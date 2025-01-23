@@ -12,7 +12,6 @@ import {
   IconButton,
   TextField,
   Typography,
-  Paper,
   Fab,
 } from "@mui/material";
 
@@ -152,35 +151,43 @@ const ChatUI: React.FC<ChatUIProps> = ({ webSocketUrl }) => {
             xs: isExpanded ? 500 : 0,
             sm: isExpanded ? 600 : 0,
             md: isExpanded ? 700 : 0,
-            lg: isExpanded ? 550 : 0,
+            lg: isExpanded ? 600 : 0,
           },
           transition: "all 0.3s ease",
           overflow: "hidden",
           borderRadius: 2,
-          backgroundColor: "#ffffff",
+          border: "1px solid #E0E0E0",
+          backgroundColor: "#fff",
           zIndex: 400,
         }}
       >
-        <Paper
-          elevation={3}
+        <Box
           sx={{
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            padding: "8px",
-            backgroundColor: "rgba(254, 80, 0, 0.85)",
+            paddingX: "8px",
+            paddingTop: "8px",
           }}
         >
-          <Typography
-            variant="subtitle1"
-            sx={{ color: "#fff", fontWeight: "500" }}
-          >
-            🤖 GeoGPT
-          </Typography>
-          <IconButton onClick={toggleExpand} sx={{ color: "#fff" }}>
+          <Box sx={{ display: "flex", alignItems: "center" }}>
+            <Image
+              src="/geonorge-logo.png"
+              alt="GeoGPT"
+              width={72}
+              height={72}
+            />
+            <Typography
+              variant="h5"
+              sx={{ color: "#333", fontWeight: "600", marginLeft: "8px" }}
+            >
+              GeoGPT
+            </Typography>
+          </Box>
+          <IconButton onClick={toggleExpand} sx={{ color: "#333" }}>
             {isExpanded ? <ExpandMore /> : <ExpandLess />}
           </IconButton>
-        </Paper>
+        </Box>
 
         {isExpanded && (
           <Box
@@ -195,7 +202,6 @@ const ChatUI: React.FC<ChatUIProps> = ({ webSocketUrl }) => {
                 flex: 1,
                 overflowY: "auto",
                 padding: "8px",
-                backgroundColor: "#ffffff",
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "flex-start",
@@ -247,7 +253,19 @@ const ChatUI: React.FC<ChatUIProps> = ({ webSocketUrl }) => {
               )}
               <div ref={chatEndRef} />
             </Box>
-
+            {chatHistory.length === 0 && (
+              <Typography
+                variant="h6"
+                sx={{
+                  color: "#333",
+                  textAlign: "center",
+                  marginBottom: "8px",
+                  fontWeight: "600",
+                }}
+              >
+                Hva kan jeg hjelpe deg med?
+              </Typography>
+            )}
             <Box
               sx={{
                 display: "flex",
@@ -292,8 +310,8 @@ const ChatUI: React.FC<ChatUIProps> = ({ webSocketUrl }) => {
                   display: "flex",
                   justifyContent: "center",
                   alignItems: "center",
-                  backgroundColor: "#007BFF",
-                  "&:hover": { backgroundColor: "#0056b3" },
+                  backgroundColor: "#333",
+                  "&:hover": { backgroundColor: "#444" },
                 }}
               >
                 <Send sx={{ color: "#fff" }} />
@@ -307,17 +325,17 @@ const ChatUI: React.FC<ChatUIProps> = ({ webSocketUrl }) => {
         <Fab
           sx={{
             position: "fixed",
-            bottom: 25,
-            right: 12,
+            bottom: 35,
+            right: 35,
             width: 64,
-            height: 48,
+            height: 64,
             borderRadius: 12,
-            backgroundColor: "#fe7c40",
-            "&:hover": { backgroundColor: "#ff5722" },
+            backgroundColor: "#333",
+            "&:hover": { backgroundColor: "#444" },
           }}
           onClick={toggleExpand}
         >
-          <Chat sx={{ color: "#fff" }} />
+          <Chat sx={{ color: "#fff", fontSize: 28 }} />
         </Fab>
       )}
     </>
