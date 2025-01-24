@@ -1,0 +1,397 @@
+body {
+    margin: 0;
+    padding: 0;
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    font-family: "Open Sans", Arial, sans-serif;
+    font-size: 14px;
+}
+
+
+/* The chat container */
+.dragable-chat {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 4px;
+
+    position: absolute;
+    width: 400px;
+    height: 280px;
+
+    min-width: 400px;
+    min-height: 280px;
+    max-width: 600px;
+    max-height: 600px;
+
+    background-color: #FFFFFF;
+    border: 2px solid #dddd;
+    box-shadow:  0px 0px 25px rgba(0, 0, 0, 0.6);
+    border-radius: 2px;
+    top: 12%;
+    right: 0%;
+}
+
+.chat-drag-handle {
+    bottom: 0;
+    text-align: center;
+    width: 100%;
+}
+
+
+.chat-container {
+    display: flex;
+    align-items: center;
+    border-top: 1px solid #dddd;
+    border-radius: 2px;
+    margin-bottom: 10px;
+}
+
+.chat-input {
+    flex: 1;
+    border: none;
+    padding: 10px;
+    outline: none;
+}
+
+.message-button {
+    background-color: #FFFF;
+    font-size: medium;
+    border: none;
+    border: 2px solid #dddd;
+    border-radius: 2px;
+    padding: 4px 8px;
+    margin-right: 10px;
+    cursor: pointer;
+}
+
+.disabled-button {
+    background-color: rgb(61, 61, 61);
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    border-top-right-radius: 20px;
+    border-bottom-right-radius: 20px;
+}
+
+#chatMessages {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    overflow-y: auto;
+    margin-bottom: 5px;
+}
+
+.user-message {
+    display: block;
+    width: fit-content;
+    max-width: 85%;
+    text-align: left;
+    /*
+    */
+    color: white;
+    background-color: #0066B2;
+    padding: 8px;
+    border-radius: 2px;
+    margin: 2px;
+    margin-left: auto;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.system-message {
+    display: block;
+    width: fit-content;
+    max-width: 85%;
+    text-align: left;
+    /*
+    */
+    color: white;
+    background-color: rgb(33, 50, 50);
+
+    border-radius: 5px;
+    /*
+    Need to find solution to message text padding without image padding
+    */
+    padding: 8px;
+    margin: 2px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+
+
+/* The search container */
+.dragable-search {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 4px;
+
+    position: absolute;
+    width: 400px;
+    height: 350px;
+
+    min-width: 400px;
+    min-height: 350px;
+    max-width: 500px;
+    max-height: 600px;
+
+    background-color: #FFFFFF;
+    border: 2px solid #dddd;
+    box-shadow: 0px 0px 25px rgba(0, 0, 0, 0.6);
+    border-radius: 2px;
+    top: 48%;
+    right: 0%;
+}
+
+.search-drag-handle {
+    bottom: 0;
+    text-align: center;
+    width: 100%;
+}
+
+.search-title {
+    font-size: larger;
+    text-align: center;
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+.search-container {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #dddd;
+    border-radius: 2px;
+    margin-bottom: 10px;
+}
+
+.search-input {
+    flex: 1;
+    border: none;
+    padding: 10px;
+    outline: none;
+}
+
+.search-button {
+    border: none;
+    background-color: #FFFF;
+    border-left: 1px solid #dddd;
+    padding: 10px 20px;
+    cursor: pointer;
+}
+
+#results {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    overflow-y: auto;
+    margin-bottom: 5px;
+}
+
+.result-item {
+    display: flex;
+    margin-top: 10px;
+    border-bottom: 1px solid #dddd;
+    justify-content: space-between;
+    align-items: end;
+}
+
+.result-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 30%;
+}
+
+.show-dataset, .download-dataset {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+
+.show-dataset-icon {
+    font-size: large;
+    color: #09A756;
+}
+
+.show-dataset-text {
+    font-size: x-small;
+}
+
+
+.download-dataset-icon {
+    font-size: large;
+    color: #09A756;
+}
+
+.download-dataset-text {
+    font-size: x-small;
+}
+
+.result-item a {
+    color: #007bff;
+    text-decoration: none;
+    max-width: 70%;
+}
+
+.result-item a:hover {
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+/* Search formatting form */
+.download-format-form-field {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px;
+    background-color: #0066B2;
+    color: #FFFFFF;
+    border-bottom: 1px solid black;
+}
+
+
+
+/* Header Geonorge Logo image, and WMS map */
+.header-image {
+    position: relative;
+    background-image: url("./header-image.png");
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
+    width: 100%;
+    height: 0;
+    padding-top: 4%;
+}
+
+.map-image {
+    position: relative;
+    background-size: cover;
+    background-repeat: no-repeat;
+    width: 100%;
+    height: 100%;
+    /*min-height: 95vh;*/
+}
+
+
+
+/* Filter and Download format dropdown menus */
+.filter-download-menus {
+    display: flex;
+    justify-content: space-between;
+}
+
+#searchFilter {
+    margin: 5px;
+}
+
+.filter-container {
+    display: inline-block;
+    align-items: center;
+    border: 1px solid #dddd;
+    border-radius: 2px;
+    padding: 8px;
+}
+
+.filter-input {
+    border: none;
+}
+
+.dropdown {
+}
+
+.filter-dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: #FFFFFF;
+    min-width: fit-content;
+    overflow-y: auto;
+    z-index: 1;
+}
+
+.dropdown-content a {
+    color: black;
+    text-decoration: none;
+    display: block;
+}
+
+.dropdown a:hover {
+    color: #FFFFFF;
+    background-color: #0066B2;
+}
+
+/* vdb download formats menu */
+.vdb-formats-dropdown {
+    position: relative;
+    display: inline-block;
+}
+.dropdown-content form {
+    padding: 12px;
+}
+.download-dropdown-trigger {
+    height: 100%;
+    cursor: pointer;
+    background-color: #0066B2;
+    padding: 8px;
+    color: white;
+    font-weight: bold;
+    border: 1.5px solid #0066B2;
+}
+
+.download-dropdown-content {
+    right: 0;
+    min-width: 400px;
+    display: none;
+    position: absolute;
+    background-color: #FFFFFF;
+    overflow-y: auto;
+    z-index: 1;
+}
+
+/* TESTING OF MARKDOWN TO HTML IMAGE */
+.card-image-container {
+    position: relative;
+    border: 1px solid #000;
+    border-radius: 10px 10px 0px 0px;
+    height: 100px;
+    overflow-y: hidden; /* can be auto for scroll, but this probably anoys users */
+}
+
+.show-card-button {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    align-content: center;
+    text-align: center;
+    font-size: small;
+    top: 5px;
+    right: 60px;
+    color: #FFFFFF;
+    background-color: #0072C7;
+    border: 0.5px solid #000;
+    border-radius: 8px;
+    width: 45px;
+    padding: 2px;
+}
+
+.download-card-button {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    align-content: center;
+    text-align: center;
+    font-size: small;
+    top: 5px;
+    right: 5px;
+    color: #FFFFFF;
+    background-color: #0072C7;
+    border: 0.5px solid #000;
+    border-radius: 8px;
+    width: 45px;
+    padding: 2px;
+}
+
+.pointer {
+    cursor: pointer;
+}
