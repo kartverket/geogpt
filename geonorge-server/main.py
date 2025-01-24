@@ -2,19 +2,30 @@ import asyncio
 import json
 import websockets
 import openai
+# from fastapi import FastAPI
+# import httpx
 
 # 1) Import your vector DB retrieval
-from helpers.vector_database import get_vdb_response
+from helpers.vector_database import get_vdb_response, get_vdb_search_response
 from helpers.retrieval_augmented_generation import (
     send_api_chat_request,
     build_rag_context, 
     force_insert_first_image
 )
+from helpers.download import get_dataset_download_and_wms_status
+from helpers.websocket_utils import send_websocket_message
 from config import CONFIG
 
 
 openai.api_key = CONFIG["api"]["openai_gpt_api_key"]
 
+# app = FastAPI()
+
+# @app.get("/proxy/norgeskart")
+# async def proxy_norgeskart(url: str):
+#     async with httpx.AsyncClient() as client:
+#         response = await client.get(url)
+#         return response.json()
 
 async def handle_connection(websocket):
     messages_history = []
@@ -43,7 +54,7 @@ async def handle_connection(websocket):
                 # 2) Retrieve top relevant rows from your vector DB
                 #    (this is the "retrieval" part of RAG)
                 vdb_results = await get_vdb_response(user_question)
-                print("DEBUG: vdb_results =", vdb_results)                
+                # print("DEBUG: vdb_results =", vdb_results)                
 
                 # 3) Convert those results into a snippet
                 rag_context = build_rag_context(vdb_results)
@@ -82,6 +93,26 @@ async def handle_connection(websocket):
                 print("chatFormSubmit error:", e)
                 
                 await websocket.send(json.dumps({"action": "streamComplete"}))
+                # ...existing code...
+                
+        elif action == "searchFormSubmit":
+            query = payload
+            print(f"Server controller received search query: {query}")
+            try:
+                # 1) Vector DB search
+                vdbSearchResponse = await get_vdb_search_response(query)
+
+                # 2) For each dataset, gather WMS + download info (including direct link)
+                datasetsWithDownloadAndWmsStatus = await get_dataset_download_and_wms_status(vdbSearchResponse)
+
+                # 3) Send back to the client
+                await send_websocket_message(
+                    "searchVdbResults",
+                    datasetsWithDownloadAndWmsStatus,
+                    websocket
+                )
+            except Exception as e:
+                print(f"Failed to retrieve or send VDB results: {e}")
 
 async def main():
     async with websockets.serve(handle_connection, "0.0.0.0", 8080):

@@ -10,9 +10,13 @@ async def fetch_area_data(uuid: str) -> list[dict]:
     Returns a list (parsed JSON). If not valid, returns an empty list.
     """
     url = f"https://nedlasting.geonorge.no/api/codelists/area/{uuid}"
+    print(f"Fetching area data for UUID: {uuid} from URL: {url}")
+
 
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as response:
+            print(f"Response status: {response.status}, URL: {response.url}")
+
             if not response.ok:
                 raise RuntimeError(f"HTTP error! status: {response.status}")
             # Check if redirected to a login page
@@ -22,7 +26,10 @@ async def fetch_area_data(uuid: str) -> list[dict]:
             return await response.json()
 
 async def dataset_has_download(uuid: str) -> bool:
+    print(f"Checking if dataset with UUID: {uuid} has downloads...")
     api_json = await fetch_area_data(uuid)
+    print(f"API response for UUID {uuid}: {api_json}")
+
     # If there's at least one object in the list, we consider it downloadable
     return len(api_json) > 0
 
@@ -178,20 +185,55 @@ async def get_download_url(metadata_uuid: str, download_formats: dict[str, Any])
 
 async def get_dataset_download_and_wms_status(vdb_search_response: list[dict]) -> list[dict]:
     """
-    For each item in vdb_search_response, fetch download formats + WMS URL.
-    Returns the updated list with additional fields.
+    For each item in vdb_search_response, fetch:
+      - The raw area data (downloadFormats)
+      - The WMS URL
+      - A direct downloadUrl if the dataset supports it (using a default/first area/format).
     """
-    async def enrich_dataset(dataset):
+
+    async def enrich_dataset(dataset: dict) -> dict:
         uuid = dataset.get("uuid")
-        formats_api_response = await fetch_area_data(uuid)
+
+        # 1) Get WMS URL
         wms_url = await get_wms(uuid)
+
+        # 2) Fetch the raw area/projection/format matrix
+        formats_api_response = await fetch_area_data(uuid)
+
+        # 3) Attempt to get a direct download link using defaults
+        download_url = None
+        if formats_api_response:
+            # Build standard or "first found" format info
+            standard_format = await get_standard_or_first_format(uuid)
+            if standard_format:
+                # Attempt an order to get the direct link
+                # Inside enrich_dataset or wherever you call get_download_url:
+                try:
+                    download_url = await get_download_url(uuid, standard_format)
+                except RuntimeError as e:
+                    if "Order contains restricted datasets" in str(e):
+                        # Mark as restricted
+                        return {
+                            **dataset,
+                            "downloadFormats": formats_api_response,
+                            "wmsUrl": wms_url,
+                            "downloadUrl": None,       # no direct URL
+                            "restricted": True         # or "isRestricted": True
+                        }
+                    else:
+                        # If it's some other error, re-raise or handle differently
+                        raise
+
+        # Return the entire object + extra info
         return {
             **dataset,
-            "downloadFormats": formats_api_response,
-            "wmsUrl": wms_url
+            "downloadFormats": formats_api_response,  # raw listing from geonorge
+            "wmsUrl": wms_url,
+            "downloadUrl": download_url,  # direct link, or None if not possible
         }
 
     # Run them all in parallel
     tasks = [enrich_dataset(ds) for ds in vdb_search_response]
     results = await asyncio.gather(*tasks)
     return results
+
