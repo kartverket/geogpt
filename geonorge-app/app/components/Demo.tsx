@@ -420,7 +420,25 @@ function Demo() {
                 boxShadow: "0px 1px 3px rgba(0, 0, 0, 0.1)",
               }}
             >
-              <strong>{result.title || "Dataset"}</strong>
+              <a
+                href={`https://kartkatalog.geonorge.no/metadata/${encodeURIComponent(
+                  result.title || "Dataset"
+                )}/${result.uuid}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  color: "#2563eb",
+                  textDecoration: "none",
+                  cursor: "pointer",
+                  display: "inline-block",
+                  marginBottom: "4px",
+                  fontSize: "1.1em",
+                  transition: "color 0.2s ease",
+                }}
+                className="hover:text-blue-800 hover:underline"
+              >
+                <strong>{result.title || "Dataset"}</strong>
+              </a>
               <br />
               <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
                 {result.wmsUrl && result.wmsUrl !== "None" ? (
