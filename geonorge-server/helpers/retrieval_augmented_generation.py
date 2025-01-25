@@ -237,7 +237,6 @@ async def check_image_signal(
             print(f"Comparing with bold text: {bold_text}")
             print(f"Normalized comparison: '{title_lower}' vs '{bold_lower}'")
             
-            # Change from exact match to contains
             if bold_lower in title_lower:
                 print("Match found!")
                 if obj.get("uuid") and obj.get("image"):
