@@ -13,8 +13,7 @@ interface ChatMessage {
   content?: string;
   imageUrl?: string;
   downloadUrl?: string | null;
-  wmsUrl?: string | null; // Add this line
-}
+  wmsUrl?: string | null; 
 
 interface SearchResult {
   uuid: string;
