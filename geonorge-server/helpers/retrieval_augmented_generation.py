@@ -208,44 +208,56 @@ async def check_image_signal(
     gpt_response: str,
     metadata_context_list: List[Dict[str, Any]]
 ) -> dict | bool:
-    """
-    Look for dataset titles wrapped in markdown bold (**title**) in the response.
-    If found and dataset has an image, prepare it for display.
-    """
-    # Look for markdown bold pattern: **text**
     import re
     
-    # Debug print for dataset titles
-    print("Raw data rows:")
-    for row in metadata_context_list:  
-        print(f"Title: {row.get('title', '')}")
+    # Debug print for dataset titles and full objects
+    print("\nDebug: Full dataset objects:")
+    for row in metadata_context_list:
+        print(f"UUID: {row.get('uuid')}")
+        print(f"Title: {row.get('title')}")
+        print(f"Image: {row.get('image')}")
+        print(f"WMS URL: {row.get('wmsUrl')}")
+        print("---")
 
-    # Debug logging for GPT response
-    print("GPT Response:", gpt_response)
+    print("\nGPT Response:", gpt_response)
     bold_titles = re.findall(r'\*\*(.*?)\*\*', gpt_response)
     print("Detected bold titles:", bold_titles)
     
     if not bold_titles:
         return False
 
-    # Check each dataset
+    # Check each dataset with detailed logging
     for obj in metadata_context_list:
-        title = obj.get("title", "")
-        # Check if any of the bold titles match this dataset
-        if any(title in bold_text for bold_text in bold_titles):
-            if obj.get("uuid") and obj.get("image"):
-                image_field = obj["image"]
-                image_urls = [s.strip() for s in image_field.split(",") if s.strip()]
-                if not image_urls:
-                    continue
-                dataset_image_url = image_urls[-1]
-                dataset_uuid = obj["uuid"]
+        title = obj.get("title", "").lower()
+        print(f"\nChecking title: {title}")
+        
+        for bold_text in bold_titles:
+            bold_lower = bold_text.lower().replace(" ", "")
+            title_lower = title.replace(" ", "")
+            print(f"Comparing with bold text: {bold_text}")
+            print(f"Normalized comparison: '{title_lower}' vs '{bold_lower}'")
+            
+            # Change from exact match to contains
+            if bold_lower in title_lower:
+                print("Match found!")
+                if obj.get("uuid") and obj.get("image"):
+                    image_field = obj["image"]
+                    print(f"Image field found: {image_field}")
+                    image_urls = [s.strip() for s in image_field.split(",") if s.strip()]
+                    if not image_urls:
+                        print("No valid image URLs found")
+                        continue
+                    dataset_image_url = image_urls[-1]
+                    dataset_uuid = obj["uuid"]
+                    
+                    return {
+                        "uuid": dataset_uuid,
+                        "datasetImageUrl": dataset_image_url,
+                        "downloadUrl": None,
+                        "wmsUrl": obj.get("wmsUrl", None)
+                    }
+                else:
+                    print(f"Missing required fields - UUID: {obj.get('uuid')}, Image: {obj.get('image')}")
 
-                return {
-                    "uuid": dataset_uuid,
-                    "datasetImageUrl": dataset_image_url,
-                    "datasetDownloadUrl": None,
-                    "wmsUrl": obj.get("wmsUrl", None)
-                }
-
+    print("No matching dataset found with required fields")
     return False
