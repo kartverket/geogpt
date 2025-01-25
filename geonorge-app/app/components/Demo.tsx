@@ -13,6 +13,7 @@ interface ChatMessage {
   content?: string;
   imageUrl?: string;
   downloadUrl?: string | null;
+  wmsUrl?: string | null; // Add this line
 }
 
 interface SearchResult {
@@ -105,13 +106,14 @@ function Demo() {
         break;
 
       case "insertImage":
-        const { datasetImageUrl, datasetDownloadUrl } = payload;
+        const { datasetImageUrl, datasetDownloadUrl, wmsUrl } = payload;
         setChatMessages((prev) => [
           ...prev,
           {
             type: "image",
             imageUrl: datasetImageUrl,
             downloadUrl: datasetDownloadUrl,
+            wmsUrl: wmsUrl,
           },
         ]);
         break;
@@ -259,21 +261,38 @@ function Demo() {
                       marginBottom: "8px",
                     }}
                   />
-                  {msg.downloadUrl && (
-                    <button
-                      onClick={() => handleDatasetDownload(msg.downloadUrl!)}
-                      style={{
-                        padding: "4px 8px",
-                        backgroundColor: "#28a745",
-                        color: "#fff",
-                        border: "none",
-                        borderRadius: "4px",
-                        cursor: "pointer",
-                      }}
-                    >
-                      Last ned datasett
-                    </button>
-                  )}
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    {msg.wmsUrl && (
+                      <button
+                        onClick={() => msg.wmsUrl && replaceIframe(msg.wmsUrl)}
+                        style={{
+                          padding: "4px 8px",
+                          backgroundColor: "#28a745",
+                          color: "#fff",
+                          border: "none",
+                          borderRadius: "4px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Vis
+                      </button>
+                    )}
+                    {msg.downloadUrl && (
+                      <button
+                        onClick={() => handleDatasetDownload(msg.downloadUrl!)}
+                        style={{
+                          padding: "4px 8px",
+                          backgroundColor: "#28a745",
+                          color: "#fff",
+                          border: "none",
+                          borderRadius: "4px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Last ned datasett
+                      </button>
+                    )}
+                  </div>
                 </div>
               );
             } else {
@@ -289,6 +308,9 @@ function Demo() {
                 rest = content.slice("System: ".length);
               }
 
+              // Parse markdown bold syntax
+              rest = rest.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+
               return (
                 <div
                   key={idx}
@@ -298,10 +320,11 @@ function Demo() {
                     backgroundColor: "#f8f9fa",
                     borderRadius: "6px",
                     boxShadow: "0px 1px 3px rgba(0, 0, 0, 0.2)",
+                    whiteSpace: "pre-wrap",
                   }}
                 >
                   {prefix && <strong>{prefix}</strong>}
-                  {rest}
+                  <span dangerouslySetInnerHTML={{ __html: rest }} />
                 </div>
               );
             }
@@ -470,7 +493,7 @@ function Demo() {
                     }}
                     disabled
                   >
-                    Utilgjengelig (Prøv annet format)
+                    Utilgjengelig (Kan ikke vises)
                   </button>
                 )}
                 {result.restricted && (

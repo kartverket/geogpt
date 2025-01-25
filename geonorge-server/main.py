@@ -9,8 +9,10 @@ import openai
 from helpers.vector_database import get_vdb_response, get_vdb_search_response
 from helpers.retrieval_augmented_generation import (
     send_api_chat_request,
-    build_rag_context, 
-    force_insert_first_image
+    # force_insert_first_image,
+    get_rag_context,
+    insert_image_rag_response,
+    
 )
 from helpers.download import get_dataset_download_and_wms_status
 from helpers.websocket_utils import send_websocket_message
@@ -57,23 +59,19 @@ async def handle_connection(websocket):
                 # print("DEBUG: vdb_results =", vdb_results)                
 
                 # 3) Convert those results into a snippet
-                rag_context = build_rag_context(vdb_results)
+                rag_context = await get_rag_context(vdb_results)
                 
                 # 4) Build system message with instructions + context
                 system_msg = {
                     "role": "system",
-                    "content": (
-                        "You are a Q&A assistant. Use ONLY the context below. "
-                        "If the answer isn't in the context, say 'I don't know.'\n\n"
-                        f"CONTEXT:\n{rag_context}"
-                    )
+                    "content": rag_context
                 }
 
                 # 5) Build final messages for GPT
                 user_msg = {"role": "user", "content": user_question}
                 messages = [*memory, system_msg, user_msg]
 
-                # 6) Stream GPT response (the “generation” part of RAG)
+                # 6) Stream GPT response (the "generation" part of RAG)
                 full_rag_response = await send_api_chat_request(
                     messages, websocket, "gpt-4o-mini"
                 )
@@ -81,9 +79,8 @@ async def handle_connection(websocket):
                 # 7) Indicate streaming is finished
                 await websocket.send(json.dumps({"action": "streamComplete"}))
 
-                # 8) Attempt to insert image if GPT signaled "[bilde]"
-                # ADD THIS LINE:
-                await force_insert_first_image(vdb_results, websocket)
+                # 8) Insert if response includes "**tittel**" in rag response
+                await insert_image_rag_response(full_rag_response, vdb_results, websocket)
 
                 # 9) Save conversation to the local history
                 messages_history.append({"role": "user", "content": user_question})
