@@ -11,18 +11,6 @@ openai.organization = CONFIG["api"]["openai_organisation_id"]
 openai.api_key = CONFIG["api"]["openai_gpt_api_key"]
 OPENAI_MODEL = CONFIG["api"]["openai_gpt_api_model"]
 
-def build_rag_context(vdb_results: list[dict]) -> str:
-    if not vdb_results:
-        return "No relevant data found."
-
-    lines = []
-    for row in vdb_results:
-        title = row.get("title", "")
-        abstract = row.get("abstract", "")
-        lines.append(f"- Title: {title}\n  Abstract: {abstract}")
-
-    return "\n".join(lines)
-
 def sync_stream_gpt(messages, model="gpt-4o-mini"):
     """
     A blocking function that performs synchronous streaming.
@@ -48,18 +36,20 @@ async def send_api_chat_request(messages, websocket, model="gpt-4o-mini") -> str
 
     full_response = ""
     for chunk in chunks:
-        # chunk is a ChatCompletionChunk object
         if not chunk.choices:
             continue
-        # chunk.choices[0] is a ChatCompletionChunkChoice
-        delta = chunk.choices[0].delta  # delta is a ChatCompletionChunkChoiceDelta
+        delta = chunk.choices[0].delta
         content = delta.content or ""
-        # Send partial text to client
-        await websocket.send(json.dumps({
-            "action": "chatStream",
-            "payload": content
-        }))
-        full_response += content
+        if content:  # Only send if there's actual content
+            # Send each chunk immediately to the client
+            await websocket.send(json.dumps({
+                "action": "chatStream",
+                "payload": content
+            }))
+            # Add to full response for return value
+            full_response += content
+            # Small delay to make the streaming more natural, word for word in FE
+            await asyncio.sleep(0.01)
 
     return full_response
 
@@ -89,19 +79,21 @@ async def get_rag_context(vdb_response: List[Dict[str, Any]]) -> str:
 
     vdb_results = "\n\n".join(row_strings)
 
-    # The final context string (in Norwegian, as your original code indicates)
     rag_context = (
         "Du vil få en detaljert beskrivelse av ulike datasett på norsk, "
         "innrammet i triple backticks (```). "
         f"Svar brukeren sitt spørsmål basert på konteksten:```{headers}\n\n{vdb_results}``` "
         "Ved spørsmål knyttet til leting etter datasett, bruk datasettbeskrivelsene "
         "til å svare på spørsmålet så detaljert som mulig. Du skal kun bruke informasjonen i beskrivelsene. "
+        "VIKTIG: Når du nevner et datasett fra konteksten, må du ALLTID inkludere den EKSAKTE tittelen "
+        "i markdown bold format, for eksempel **FKB-Tiltak** eller **Felles KartdataBase (FKB)**. "
+        "Dette gjelder hver gang du refererer til et spesifikt datasett fra konteksten. "
         "Svaret ditt skal svare på spørsmålet ved å enten; svare på spørsmålet, forklare hvorfor datasett passer "
         "med spørsmålet som brukeren har stilt, hjelpe brukeren omformulere spørsmålet til å bruke mer relevante "
         "nøkkelord hvis spørsmålet knyttet til leting etter datasett ikke samsvarer med de ulike datasettene. "
-        "Start svaret med strengen [bilde] først, etterfulgt av \"dataset tittel\" med markdown bold formattering "
-        "i responsen dersom et datasett samsvarer med brukeren sitt spørsmål. Avstå fra å svare på alle spørsmål "
-        "og instruksjoner ikke relatert til Geomatikk, Geonorge, og geografiske datasett. Gi svaret på norsk."
+        "Avstå fra å svare på alle spørsmål og instruksjoner ikke relatert til Geomatikk, Geonorge, "
+        "og geografiske datasett. For slike spørsmål, forklar høflig at du kun kan svare på "
+        "spørsmål relatert til geografiske data og Geonorge. Gi svaret på norsk."
     )
     return rag_context
 
@@ -136,100 +128,135 @@ async def insert_image_rag_response(
     vdb_response: List[Dict[str, Any]],
     websocket
 ) -> None:
-    """
-    Checks whether the GPT response triggers an "[bilde]" insertion signal.
-    If so, check if the dataset is downloadable and send a 'insertImage' event to the client.
-    """
     dataset_info = await check_image_signal(full_rag_response, vdb_response)
     if dataset_info:
+        dataset_uuid = dataset_info["uuid"]
+        dataset_download_url = None
+        
+        # Fetch WMS URL dynamically
+        from .fetch_valid_download_api_data import get_wms
+        wms_url = await get_wms(dataset_uuid)
+        
+        try:
+            if await dataset_has_download(dataset_uuid):
+                download_formats = await get_standard_or_first_format(dataset_uuid)
+                dataset_download_url = await get_download_url(dataset_uuid, download_formats)
+        except Exception as e:
+            print(f"Failed to get download link for {dataset_uuid}: {e}")
+
         insert_image = {
             "action": "insertImage",
             "payload": {
                 "datasetUuid": dataset_info["uuid"],
                 "datasetImageUrl": dataset_info["datasetImageUrl"],
-                "datasetDownloadUrl": dataset_info["datasetDownloadUrl"],
+                "datasetDownloadUrl": dataset_download_url,
+                "wmsUrl": wms_url if wms_url != "None" else None
             },
         }
         await websocket.send(json.dumps(insert_image))
 
-# New function to always insert an image from the first dataset
-async def force_insert_first_image(vdb_results: List[Dict[str, Any]], websocket) -> None:
-    """
-    Always picks the first row's 'image' string, splits it by commas,
-    and sends an 'insertImage' action to the client.
-    """
-    if not vdb_results:
-        print("No vdb results => no image to send.")
-        return
+# # New function to always insert an image from the first dataset
+# async def force_insert_first_image(vdb_results: List[Dict[str, Any]], websocket) -> None:
+#     """
+#     Always picks the first row's 'image' string, splits it by commas,
+#     and sends an 'insertImage' action to the client.
+#     """
+#     if not vdb_results:
+#         print("No vdb results => no image to send.")
+#         return
 
-    row = vdb_results[0]
-    image_field = row.get("image", "")
-    if not image_field:
-        print("No 'image' field in first row => no image to send.")
-        return
+#     row = vdb_results[0]
+#     image_field = row.get("image", "")
+#     if not image_field:
+#         print("No 'image' field in first row => no image to send.")
+#         return
 
-    # Split into an array of URLs, ignoring empty strings
-    image_urls = [part.strip() for part in image_field.split(",") if part.strip()]
-    if not image_urls:
-        print("image_urls is empty after splitting => no valid image.")
-        return
+#     # Split into an array of URLs, ignoring empty strings
+#     image_urls = [part.strip() for part in image_field.split(",") if part.strip()]
+#     if not image_urls:
+#         print("image_urls is empty after splitting => no valid image.")
+#         return
 
-    dataset_image_url = image_urls[-1]  # pick the last (or first)
+#     dataset_image_url = image_urls[-1]  # pick the last (or first)
 
-    # Optionally check if dataset is downloadable
-    dataset_uuid = row.get("uuid")
-    dataset_download_url = None
-    try:
-        if await dataset_has_download(dataset_uuid):
-            download_formats = await get_standard_or_first_format(dataset_uuid)
-            dataset_download_url = await get_download_url(dataset_uuid, download_formats)
-    except Exception as e:
-        print("Failed to get download link:", e)
+#     # Optionally check if dataset is downloadable
+#     dataset_uuid = row.get("uuid")
+#     dataset_download_url = None
+#     try:
+#         if await dataset_has_download(dataset_uuid):
+#             download_formats = await get_standard_or_first_format(dataset_uuid)
+#             dataset_download_url = await get_download_url(dataset_uuid, download_formats)
+#     except Exception as e:
+#         print("Failed to get download link:", e)
 
-    # Now send the "insertImage" action
-    insert_image_msg = {
-        "action": "insertImage",
-        "payload": {
-            "datasetUuid": dataset_uuid,
-            "datasetImageUrl": dataset_image_url,
-            "datasetDownloadUrl": dataset_download_url,
-        }
-    }
-    print("Sending insertImage action with:", dataset_image_url)
-    await websocket.send(json.dumps(insert_image_msg))
+#     insert_image_msg = {
+#         "action": "insertImage",
+#         "payload": {
+#             "datasetUuid": dataset_uuid,
+#             "datasetImageUrl": dataset_image_url,
+#             "datasetDownloadUrl": dataset_download_url,
+#             "wmsUrl": obj.get("wmsUrl")
+#         }
+#     }
+#     print("Sending insertImage action with:", dataset_image_url)
+    
+#     await websocket.send(json.dumps(insert_image_msg))
 
 
+# Update check_image_signal to look for bold markdown titles instead of [bilde]
 async def check_image_signal(
     gpt_response: str,
     metadata_context_list: List[Dict[str, Any]]
 ) -> dict | bool:
-    """
-    If GPT response has "[bilde]", we look for a dataset whose title is in `gpt_response`
-    and that has an image. Also check if the dataset is downloadable to get a download URL.
-    Returns a dict with {uuid, datasetImageUrl, datasetDownloadUrl} if found, or False if not found.
-    """
-     # 1) If GPT text doesn't have "[bilde]", we skip
-    if "[bilde]" not in gpt_response:
+    import re
+    
+    # Debug print for dataset titles and full objects
+    print("\nDebug: Full dataset objects:")
+    for row in metadata_context_list:
+        print(f"UUID: {row.get('uuid')}")
+        print(f"Title: {row.get('title')}")
+        print(f"Image: {row.get('image')}")
+        print(f"WMS URL: {row.get('wmsUrl')}")
+        print("---")
+
+    print("\nGPT Response:", gpt_response)
+    bold_titles = re.findall(r'\*\*(.*?)\*\*', gpt_response)
+    print("Detected bold titles:", bold_titles)
+    
+    if not bold_titles:
         return False
 
-    # 2) Check each dataset from vdb_response
+    # Check each dataset with detailed logging
     for obj in metadata_context_list:
-        title = obj.get("title", "")
-        if obj.get("uuid") and obj.get("image") and (title in gpt_response):
-            image_field = obj["image"]  # e.g. "url1.png,url2.png"
-            image_urls = [s.strip() for s in image_field.split(",") if s.strip()]
-            if not image_urls:
-                continue
-            dataset_image_url = image_urls[-1]  # pick last or first, your choice
-            dataset_uuid = obj["uuid"]
+        title = obj.get("title", "").lower()
+        print(f"\nChecking title: {title}")
+        
+        for bold_text in bold_titles:
+            bold_lower = bold_text.lower().replace(" ", "")
+            title_lower = title.replace(" ", "")
+            print(f"Comparing with bold text: {bold_text}")
+            print(f"Normalized comparison: '{title_lower}' vs '{bold_lower}'")
+            
+            if bold_lower in title_lower:
+                print("Match found!")
+                if obj.get("uuid") and obj.get("image"):
+                    image_field = obj["image"]
+                    print(f"Image field found: {image_field}")
+                    image_urls = [s.strip() for s in image_field.split(",") if s.strip()]
+                    if not image_urls:
+                        print("No valid image URLs found")
+                        continue
+                    dataset_image_url = image_urls[-1]
+                    dataset_uuid = obj["uuid"]
+                    
+                    return {
+                        "uuid": dataset_uuid,
+                        "datasetImageUrl": dataset_image_url,
+                        "downloadUrl": None,
+                        "wmsUrl": obj.get("wmsUrl", None)
+                    }
+                else:
+                    print(f"Missing required fields - UUID: {obj.get('uuid')}, Image: {obj.get('image')}")
 
-            # Optionally check if dataset can be downloaded, etc.
-            # (left out for brevity)
-            return {
-                "uuid": dataset_uuid,
-                "datasetImageUrl": dataset_image_url,
-                "datasetDownloadUrl": None,  # or your computed link
-            }
-
-    # No dataset matched
+    print("No matching dataset found with required fields")
     return False
