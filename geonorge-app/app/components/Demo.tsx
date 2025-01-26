@@ -1,8 +1,20 @@
 "use client";
-import React, { useState, useRef, FormEvent, useEffect } from "react";
+import React, { useState, useEffect, useRef, FormEvent } from "react";
 import { Rnd } from "react-rnd";
 
-import { ChatMessage } from "../types/ChatMessage";
+type MessageType = {
+  action: string;
+  payload?: any;
+  isNewMessage?: boolean;
+};
+
+interface ChatMessage {
+  type: "text" | "image" | "streaming";
+  content?: string;
+  imageUrl?: string;
+  downloadUrl?: string | null;
+  wmsUrl?: string | null;
+}
 
 interface SearchResult {
   uuid: string;
@@ -19,6 +31,7 @@ function Demo() {
   const [iframeSrc, setIframeSrc] = useState(INITIAL_MAP_URL);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searchInput, setSearchInput] = useState("");
+  const [ws, setWs] = useState<WebSocket | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [forceUpdate, setForceUpdate] = useState(0);
@@ -28,10 +41,87 @@ function Demo() {
   const [chatDraggingZ, setChatDraggingZ] = useState(2);
   const [searchDraggingZ, setSearchDraggingZ] = useState(1);
 
+  useEffect(() => {
+    const socket = new WebSocket("ws://localhost:8080");
+    setWs(socket);
+
+    socket.onmessage = (event) => {
+      const data: MessageType = JSON.parse(event.data);
+      handleServerMessage(data);
+    };
+
+    socket.onopen = () => {
+      // Automatically trigger the search on socket connection
+      const initialSearchMessage = {
+        action: "searchFormSubmit",
+        payload: "", // You can set a default payload or leave it empty
+      };
+      socket.send(JSON.stringify(initialSearchMessage));
+    };
+
+    return () => {
+      socket.close();
+    };
+  }, []);
+
   // Scroll chat to bottom whenever chatMessages change
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
+
+  const handleServerMessage = (data: MessageType) => {
+    const { action, payload } = data;
+    console.log("Incoming action:", action, "payload:", payload);
+
+    switch (action) {
+      case "chatStream":
+        setChatMessages((prev) => {
+          const lastMsg = prev[prev.length - 1];
+          if (!lastMsg || lastMsg.type !== "streaming") {
+            return [...prev, { type: "streaming", content: payload }];
+          } else {
+            const updated: ChatMessage = {
+              ...lastMsg,
+              content: lastMsg.content + payload,
+            };
+            return [...prev.slice(0, -1), updated];
+          }
+        });
+        break;
+
+      case "streamComplete":
+        setChatMessages((prev) => {
+          const lastMsg = prev[prev.length - 1];
+          if (!lastMsg || lastMsg.type !== "streaming") {
+            return prev;
+          }
+          const systemMsg = `System: ${lastMsg.content}`;
+          const converted: ChatMessage = { type: "text", content: systemMsg };
+          return [...prev.slice(0, -1), converted];
+        });
+        break;
+
+      case "searchVdbResults":
+        setSearchResults(payload);
+        break;
+
+      case "insertImage":
+        const { datasetImageUrl, datasetDownloadUrl, wmsUrl } = payload;
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            type: "image",
+            imageUrl: datasetImageUrl,
+            downloadUrl: datasetDownloadUrl,
+            wmsUrl: wmsUrl,
+          },
+        ]);
+        break;
+
+      default:
+        console.log("Unknown action:", data);
+    }
+  };
 
   const replaceIframe = (wmsUrl: string) => {
     // Validation checks
@@ -47,16 +137,26 @@ function Demo() {
 
   const onSearchSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // Implement search functionality without WebSocket
-    // For example, you can use fetch or axios to call an API
-    console.log("Search submitted:", searchInput);
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+    ws.send(
+      JSON.stringify({
+        action: "searchFormSubmit",
+        payload: searchInput,
+      })
+    );
   };
 
   const onChatSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // Implement chat functionality without WebSocket
-    // For example, you can use fetch or axios to call an API
-    console.log("Chat submitted:", chatInput);
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+    ws.send(
+      JSON.stringify({
+        action: "chatFormSubmit",
+        payload: chatInput,
+      })
+    );
 
     // Add user message immediately
     setChatMessages((prev) => [
@@ -106,6 +206,168 @@ function Demo() {
         }}
         title="Geo Map"
       />
+
+      {/* Chat */}
+      <Rnd
+        bounds="window"
+        default={{ x: 20, y: 20, width: 300, height: 400 }}
+        style={{
+          zIndex: chatDraggingZ,
+          backgroundColor: "#ffffffee",
+          display: "flex",
+          flexDirection: "column",
+          border: "1px solid #ccc",
+          borderRadius: "6px",
+        }}
+        onDragStart={onChatDragStart}
+      >
+        <div
+          style={{
+            backgroundColor: "#eee",
+            cursor: "move",
+            padding: "4px",
+            textAlign: "center",
+          }}
+        >
+          <strong>GeoGPT Chat</strong>
+        </div>
+
+        <div
+          id="chatMessages"
+          style={{ flex: 1, padding: "8px", overflowY: "auto" }}
+        >
+          <div className="system-message">
+            Hei! Jeg er GeoGPT. Spør meg om geodata!
+          </div>
+
+          {chatMessages.map((msg, idx) => {
+            if (msg.type === "image" && msg.imageUrl) {
+              return (
+                <div
+                  key={idx}
+                  style={{
+                    margin: "4px 0",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                  }}
+                >
+                  <img
+                    src={msg.imageUrl}
+                    alt="Dataset"
+                    style={{
+                      maxWidth: "100%",
+                      height: "auto",
+                      marginBottom: "8px",
+                    }}
+                  />
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    {msg.wmsUrl && (
+                      <button
+                        onClick={() => msg.wmsUrl && replaceIframe(msg.wmsUrl)}
+                        style={{
+                          padding: "4px 8px",
+                          backgroundColor: "#28a745",
+                          color: "#fff",
+                          border: "none",
+                          borderRadius: "4px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Vis
+                      </button>
+                    )}
+                    {msg.downloadUrl && (
+                      <button
+                        onClick={() => handleDatasetDownload(msg.downloadUrl!)}
+                        style={{
+                          padding: "4px 8px",
+                          backgroundColor: "#28a745",
+                          color: "#fff",
+                          border: "none",
+                          borderRadius: "4px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Last ned datasett
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            } else {
+              let content = msg.content || "";
+              let prefix = "";
+              let rest = content;
+
+              if (content.startsWith("You: ")) {
+                prefix = "You: ";
+                rest = content.slice("You: ".length);
+              } else if (content.startsWith("System: ")) {
+                prefix = "System: ";
+                rest = content.slice("System: ".length);
+              }
+
+              // Parse markdown bold syntax
+              rest = rest.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+
+              return (
+                <div
+                  key={idx}
+                  style={{
+                    margin: "4px 0",
+                    padding: "8px",
+                    backgroundColor: "#f8f9fa",
+                    borderRadius: "6px",
+                    boxShadow: "0px 1px 3px rgba(0, 0, 0, 0.2)",
+                    whiteSpace: "pre-wrap",
+                  }}
+                >
+                  {prefix && <strong>{prefix}</strong>}
+                  <span dangerouslySetInnerHTML={{ __html: rest }} />
+                </div>
+              );
+            }
+          })}
+          <div ref={chatEndRef} />
+        </div>
+
+        <form
+          onSubmit={onChatSubmit}
+          style={{
+            display: "flex",
+            borderTop: "1px solid #ddd",
+            padding: "8px",
+          }}
+        >
+          <input
+            type="text"
+            value={chatInput}
+            onChange={(e) => setChatInput(e.target.value)}
+            placeholder="Spør GeoGPT..."
+            style={{
+              flex: 1,
+              padding: "8px",
+              border: "1px solid #ccc",
+              borderRadius: "4px",
+              marginRight: "8px",
+            }}
+          />
+          <button
+            type="submit"
+            style={{
+              padding: "8px 16px",
+              backgroundColor: "#007bff",
+              color: "#fff",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer",
+            }}
+          >
+            Send
+          </button>
+        </form>
+      </Rnd>
 
       {/* Kartkatalog */}
       <Rnd
