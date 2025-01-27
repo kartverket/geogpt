@@ -3,6 +3,7 @@ import requests
 import json
 from config import config  # Importer config
 
+
 API_URL = "https://api.openai.com/v1/embeddings"
 API_KEY = config["api"]["openai_embedding_api_key"]
 MODEL = config["api"]["model"]

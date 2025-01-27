@@ -25,3 +25,4 @@ CREATE TABLE if not exists text_embedding_3_large
     parentId             TEXT,        -- Assuming parentId is a UUID referencing another entity
     title_vector         vector(3072) -- pgvector column with 3072 dimensions
 );
+

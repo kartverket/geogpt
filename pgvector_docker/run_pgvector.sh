@@ -25,3 +25,4 @@ docker run -d --name $CONTAINER_NAME \
   -p 5432:5432 $IMAGE_NAME
 
 echo "pgvector PostgreSQL container is running with the latest image."
+
