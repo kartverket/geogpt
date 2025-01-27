@@ -24,8 +24,33 @@ interface SearchResult {
   restricted?: boolean;
 }
 
+type DatasetLink = {
+  name: string;
+  url: string;
+  styles: string;
+};
+
 const INITIAL_MAP_URL =
   "https://norgeskart.no/geoportal/#!?zoom=4.6366666666666685&lon=168670.22&lat=6789452.95&wms=https:%2F%2Fnve.geodataonline.no%2Farcgis%2Fservices%2FSkredKvikkleire2%2FMapServer%2FWMSServer&project=geonorge&layers=1002";
+
+const GEONORGE_SEARCH_URL = 'https://kartkatalog.geonorge.no/search';
+const LINK_STYLES = {
+  color: '#2563eb',
+  textDecoration: 'none',
+  fontWeight: 'bold'
+} as const;
+
+const formatDatasetLink = (datasetName: string): string => {
+  const link: DatasetLink = {
+    name: datasetName,
+    url: `${GEONORGE_SEARCH_URL}?text=${encodeURIComponent(datasetName)}`,
+    styles: Object.entries(LINK_STYLES)
+      .map(([key, value]) => `${key}: ${value}`)
+      .join('; ')
+  };
+
+  return `<a href="${link.url}" target="_blank" style="${link.styles}">${link.name}</a>`;
+};
 
 function Demo() {
   const [iframeSrc, setIframeSrc] = useState(INITIAL_MAP_URL);
@@ -36,6 +61,8 @@ function Demo() {
   const [chatInput, setChatInput] = useState("");
   const [forceUpdate, setForceUpdate] = useState(0);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  
+  
 
   // Drag and z-index states
   const [chatDraggingZ, setChatDraggingZ] = useState(2);
@@ -190,6 +217,7 @@ function Demo() {
     link.click();
     document.body.removeChild(link);
   };
+  
 
   return (
     <div style={{ height: "100vh", width: "100vw", position: "relative" }}>
@@ -307,9 +335,7 @@ function Demo() {
                 prefix = "System: ";
                 rest = content.slice("System: ".length);
               }
-
-              // Parse markdown bold syntax
-              rest = rest.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+              rest = rest.replace(/\*\*(.*?)\*\*/g, (_, datasetName) => formatDatasetLink(datasetName));
 
               return (
                 <div
