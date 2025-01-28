@@ -1,28 +1,33 @@
 import React from "react";
+import { keyframes } from "@emotion/react";
+import styled from "@emotion/styled";
+import { Primitive } from "@radix-ui/react-primitive";
 
-// Components from Material-UI
-import { Box } from "@mui/material";
+const blink = keyframes`
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 1; }
+`;
+
+const Flex = styled(Primitive.div)`
+  display: flex;
+  align-items: center;
+`;
+
+const Dot = styled(Primitive.div)`
+  width: 8px;
+  height: 8px;
+  margin: 0 4px;
+  background-color: #fe5000;
+  border-radius: 50%;
+  animation: ${blink} 1s infinite;
+`;
 
 const TypingIndicator: React.FC = () => (
-  <Box sx={{ display: "flex", alignItems: "center" }}>
+  <Flex>
     {[0, 0.2, 0.4].map((delay, index) => (
-      <Box
-        key={index}
-        sx={{
-          width: 7,
-          height: 7,
-          margin: "7px 7px 7px 4px",
-          backgroundColor: "#a6a6a6",
-          borderRadius: "50%",
-          animation: `blink 1.5s infinite ${delay}s`,
-          "@keyframes blink": {
-            "0%, 100%": { opacity: 0.2 },
-            "50%": { opacity: 1 },
-          },
-        }}
-      />
+      <Dot key={index} style={{ animationDelay: `${delay}s` }} />
     ))}
-  </Box>
+  </Flex>
 );
 
 export default TypingIndicator;

@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect, useRef, FormEvent } from "react";
 import { Rnd } from "react-rnd";
+import DatasetDownloadModal from "./DatasetDownloadModal";
 
 type MessageType = {
   action: string;
@@ -40,6 +41,12 @@ function Demo() {
   // Drag and z-index states
   const [chatDraggingZ, setChatDraggingZ] = useState(2);
   const [searchDraggingZ, setSearchDraggingZ] = useState(1);
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [datasetName, setDatasetName] = useState("Datasett");
+  const [fileSize, setFileSize] = useState("10MB");
+  const [formatInfo, setFormatInfo] = useState("ZIP");
 
   useEffect(() => {
     const socket = new WebSocket("ws://localhost:8080");
@@ -176,19 +183,24 @@ function Demo() {
     setChatDraggingZ(1);
   };
 
-  const handleDatasetDownload = (downloadUrl: string) => {
-    if (!downloadUrl) {
-      console.error("No download URL provided.");
-      return;
-    }
+  const handleDatasetDownload = (downloadUrl: string, datasetName: string) => {
+    setDownloadUrl(downloadUrl);
+    setDatasetName(datasetName);
+    setFileSize("Unknown size");
+    setFormatInfo("ZIP");
+    setModalOpen(true);
+  };
 
+  const handleConfirmDownload = () => {
+    if (!downloadUrl) return;
     const link = document.createElement("a");
     link.href = downloadUrl;
     link.target = "_blank";
-    link.download = ""; // You can specify a file name if needed
+    link.download = "";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    setModalOpen(false);
   };
 
   return (
@@ -279,7 +291,9 @@ function Demo() {
                     )}
                     {msg.downloadUrl && (
                       <button
-                        onClick={() => handleDatasetDownload(msg.downloadUrl!)}
+                        onClick={() =>
+                          handleDatasetDownload(msg.downloadUrl!, "Dataset")
+                        }
                         style={{
                           padding: "4px 8px",
                           backgroundColor: "#28a745",
@@ -512,7 +526,12 @@ function Demo() {
                 )}
                 {result.downloadUrl && (
                   <button
-                    onClick={() => handleDatasetDownload(result.downloadUrl!)}
+                    onClick={() =>
+                      handleDatasetDownload(
+                        result.downloadUrl!,
+                        result.title || "Datasett"
+                      )
+                    }
                     style={{
                       padding: "4px 8px",
                       backgroundColor: "#007bff",
@@ -530,6 +549,15 @@ function Demo() {
           ))}
         </div>
       </Rnd>
+      <DatasetDownloadModal
+        isOpen={modalOpen}
+        handleClose={() => setModalOpen(false)}
+        handleDownload={handleConfirmDownload}
+        datasetName={datasetName}
+        datasetLink={downloadUrl || ""}
+        fileSize={fileSize}
+        formatInfo={formatInfo}
+      />
     </div>
   );
 }
