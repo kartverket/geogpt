@@ -24,6 +24,7 @@ interface SearchResult {
   restricted?: boolean;
 }
 
+// Prop for the DatasetLink
 type DatasetLink = {
   name: string;
   url: string;
@@ -33,7 +34,9 @@ type DatasetLink = {
 const INITIAL_MAP_URL =
   "https://norgeskart.no/geoportal/#!?zoom=4.6366666666666685&lon=168670.22&lat=6789452.95&wms=https:%2F%2Fnve.geodataonline.no%2Farcgis%2Fservices%2FSkredKvikkleire2%2FMapServer%2FWMSServer&project=geonorge&layers=1002";
 
+// URL for searching datasets on Geonorge
 const GEONORGE_SEARCH_URL = 'https://kartkatalog.geonorge.no/search';
+// Styles for the dataset links
 const LINK_STYLES = {
   color: '#2563eb',
   textDecoration: 'none',
@@ -335,7 +338,7 @@ function Demo() {
                 prefix = "System: ";
                 rest = content.slice("System: ".length);
               }
-              rest = rest.replace(/\*\*(.*?)\*\*/g, (_, datasetName) => formatDatasetLink(datasetName));
+              rest = rest.replace(/\*\*(.*?)\*\*/g, (_, datasetName) => formatDatasetLink(datasetName)); // Dataset link format.
 
               return (
                 <div
