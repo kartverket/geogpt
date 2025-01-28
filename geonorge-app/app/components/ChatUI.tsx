@@ -7,24 +7,23 @@ import { initializeWebSocket, MessageType } from "../utils/websocket";
 // Components
 import TypingIndicator from "./TypingIndicator";
 import ChatMessageItem from "./ChatMessageItem";
+import DatasetDownloadModal from "./DatasetDownloadModal";
 
 // Types
 import { ChatMessage } from "../types/ChatMessage";
 
-// Material-UI Icons
-import {
-  Box,
-  Button,
-  IconButton,
-  TextField,
-  Typography,
-  Fab,
-} from "@mui/material";
+// Icons
 import { ExpandLess, ExpandMore, Send, Chat } from "@mui/icons-material";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import CloseIcon from "@mui/icons-material/Close";
+import { Button } from "@/components/ui/button";
 
 interface ChatUIProps {
   webSocketUrl: string;
 }
+
+const INITIAL_MAP_URL =
+  "https://norgeskart.no/geoportal/#!?zoom=4.6366666666666685&lon=168670.22&lat=6789452.95&wms=https:%2F%2Fnve.geodataonline.no%2Farcgis%2Fservices%2FSkredKvikkleire2%2FMapServer%2FWMSServer&project=geonorge&layers=1002";
 
 const ChatUI: React.FC<ChatUIProps> = ({ webSocketUrl }) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -33,6 +32,17 @@ const ChatUI: React.FC<ChatUIProps> = ({ webSocketUrl }) => {
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const [showAlert, setShowAlert] = useState(true);
+
+  const [iframeSrc, setIframeSrc] = useState(INITIAL_MAP_URL);
+  const [forceUpdate, setForceUpdate] = useState(0);
+
+  //Modal states for dataset download
+  const [modalOpen, setModalOpen] = useState(false);
+  const [downloadUrl, setDownloadUrl] = useState("");
+  const [datasetName, setDatasetName] = useState("");
+  const [datasetLink, setDatasetLink] = useState("");
+  const [fileSize, setFileSize] = useState("");
 
   const toggleExpand = () => setIsExpanded((prev) => !prev);
 
@@ -46,7 +56,15 @@ const ChatUI: React.FC<ChatUIProps> = ({ webSocketUrl }) => {
         setChatHistory((prev) => {
           const lastMsg = prev[prev.length - 1];
           if (!lastMsg || lastMsg.type !== "streaming") {
-            return [...prev, { type: "streaming", content: payload }];
+            return [
+              ...prev,
+              {
+                type: "streaming",
+                content: payload,
+                wmsUrl: "",
+                downloadUrl: "",
+              },
+            ];
           } else {
             const updated: ChatMessage = {
               ...lastMsg,
@@ -65,6 +83,8 @@ const ChatUI: React.FC<ChatUIProps> = ({ webSocketUrl }) => {
           const converted: ChatMessage = {
             type: "text",
             content: lastMsg.content,
+            wmsUrl: lastMsg.wmsUrl || "",
+            downloadUrl: lastMsg.downloadUrl || "",
           };
           return [...prev.slice(0, -1), converted];
         });
@@ -73,14 +93,26 @@ const ChatUI: React.FC<ChatUIProps> = ({ webSocketUrl }) => {
       case "userMessage":
         setChatHistory((prev) => [
           ...prev,
-          { type: "text", content: payload, align: "flex-end" },
+          {
+            type: "text",
+            content: payload,
+            align: "flex-end",
+            wmsUrl: "",
+            downloadUrl: "",
+          },
         ]);
         break;
 
       case "systemMessage":
         setChatHistory((prev) => [
           ...prev,
-          { type: "text", content: payload, align: "flex-start" },
+          {
+            type: "text",
+            content: payload,
+            align: "flex-start",
+            wmsUrl: "",
+            downloadUrl: "",
+          },
         ]);
         break;
 
@@ -91,6 +123,8 @@ const ChatUI: React.FC<ChatUIProps> = ({ webSocketUrl }) => {
             type: "image",
             imageUrl: payload.datasetImageUrl,
             align: "flex-start",
+            downloadUrl: payload.datasetDownloadUrl,
+            wmsUrl: payload.wmsUrl,
           },
         ]);
         break;
@@ -125,175 +159,172 @@ const ChatUI: React.FC<ChatUIProps> = ({ webSocketUrl }) => {
     if (e.key === "Enter") handleSend();
   };
 
+  const replaceIframe = (wmsUrl: string) => {
+    if (!wmsUrl || wmsUrl === "NONE" || wmsUrl.toLowerCase() === "none") {
+      alert(`Invalid or missing WMS URL: ${wmsUrl || "none provided"}`);
+      return;
+    }
+    setIframeSrc(wmsUrl);
+    setForceUpdate((prev) => prev + 1);
+  };
+
+  const handleConfirmDownload = () => {
+    if (!downloadUrl) return;
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.target = "_blank";
+    link.download = "";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setModalOpen(false);
+  };
+
+  const handleView = (wmsUrl: string) => {
+    replaceIframe(wmsUrl);
+  };
+
+  const handleDownload = (downloadUrl: string, datasetName: string) => {
+    setDownloadUrl(downloadUrl);
+    setDatasetName(datasetName);
+    setFileSize(fileSize);
+    setModalOpen(true);
+  };
+
   return (
     <>
-      <Box
-        sx={{
-          position: "fixed",
-          bottom: 25,
-          right: 12,
-          width: isExpanded ? { xs: 370, sm: 450, md: 500, lg: 600 } : 0,
-          height: isExpanded ? { xs: 500, sm: 600, md: 700, lg: 600 } : 0,
-          transition: "all 0.3s ease",
-          overflow: "hidden",
-          borderRadius: 2,
-          border: "1px solid #E0E0E0",
-          backgroundColor: "#fff",
-          zIndex: 400,
-        }}
-      >
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            paddingX: "8px",
-            paddingTop: "8px",
+      <div style={{ height: "100vh", width: "100vw", position: "relative" }}>
+        <iframe
+          key={forceUpdate}
+          src={iframeSrc}
+          style={{
+            width: "100%",
+            height: "100%",
+            border: "none",
+            position: "absolute",
+            zIndex: 0,
           }}
+          title="Geo Map"
+        />
+        <div
+          className={`fixed bottom-6 right-3 transition-all duration-300 overflow-hidden rounded-lg border border-gray-300 bg-white z-50 ${
+            isExpanded
+              ? "w-[370px] sm:w-[450px] md:w-[400px] lg:w-[550px] h-[500px] sm:h-[600px] md:h-[700px] lg:h-[570px]"
+              : "w-0 h-0"
+          }`}
         >
-          <Box sx={{ display: "flex", alignItems: "center" }}>
-            <Image
-              src="/geonorge-logo.png"
-              alt="GeoGPT"
-              width={64}
-              height={64}
-            />
-            <Typography
-              variant="h5"
-              sx={{ color: "#333", fontWeight: "500", marginLeft: "8px" }}
-            >
-              GeoGPT
-            </Typography>
-          </Box>
-          <IconButton onClick={toggleExpand} sx={{ color: "#333" }}>
-            {isExpanded ? <ExpandMore /> : <ExpandLess />}
-          </IconButton>
-        </Box>
-
-        {isExpanded && (
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              height: "calc(100% - 50px)",
-            }}
-          >
-            <Box
-              sx={{
-                flex: 1,
-                overflowY: "auto",
-                padding: "8px",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "flex-start",
-              }}
-            >
-              {chatHistory.map((msg, index) => (
-                <ChatMessageItem key={index} message={msg} />
-              ))}
-              {isLoading && (
-                <Box
-                  sx={{
-                    marginBottom: "8px",
-                    padding: "8px",
-                    paddingX: "16px",
-                    fontSize: "14px",
-                    backgroundColor: "#f3f3f3",
-                    borderRadius: "24px",
-                    width: "fit-content",
-                    alignSelf: "flex-start",
-                  }}
-                >
-                  <TypingIndicator />
-                </Box>
-              )}
-              <div ref={chatEndRef} />
-            </Box>
-            {chatHistory.length === 0 && (
-              <Box
-                sx={{
-                  textAlign: "center",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                }}
-              >
-                <Image
-                  src="/geonorge-logo.png"
-                  alt="GeoGPT"
-                  width={150}
-                  height={150}
-                />
-                <Typography
-                  variant="h6"
-                  sx={{
-                    color: "#333",
-                    marginBottom: "12px",
-                    fontWeight: "600",
-                  }}
-                >
-                  Hva kan jeg hjelpe deg med?
-                </Typography>
-              </Box>
-            )}
-            <Box sx={{ display: "flex", alignItems: "center", padding: "8px" }}>
-              <TextField
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Skriv en melding..."
-                variant="outlined"
-                size="small"
-                fullWidth
-                sx={{
-                  marginRight: "8px",
-                  marginBottom: "8px",
-                  "& .MuiOutlinedInput-root": {
-                    "& fieldset": { borderColor: "#E0E0E0" },
-                    "&:hover fieldset": { borderColor: "#4F4F4F" },
-                    "&.Mui-focused fieldset": { borderColor: "#4F4F4F" },
-                    "& input": { fontSize: "14px" },
-                  },
-                }}
-                onKeyDown={handleKeyPress}
+          <div className="flex items-center justify-between px-2 pt-2">
+            <div className="flex items-center">
+              <Image
+                src="/geonorge-logo.png"
+                alt="GeoGPT"
+                width={78}
+                height={78}
               />
-              <Button
-                variant="contained"
-                onClick={handleSend}
-                sx={{
-                  marginBottom: "8px",
-                  minWidth: "70px",
-                  minHeight: "37px",
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  backgroundColor: "#333",
-                  "&:hover": { backgroundColor: "#444" },
-                }}
-              >
-                <Send sx={{ color: "#fff" }} />
-              </Button>
-            </Box>
-          </Box>
-        )}
-      </Box>
+              <h5 className="ml-2 text-2xl  text-color-gn-secondary">GeoGPT</h5>
+            </div>
+            <button onClick={toggleExpand} className="text-color-gn-secondary">
+              {isExpanded ? <ExpandMore /> : <ExpandLess />}
+            </button>
+          </div>
 
-      {!isExpanded && (
-        <Fab
-          sx={{
-            position: "fixed",
-            bottom: 35,
-            right: 35,
-            width: 64,
-            height: 64,
-            borderRadius: 12,
-            backgroundColor: "#333",
-            "&:hover": { backgroundColor: "#444" },
-          }}
-          onClick={toggleExpand}
-        >
-          <Chat sx={{ color: "#fff", fontSize: 28 }} />
-        </Fab>
-      )}
+          {isExpanded && (
+            <div className="flex flex-col h-[calc(100%-50px)]">
+              <div className="flex-1 overflow-y-auto p-2 flex flex-col items-start">
+                {chatHistory.map((msg, index) => (
+                  <ChatMessageItem
+                    key={index}
+                    onDatasetGeneration={(extractedName: string) =>
+                      setDatasetName(extractedName)
+                    }
+                    onDatasetLinkGeneration={(formattedLink: string) =>
+                      setDatasetLink(formattedLink)
+                    }
+                    message={msg}
+                    onView={handleView}
+                    onDownload={(downloadUrl: string) =>
+                      handleDownload(downloadUrl, "Datasett")
+                    }
+                  />
+                ))}
+                {isLoading && (
+                  <div className="mb-2 p-2 px-4 text-sm bg-white rounded-full self-start">
+                    <TypingIndicator />
+                  </div>
+                )}
+                <div ref={chatEndRef} />
+              </div>
+              {chatHistory.length === 0 && (
+                <div className="text-center flex flex-col items-center">
+                  <Image
+                    src="/geonorge-logo.png"
+                    alt="GeoGPT"
+                    width={150}
+                    height={150}
+                  />
+                  <h6 className="mb-3 text-xl font-semibold text-color-gn-secondary">
+                    Hva kan jeg hjelpe deg med?
+                  </h6>
+                </div>
+              )}
+              <div className="flex items-center p-2">
+                <input
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Skriv en melding..."
+                  className="flex-1 p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-gray-500"
+                  onKeyDown={handleKeyPress}
+                />
+                <Button
+                  onClick={handleSend}
+                  className="ml-2 m-2 flex min-h-[37px] min-w-[70px] items-center justify-center rounded-lg bg-color-gn-secondary p-2 text-white "
+                >
+                  <Send />
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {!isExpanded && (
+          <div className="fixed bottom-40 right-6 flex flex-col items-end space-y-0">
+            {showAlert && (
+              <Alert className="relative p-4 bg-white border border-gray-300 rounded-lg shadow-md">
+                <button
+                  className="absolute top-2 right-2 text-gray-600 hover:text-gray-800"
+                  onClick={() => setShowAlert(false)}
+                >
+                  <CloseIcon fontSize="small" />
+                </button>
+                <AlertTitle className="text-gray-800 font-semibold">
+                  Prøv ut vår Chatbot
+                </AlertTitle>
+                <AlertDescription className="text-gray-600">
+                  Klikk på ikonet for å starte en samtale.
+                </AlertDescription>
+              </Alert>
+            )}
+            <div className="relative">
+              <button
+                className="absolute right-0 -top-4 w-16 h-16 rounded-full bg-color-gn-primarylight hover:bg-color-gn-primary flex justify-center items-center shadow-lg transition-transform transform hover:scale-105"
+                onClick={toggleExpand}
+              >
+                <Chat className="text-white text-2xl" />
+              </button>
+            </div>
+          </div>
+        )}
+        <DatasetDownloadModal
+          isOpen={modalOpen}
+          handleClose={() => setModalOpen(false)}
+          handleDownload={handleConfirmDownload}
+          title="Bekreft nedlasting"
+          datasetName={datasetName}
+          datasetLink={datasetLink}
+          datasetDownloadLink={downloadUrl}
+          fileSize={fileSize}
+        />
+      </div>
     </>
   );
 };

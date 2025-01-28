@@ -1,8 +1,13 @@
 "use client";
 import "./globals.css";
-import theme from "./components/Theme";
-import { ThemeProvider } from "@emotion/react";
-import { CssBaseline } from "@mui/material";
+import { Inter } from "next/font/google";
+
+// Load Inter font with specific weights
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
+  variable: "--font-inter", // Add a CSS variable for the font
+});
 
 export default function RootLayout({
   children,
@@ -10,16 +15,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={inter.variable}>
       <head>
         <link rel="icon" href="https://kartkatalog.geonorge.no/favicon.ico" />
       </head>
-      <body className="antialiased">
-        <ThemeProvider theme={theme}>
-          <CssBaseline />
-          {children}
-        </ThemeProvider>
-      </body>
+      <body className="antialiased">{children}</body>
     </html>
   );
 }
