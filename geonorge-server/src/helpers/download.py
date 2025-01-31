@@ -1,7 +1,7 @@
 # download.py
 import asyncio
 import aiohttp
-from .fetch_valid_download_api_data import get_wms  
+from helpers.fetch_valid_download_api_data import get_wms  
 from typing import Any
 
 async def fetch_area_data(uuid: str) -> list[dict]:
@@ -26,9 +26,9 @@ async def fetch_area_data(uuid: str) -> list[dict]:
             return await response.json()
 
 async def dataset_has_download(uuid: str) -> bool:
-    print(f"Checking if dataset with UUID: {uuid} has downloads...")
+    # print(f"Checking if dataset with UUID: {uuid} has downloads...")
     api_json = await fetch_area_data(uuid)
-    print(f"API response for UUID {uuid}: {api_json}")
+
 
     # If there's at least one object in the list, we consider it downloadable
     return len(api_json) > 0
@@ -54,7 +54,7 @@ async def get_standard_or_first_format(uuid: str) -> dict[str, Any]:
     usage_purpose = "GeoGPT"
 
     api_json = await fetch_area_data(uuid)
-    areas = api_json  # already a list of dict
+    areas = api_json 
 
     if not areas:
         print("No valid area data found.")
@@ -98,10 +98,10 @@ async def get_standard_or_first_format(uuid: str) -> dict[str, Any]:
     format_type = fmt_obj.get("type", "")
 
     # Debug logs
-    print(f"The standard Area: {area_name}, code: {area_code}, type: {area_type}")
-    print(f"The standard Projection: {projection_name}, code: {projection_code}, cs: {projection_codespace}")
-    print(f"The standard Format: {format_name}, code: {format_code}, type: {format_type}")
-    print(f"UserGroup: {user_group}, UsagePurpose: {usage_purpose}")
+    # print(f"The standard Area: {area_name}, code: {area_code}, type: {area_type}")
+    # print(f"The standard Projection: {projection_name}, code: {projection_code}, cs: {projection_codespace}")
+    # print(f"The standard Format: {format_name}, code: {format_code}, type: {format_type}")
+    # print(f"UserGroup: {user_group}, UsagePurpose: {usage_purpose}")
 
     return {
         "areaName": area_name,
@@ -126,10 +126,10 @@ async def get_download_url(metadata_uuid: str, download_formats: dict[str, Any])
     software_client_version = "0.1.0"
 
     # Debug logs
-    print(f"Area: {download_formats.get('areaName')}, {download_formats.get('areaCode')}, {download_formats.get('areaType')}")
-    print(f"Projection: {download_formats.get('projectionName')}, {download_formats.get('projectionCode')}, {download_formats.get('projectionCodespace')}")
-    print(f"Format: {download_formats.get('formatName')}, {download_formats.get('formatCode')}, {download_formats.get('formatType')}")
-    print(f"UserGroup: {download_formats.get('userGroup')}, UsagePurpose: {download_formats.get('usagePurpose')}")
+    # print(f"Area: {download_formats.get('areaName')}, {download_formats.get('areaCode')}, {download_formats.get('areaType')}")
+    # print(f"Projection: {download_formats.get('projectionName')}, {download_formats.get('projectionCode')}, {download_formats.get('projectionCodespace')}")
+    # print(f"Format: {download_formats.get('formatName')}, {download_formats.get('formatCode')}, {download_formats.get('formatType')}")
+    # print(f"UserGroup: {download_formats.get('userGroup')}, UsagePurpose: {download_formats.get('usagePurpose')}")
 
     order_request = {
         "email": email,
@@ -183,13 +183,16 @@ async def get_download_url(metadata_uuid: str, download_formats: dict[str, Any])
             else:
                 return None
 
-async def get_dataset_download_and_wms_status(vdb_search_response: list[dict]) -> list[dict]:
+async def get_dataset_download_and_wms_status(vdb_search_response: list[tuple]) -> list[dict]:
     """
     For each item in vdb_search_response, fetch:
       - The raw area data (downloadFormats)
       - The WMS URL
       - A direct downloadUrl if the dataset supports it (using a default/first area/format).
     """
+    # Convert tuples to dictionaries
+    field_names = ['uuid', 'title', 'abstract', 'image', 'distance']
+    dict_response = [dict(zip(field_names, row)) for row in vdb_search_response]
 
     async def enrich_dataset(dataset: dict) -> dict:
         uuid = dataset.get("uuid")
@@ -217,11 +220,10 @@ async def get_dataset_download_and_wms_status(vdb_search_response: list[dict]) -
                             **dataset,
                             "downloadFormats": formats_api_response,
                             "wmsUrl": wms_url,
-                            "downloadUrl": None,       # no direct URL
-                            "restricted": True         # or "isRestricted": True
+                            "downloadUrl": None,       
+                            "restricted": True       
                         }
                     else:
-                        # If it's some other error, re-raise or handle differently
                         raise
 
         # Return the entire object + extra info
@@ -232,8 +234,8 @@ async def get_dataset_download_and_wms_status(vdb_search_response: list[dict]) -
             "downloadUrl": download_url,  # direct link, or None if not possible
         }
 
-    # Run them all in parallel
-    tasks = [enrich_dataset(ds) for ds in vdb_search_response]
+    # Run them all in parallel with the converted dictionaries
+    tasks = [enrich_dataset(ds) for ds in dict_response]
     results = await asyncio.gather(*tasks)
     return results
 
