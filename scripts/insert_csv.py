@@ -1,10 +1,17 @@
 import csv
 import psycopg2
 from psycopg2.extras import execute_batch
-from config import config
+import config
 
 # Databasekonfigurasjon
-db_config = config["db"]
+db_config = {
+    "host": config.DB_HOST,
+    "port": config.DB_PORT,
+    "name": config.DB_NAME,
+    "user": config.DB_USER,
+    "password": config.DB_PASSWORD
+}
+
 connection = psycopg2.connect(
     host=db_config["host"],
     port=db_config["port"],
