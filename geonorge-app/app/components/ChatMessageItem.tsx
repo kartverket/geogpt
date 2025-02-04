@@ -21,7 +21,9 @@ interface ChatMessageItemProps {
 }
 
 const formatMessageContent = (content: string) => {
-  return content.replace(/\*\*(.*?)\*\*/g, (_, datasetName) =>
+  // Ensure content is a string
+  const stringContent = String(content || "");
+  return stringContent.replace(/\*\*(.*?)\*\*/g, (_, datasetName) =>
     formatDatasetLink(datasetName)
   );
 };
@@ -79,7 +81,7 @@ const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
     }
 
     // For system messages, type letter by letter only if not already typed
-    if (!hasTypedRef.get(message.content)) {
+    if (!hasTypedRef.get(message.content || "")) {
       const typeNextLetter = () => {
         if (index <= text.length) {
           setDisplayedText(formatMessageContent(text.slice(0, index)));
@@ -89,7 +91,7 @@ const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
       };
 
       requestAnimationFrame(typeNextLetter);
-      hasTypedRef.set(message.content, true); // Set the ref to true after typing effect starts
+      hasTypedRef.set(message.content || "", true); // Set the ref to true after typing effect starts
     } else {
       // If already typed, just display the full text immediately
       setDisplayedText(formattedContent);
