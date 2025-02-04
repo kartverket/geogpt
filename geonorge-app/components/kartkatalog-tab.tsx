@@ -27,6 +27,7 @@ import {
   TooltipContent,
   TooltipProvider,
 } from "@/components/ui/tooltip";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface SearchResult {
   uuid: string;
@@ -34,6 +35,7 @@ interface SearchResult {
   wmsUrl?: string;
   downloadUrl?: string | null;
   restricted?: boolean;
+  selected?: boolean;
 }
 
 interface KartkatalogTabProps {
@@ -54,6 +56,7 @@ export function KartkatalogTab({
   const [searchResults, setSearchResults] = React.useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
   const [hasSearched, setHasSearched] = React.useState(false);
+  const [selectedDatasets, setSelectedDatasets] = React.useState<Set<string>>(new Set());
 
   React.useEffect(() => {
     if (ws) {
@@ -86,6 +89,38 @@ export function KartkatalogTab({
         payload: searchInput,
       })
     );
+  };
+
+  // Select/deselect dataset
+  const handleSelectDataset = (uuid: string) => {
+    setSelectedDatasets(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(uuid)) {
+        newSet.delete(uuid);
+      } else {
+        newSet.add(uuid);
+      }
+      return newSet;
+    });
+  };
+
+  // Bulk download selected datasets
+  const handleBulkDownload = async () => {
+    const selectedItems = searchResults.filter(
+      result => result.downloadUrl && selectedDatasets.has(result.uuid)
+    );
+    // Download each dataset, delay between each download to prevent browser blocking
+    for (let i = 0; i < selectedItems.length; i++) {
+      const result = selectedItems[i];
+      if (result.downloadUrl) {
+        onDatasetDownload(result.downloadUrl);
+        if (i < selectedItems.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1500));
+        }
+      }
+    }
+    
+    setSelectedDatasets(new Set()); // Clear after download
   };
 
   // Loading skeleton component
@@ -147,8 +182,23 @@ export function KartkatalogTab({
               </div>
             </div>
 
-            <ScrollArea className="h-[400px] ">
-              <div className="divide-y divide-gray-200 ">
+            <ScrollArea className="h-[400px]">
+              {selectedDatasets.size > 0 && (
+                <div className="sticky top-0 z-10 bg-white border-b border-gray-200 p-2 flex justify-between items-center">
+                  <span className="text-sm text-gray-600">
+                    {selectedDatasets.size} datasett valgt
+                  </span>
+                  <Button
+                    onClick={handleBulkDownload}
+                    size="sm"
+                    className="bg-[#404041] hover:bg-[#5c5c5d] text-white"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Last ned valgte
+                  </Button>
+                </div>
+              )}
+              <div className="divide-y divide-gray-200">
                 {isLoading ? (
                   // Show 3 loading skeletons while searching
                   <>
@@ -170,63 +220,74 @@ export function KartkatalogTab({
                       key={result.uuid}
                       className="px-4 py-3 hover:bg-[#F5F5F5] transition-colors"
                     >
-                      <a
-                        href={`https://kartkatalog.geonorge.no/metadata/${encodeURIComponent(
-                          result.title || "Dataset"
-                        )}/${result.uuid}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[15px] text-gray-900 hover:text-gray-600 mb-2 max-w-max underline underline-offset-4 flex items-center gap-1"
-                      >
-                        {result.title || "Dataset"}
-                        <ExternalLink className="h-4 w-4" />
-                      </a>
-                      <div className="flex gap-2">
-                        {result.wmsUrl && result.wmsUrl !== "None" ? (
-                          <button
-                            onClick={() =>
-                              result.wmsUrl && onReplaceIframe(result.wmsUrl)
-                            }
-                            className="px-3 py-1.5 text-sm bg-[#FF8B65] hover:bg-[#FE642F] text-white rounded-[2px] transition-colors flex items-center gap-1"
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1">
+                          <a
+                            href={`https://kartkatalog.geonorge.no/metadata/${encodeURIComponent(
+                              result.title || "Dataset"
+                            )}/${result.uuid}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[15px] text-gray-900 hover:text-gray-600 mb-2 max-w-max underline underline-offset-4 flex items-center gap-1"
                           >
-                            <Eye className="h-4 w-4" /> Vis
-                          </button>
-                        ) : (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
+                            {result.title || "Dataset"}
+                            <ExternalLink className="h-4 w-4" />
+                          </a>
+                          <div className="flex gap-2">
+                            {result.wmsUrl && result.wmsUrl !== "None" ? (
                               <button
-                                disabled
-                                className="px-3 py-1.5 text-sm bg-gray-100 text-gray-400 rounded-[2px] cursor-pointer flex items-center gap-1"
+                                onClick={() =>
+                                  result.wmsUrl && onReplaceIframe(result.wmsUrl)
+                                }
+                                className="px-3 py-1.5 text-sm bg-[#FF8B65] hover:bg-[#FE642F] text-white rounded-[2px] transition-colors flex items-center gap-1"
                               >
-                                <XCircle className="h-4 w-4" /> Utilgjengelig
+                                <Eye className="h-4 w-4" /> Vis
                               </button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              Dette datasettet kan ikke vises.
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
-                        {result.restricted && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button className="px-3 py-1.5 text-sm bg-red-100 text-red-600 rounded-[2px] flex items-center gap-1">
-                                <LockKeyhole className="h-4 w-4" /> Låst
+                            ) : (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    disabled
+                                    className="px-3 py-1.5 text-sm bg-gray-100 text-gray-400 rounded-[2px] cursor-pointer flex items-center gap-1"
+                                  >
+                                    <XCircle className="h-4 w-4" /> Utilgjengelig
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  Dette datasettet kan ikke vises.
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                            {result.restricted && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button className="px-3 py-1.5 text-sm bg-red-100 text-red-600 rounded-[2px] flex items-center gap-1">
+                                    <LockKeyhole className="h-4 w-4" /> Låst
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  Datasettet er låst og krever tilgang.
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                            {result.downloadUrl && (
+                              <button
+                                onClick={() =>
+                                  onDatasetDownload(result.downloadUrl!)
+                                }
+                                className="px-3 py-1.5 text-sm bg-[#404041] hover:bg-[#5c5c5d] text-white rounded-[2px] transition-colors flex items-center gap-1"
+                              >
+                                <Download className="h-4 w-4" /> Last ned
                               </button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              Datasettet er låst og krever tilgang.
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
+                            )}
+                          </div>
+                        </div>
                         {result.downloadUrl && (
-                          <button
-                            onClick={() =>
-                              onDatasetDownload(result.downloadUrl!)
-                            }
-                            className="px-3 py-1.5 text-sm bg-[#404041] hover:bg-[#5c5c5d] text-white rounded-[2px] transition-colors flex items-center gap-1"
-                          >
-                            <Download className="h-4 w-4" /> Last ned
-                          </button>
+                          <Checkbox
+                            checked={selectedDatasets.has(result.uuid)}
+                            onCheckedChange={() => handleSelectDataset(result.uuid)}
+                            className="mt-1"
+                          />
                         )}
                       </div>
                     </div>
