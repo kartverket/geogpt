@@ -23,6 +23,7 @@
     "@radix-ui/react-slot": "^1.1.1",
     "@radix-ui/react-tabs": "^1.1.2",
     "@radix-ui/react-tooltip": "^1.1.6",
+    "add": "^2.0.6",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "framer-motion": "^11.18.2",
@@ -35,10 +36,12 @@
     "react-rnd": "^10.4.14",
     "remark-gfm": "^4.0.0",
     "remeda": "^2.20.0",
+    "shadcn": "^2.3.0",
     "shiki": "^2.2.0",
     "sonner": "^1.7.4",
     "tailwind-merge": "^2.6.0",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "tooltip": "^1.6.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
