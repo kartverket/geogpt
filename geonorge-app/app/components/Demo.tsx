@@ -1,7 +1,17 @@
 "use client";
-import React, { useState, useEffect, useRef, FormEvent } from "react";
-import { Rnd } from "react-rnd";
-import DatasetDownloadModal from "./DatasetDownloadModal";
+
+import { useState, useEffect, useRef, type FormEvent } from "react";
+import { KartkatalogTab } from "@/components/kartkatalog-tab";
+// ShadCN UI components
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+// Import the full screen Chat component from the kit
+import { Chat as FullScreenChat } from "@/components/ui/chat";
+import { Maximize } from "lucide-react";
 
 type MessageType = {
   action: string;
@@ -25,38 +35,11 @@ interface SearchResult {
   restricted?: boolean;
 }
 
-// Prop for the DatasetLink
-type DatasetLink = {
-  name: string;
-  url: string;
-  styles: string;
-};
-
 const INITIAL_MAP_URL =
   "https://norgeskart.no/geoportal/#!?zoom=4.6366666666666685&lon=168670.22&lat=6789452.95&wms=https:%2F%2Fnve.geodataonline.no%2Farcgis%2Fservices%2FSkredKvikkleire2%2FMapServer%2FWMSServer&project=geonorge&layers=1002";
 
-// URL for searching datasets on Geonorge
-const GEONORGE_SEARCH_URL = 'https://kartkatalog.geonorge.no/search';
-// Styles for the dataset links
-const LINK_STYLES = {
-  color: '#2563eb',
-  textDecoration: 'none',
-  fontWeight: 'bold'
-} as const;
-
-const formatDatasetLink = (datasetName: string): string => {
-  const link: DatasetLink = {
-    name: datasetName,
-    url: `${GEONORGE_SEARCH_URL}?text=${encodeURIComponent(datasetName)}`,
-    styles: Object.entries(LINK_STYLES)
-      .map(([key, value]) => `${key}: ${value}`)
-      .join('; ')
-  };
-
-  return `<a href="${link.url}" target="_blank" style="${link.styles}">${link.name}</a>`;
-};
-
-function Demo() {
+function DemoV2() {
+  // Basic state
   const [iframeSrc, setIframeSrc] = useState(INITIAL_MAP_URL);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searchInput, setSearchInput] = useState("");
@@ -64,20 +47,14 @@ function Demo() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [forceUpdate, setForceUpdate] = useState(0);
+
+  // State for full screen mode and popover open state
+  const [isFullScreen, setIsFullScreen] = useState(false);
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+
   const chatEndRef = useRef<HTMLDivElement>(null);
-  
-  
 
-  // Drag and z-index states
-  const [chatDraggingZ, setChatDraggingZ] = useState(2);
-  const [searchDraggingZ, setSearchDraggingZ] = useState(1);
-
-  const [modalOpen, setModalOpen] = useState(false);
-  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
-  const [datasetName, setDatasetName] = useState("Datasett");
-  const [fileSize, setFileSize] = useState("10MB");
-  const [formatInfo, setFormatInfo] = useState("ZIP");
-
+  // Set up WebSocket and message handling
   useEffect(() => {
     const socket = new WebSocket("ws://localhost:8080");
     setWs(socket);
@@ -88,10 +65,10 @@ function Demo() {
     };
 
     socket.onopen = () => {
-      // Automatically trigger the search on socket connection
+      // Trigger an initial search on connection
       const initialSearchMessage = {
         action: "searchFormSubmit",
-        payload: "", // You can set a default payload or leave it empty
+        payload: "",
       };
       socket.send(JSON.stringify(initialSearchMessage));
     };
@@ -101,7 +78,7 @@ function Demo() {
     };
   }, []);
 
-  // Scroll chat to bottom whenever chatMessages change
+  // Scroll to bottom when new chat messages arrive
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
@@ -109,17 +86,24 @@ function Demo() {
   const handleServerMessage = (data: MessageType) => {
     const { action, payload } = data;
     console.log("Incoming action:", action, "payload:", payload);
-
     switch (action) {
       case "chatStream":
+        if (payload.isNewMessage && !payload.payload) break;
         setChatMessages((prev) => {
           const lastMsg = prev[prev.length - 1];
-          if (!lastMsg || lastMsg.type !== "streaming") {
-            return [...prev, { type: "streaming", content: payload }];
+          if (
+            !lastMsg ||
+            lastMsg.type !== "streaming" ||
+            payload.isNewMessage
+          ) {
+            return [
+              ...prev,
+              { type: "streaming", content: payload.payload || "" },
+            ];
           } else {
             const updated: ChatMessage = {
               ...lastMsg,
-              content: lastMsg.content + payload,
+              content: lastMsg.content + (payload.payload || ""),
             };
             return [...prev.slice(0, -1), updated];
           }
@@ -129,9 +113,7 @@ function Demo() {
       case "streamComplete":
         setChatMessages((prev) => {
           const lastMsg = prev[prev.length - 1];
-          if (!lastMsg || lastMsg.type !== "streaming") {
-            return prev;
-          }
+          if (!lastMsg || lastMsg.type !== "streaming") return prev;
           const systemMsg = `System: ${lastMsg.content}`;
           const converted: ChatMessage = { type: "text", content: systemMsg };
           return [...prev.slice(0, -1), converted];
@@ -161,41 +143,30 @@ function Demo() {
   };
 
   const replaceIframe = (wmsUrl: string) => {
-    // Validation checks
     if (!wmsUrl || wmsUrl === "NONE" || wmsUrl.toLowerCase() === "none") {
       alert(`Invalid or missing WMS URL: ${wmsUrl || "none provided"}`);
       return;
     }
-
-    // Valid URL - update iframe
     setIframeSrc(wmsUrl);
     setForceUpdate((prev) => prev + 1);
   };
 
-  const onSearchSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  // const onSearchSubmit = (e: FormEvent<HTMLFormElement>) => {
+  //   e.preventDefault();
+  //   if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  //   ws.send(
+  //     JSON.stringify({
+  //       action: "searchFormSubmit",
+  //       payload: searchInput,
+  //     })
+  //   );
+  // };
 
-    ws.send(
-      JSON.stringify({
-        action: "searchFormSubmit",
-        payload: searchInput,
-      })
-    );
-  };
-
+  // For the non-fullscreen chat submit handler
   const onChatSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
-
-    ws.send(
-      JSON.stringify({
-        action: "chatFormSubmit",
-        payload: chatInput,
-      })
-    );
-
-    // Add user message immediately
+    ws.send(JSON.stringify({ action: "chatFormSubmit", payload: chatInput }));
     setChatMessages((prev) => [
       ...prev,
       { type: "text", content: `You: ${chatInput}` },
@@ -203,26 +174,85 @@ function Demo() {
     setChatInput("");
   };
 
-  const onChatDragStart = () => {
-    setChatDraggingZ(2);
-    setSearchDraggingZ(1);
+  // Shared function for sending a message
+  const handleSendMessage = (message: string) => {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ action: "chatFormSubmit", payload: message }));
+    setChatMessages((prev) => [
+      ...prev,
+      { type: "text", content: `You: ${message}` },
+    ]);
   };
 
-  const onSearchDragStart = () => {
-    setSearchDraggingZ(2);
-    setChatDraggingZ(1);
+  // Full screen chat handlers
+  const fullScreenHandleSubmit = (
+    e?: { preventDefault?: () => void },
+    options?: { experimental_attachments?: FileList }
+  ) => {
+    if (e && e.preventDefault) {
+      e.preventDefault();
+    }
+    if (!chatInput.trim()) return;
+    handleSendMessage(chatInput);
+    setChatInput("");
   };
 
-  const handleDatasetDownload = (downloadUrl: string, datasetName: string) => {
-    setDownloadUrl(downloadUrl);
-    setDatasetName(datasetName);
-    setFileSize("Unknown size");
-    setFormatInfo("ZIP");
-    setModalOpen(true);
+  const fullScreenHandleInputChange = (
+    e: React.ChangeEvent<HTMLTextAreaElement>
+  ) => {
+    setChatInput(e.target.value);
   };
 
-  const handleConfirmDownload = () => {
-    if (!downloadUrl) return;
+  // Transform chatMessages to the shape expected by the FullScreenChat component.
+  // If the message is an image, include extra properties and set type to "image"
+  const transformMessagesForChatKit = () => {
+    return chatMessages.map((msg, idx) => {
+      if (msg.type === "image" && msg.imageUrl) {
+        return {
+          id: `msg-${idx}`,
+          type: "image" as const,
+          role: "assistant" as const,
+          imageUrl: msg.imageUrl,
+          wmsUrl: msg.wmsUrl || undefined, // Convert null to undefined
+          downloadUrl: msg.downloadUrl || undefined, // Convert null to undefined
+          content: "",
+        };
+      }
+      let role: "user" | "assistant" = "assistant";
+      let content = msg.content || "";
+      if (content.startsWith("You: ")) {
+        role = "user";
+        content = content.slice("You: ".length);
+      } else if (content.startsWith("System: ")) {
+        role = "assistant";
+        content = content.slice("System: ".length);
+      }
+      return {
+        id: `msg-${idx}`,
+        role,
+        content,
+        type: "text" as const,
+      };
+    });
+  };
+
+  // Suggestions for the full screen chat
+  const suggestions = [
+    "Hva er FKB?",
+    "Hvilke datasett er nyttige for byggesaksbehandlere?",
+    "Er det kvikkleire der jeg bor?",
+  ];
+
+  // Append function for suggestion prompts in full screen chat
+  const handleAppend = (message: { role: "user"; content: string }) => {
+    handleSendMessage(message.content);
+  };
+
+  const handleDatasetDownload = (downloadUrl: string) => {
+    if (!downloadUrl) {
+      console.error("No download URL provided.");
+      return;
+    }
     const link = document.createElement("a");
     link.href = downloadUrl;
     link.target = "_blank";
@@ -230,365 +260,218 @@ function Demo() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    setModalOpen(false);
   };
-  
+
+  // When entering full screen, close the popover
+  const enterFullScreen = () => {
+    setIsFullScreen(true);
+    setIsPopoverOpen(false);
+  };
+
+  // When exiting full screen, reopen the popover
+  const exitFullScreen = () => {
+    setIsFullScreen(false);
+    setIsPopoverOpen(true);
+  };
 
   return (
-    <div style={{ height: "100vh", width: "100vw", position: "relative" }}>
+    <div className="relative h-screen w-screen font-['Helvetica_Neue',_Arial,_sans-serif]">
       {/* Map Iframe */}
       <iframe
         key={forceUpdate}
         src={iframeSrc}
-        style={{
-          width: "100%",
-          height: "100%",
-          border: "none",
-          position: "absolute",
-          zIndex: 0,
-        }}
+        className="absolute inset-0 w-full h-full border-0 z-0"
         title="Geo Map"
       />
 
-      {/* Chat */}
-      <Rnd
-        bounds="window"
-        default={{ x: 20, y: 20, width: 300, height: 400 }}
-        style={{
-          zIndex: chatDraggingZ,
-          backgroundColor: "#ffffffee",
-          display: "flex",
-          flexDirection: "column",
-          border: "1px solid #ccc",
-          borderRadius: "6px",
-        }}
-        onDragStart={onChatDragStart}
-      >
-        <div
-          style={{
-            backgroundColor: "#eee",
-            cursor: "move",
-            padding: "4px",
-            textAlign: "center",
-          }}
-        >
-          <strong>GeoGPT Chat</strong>
-        </div>
-
-        <div
-          id="chatMessages"
-          style={{ flex: 1, padding: "8px", overflowY: "auto" }}
-        >
-          <div className="system-message">
-            Hei! Jeg er GeoGPT. Spør meg om geodata!
-          </div>
-
-          {chatMessages.map((msg, idx) => {
-            if (msg.type === "image" && msg.imageUrl) {
-              return (
-                <div
-                  key={idx}
-                  style={{
-                    margin: "4px 0",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                  }}
-                >
-                  <img
-                    src={msg.imageUrl}
-                    alt="Dataset"
-                    style={{
-                      maxWidth: "100%",
-                      height: "auto",
-                      marginBottom: "8px",
-                    }}
-                  />
-                  <div style={{ display: "flex", gap: "8px" }}>
-                    {msg.wmsUrl && (
-                      <button
-                        onClick={() => msg.wmsUrl && replaceIframe(msg.wmsUrl)}
-                        style={{
-                          padding: "4px 8px",
-                          backgroundColor: "#28a745",
-                          color: "#fff",
-                          border: "none",
-                          borderRadius: "4px",
-                          cursor: "pointer",
-                        }}
-                      >
-                        Vis
-                      </button>
-                    )}
-                    {msg.downloadUrl && (
-                      <button
-                        onClick={() =>
-                          handleDatasetDownload(msg.downloadUrl!, "Dataset")
-                        }
-                        style={{
-                          padding: "4px 8px",
-                          backgroundColor: "#28a745",
-                          color: "#fff",
-                          border: "none",
-                          borderRadius: "4px",
-                          cursor: "pointer",
-                        }}
-                      >
-                        Last ned datasett
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            } else {
-              let content = msg.content || "";
-              let prefix = "";
-              let rest = content;
-
-              if (content.startsWith("You: ")) {
-                prefix = "You: ";
-                rest = content.slice("You: ".length);
-              } else if (content.startsWith("System: ")) {
-                prefix = "System: ";
-                rest = content.slice("System: ".length);
-              }
-              rest = rest.replace(/\*\*(.*?)\*\*/g, (_, datasetName) => formatDatasetLink(datasetName)); // Dataset link format.
-
-              return (
-                <div
-                  key={idx}
-                  style={{
-                    margin: "4px 0",
-                    padding: "8px",
-                    backgroundColor: "#f8f9fa",
-                    borderRadius: "6px",
-                    boxShadow: "0px 1px 3px rgba(0, 0, 0, 0.2)",
-                    whiteSpace: "pre-wrap",
-                  }}
-                >
-                  {prefix && <strong>{prefix}</strong>}
-                  <span dangerouslySetInnerHTML={{ __html: rest }} />
-                </div>
-              );
-            }
-          })}
-          <div ref={chatEndRef} />
-        </div>
-
-        <form
-          onSubmit={onChatSubmit}
-          style={{
-            display: "flex",
-            borderTop: "1px solid #ddd",
-            padding: "8px",
-          }}
-        >
-          <input
-            type="text"
-            value={chatInput}
-            onChange={(e) => setChatInput(e.target.value)}
-            placeholder="Spør GeoGPT..."
-            style={{
-              flex: 1,
-              padding: "8px",
-              border: "1px solid #ccc",
-              borderRadius: "4px",
-              marginRight: "8px",
-            }}
-          />
-          <button
-            type="submit"
-            style={{
-              padding: "8px 16px",
-              backgroundColor: "#007bff",
-              color: "#fff",
-              border: "none",
-              borderRadius: "4px",
-              cursor: "pointer",
-            }}
-          >
-            Send
-          </button>
-        </form>
-      </Rnd>
-
-      {/* Kartkatalog */}
-      <Rnd
-        bounds="window"
-        default={{ x: 350, y: 20, width: 300, height: 400 }}
-        style={{
-          zIndex: searchDraggingZ,
-          background: "#fff",
-          border: "1px solid #ddd",
-          borderRadius: "6px",
-          display: "flex",
-          flexDirection: "column",
-        }}
-        onDragStart={onSearchDragStart}
-      >
-        <div
-          style={{
-            padding: "8px",
-            backgroundColor: "#eee",
-            textAlign: "center",
-            fontWeight: "bold",
-          }}
-        >
-          Kartkatalogen
-        </div>
-        <form
-          onSubmit={onSearchSubmit}
-          style={{
-            padding: "8px",
-            borderBottom: "1px solid #ddd",
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-          }}
-        >
-          <input
-            type="text"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Søk etter datasett..."
-            style={{
-              flex: 1,
-              padding: "8px",
-              border: "1px solid #ccc",
-              borderRadius: "4px",
-              outline: "none",
-            }}
-          />
-          <button
-            type="submit"
-            style={{
-              padding: "8px 16px",
-              backgroundColor: "#007bff",
-              color: "#fff",
-              border: "none",
-              borderRadius: "4px",
-              cursor: "pointer",
-              whiteSpace: "nowrap",
-            }}
-          >
-            Søk
-          </button>
-        </form>
-        <div style={{ flex: 1, overflowY: "auto", padding: "8px" }}>
-          {searchResults.map((result) => (
-            <div
-              key={result.uuid}
-              style={{
-                marginBottom: "8px",
-                border: "1px solid #ddd",
-                borderRadius: "6px",
-                padding: "8px",
-                boxShadow: "0px 1px 3px rgba(0, 0, 0, 0.1)",
-              }}
-            >
-              <a
-                href={`https://kartkatalog.geonorge.no/metadata/${encodeURIComponent(
-                  result.title || "Dataset"
-                )}/${result.uuid}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  color: "#2563eb",
-                  textDecoration: "none",
-                  cursor: "pointer",
-                  display: "inline-block",
-                  marginBottom: "4px",
-                  fontSize: "1.1em",
-                  transition: "color 0.2s ease",
-                }}
-                className="hover:text-blue-800 hover:underline"
-              >
-                <strong>{result.title || "Dataset"}</strong>
-              </a>
-              <br />
-              <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
-                {result.wmsUrl && result.wmsUrl !== "None" ? (
-                  <button
-                    onClick={() =>
-                      result.wmsUrl && replaceIframe(result.wmsUrl)
-                    }
-                    style={{
-                      padding: "4px 16px 4px 16px",
-                      backgroundColor: "#28a745",
-                      color: "#fff",
-                      border: "none",
-                      borderRadius: "4px",
-                      cursor: "pointer",
-                    }}
-                  >
-                    Vis
-                  </button>
-                ) : (
-                  <button
-                    style={{
-                      padding: "4px 8px",
-                      backgroundColor: "#dc3545",
-                      color: "#fff",
-                      border: "none",
-                      borderRadius: "4px",
-                      cursor: "not-allowed",
-                      opacity: 0.65,
-                    }}
-                    disabled
-                  >
-                    Utilgjengelig (Kan ikke vises)
-                  </button>
-                )}
-                {result.restricted && (
-                  <button
-                    style={{
-                      padding: "4px 8px",
-                      backgroundColor: "red",
-                      color: "#fff",
-                      border: "none",
-                      borderRadius: "4px",
-                      cursor: "pointer",
-                    }}
-                  >
-                    Låst (krever innlogging)
-                  </button>
-                )}
-                {result.downloadUrl && (
-                  <button
-                    onClick={() =>
-                      handleDatasetDownload(
-                        result.downloadUrl!,
-                        result.title || "Datasett"
-                      )
-                    }
-                    style={{
-                      padding: "4px 8px",
-                      backgroundColor: "#007bff",
-                      color: "#fff",
-                      border: "none",
-                      borderRadius: "4px",
-                      cursor: "pointer",
-                    }}
-                  >
-                    Last ned
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </Rnd>
-      <DatasetDownloadModal
-        isOpen={modalOpen}
-        handleClose={() => setModalOpen(false)}
-        handleDownload={handleConfirmDownload}
-        datasetName={datasetName}
-        datasetLink={downloadUrl || ""}
-        fileSize={fileSize}
-        formatInfo={formatInfo}
+      {/* KartkatalogTab Component */}
+      <KartkatalogTab
+        onReplaceIframe={replaceIframe}
+        onDatasetDownload={handleDatasetDownload}
+        ws={ws}
       />
+
+      {/* Non-fullscreen Popover Chat UI (rendered only when not in full screen) */}
+      {!isFullScreen && (
+        <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              className="fixed bottom-6 right-6 rounded-full p-0 h-12 w-12 flex items-center justify-center shadow-lg"
+              variant="default"
+            >
+              {/* Chat icon SVG */}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 10h.01M12 10h.01M16 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent
+            side="top"
+            align="end"
+            className="w-96 h-[28rem] p-0 overflow-hidden shadow-lg rounded-lg"
+          >
+            <div className="flex flex-col h-full bg-white">
+              <div className="bg-gray-200 px-4 py-2 flex justify-between items-center">
+                <span className="font-semibold">GeoGPT Chat</span>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={enterFullScreen}>
+                    <Maximize />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="px-4"
+                    onClick={() => setIsPopoverOpen(false)}
+                  >
+                    X
+                  </Button>
+                </div>
+              </div>
+
+              <div
+                id="chatMessages"
+                className="flex-1 p-4 overflow-y-auto space-y-2"
+              >
+                <div className="text-sm text-gray-600">
+                  Hei! Jeg er GeoGPT. Spør meg om geodata!
+                </div>
+                {chatMessages.map((msg, idx) => {
+                  // This is the non-fullscreen rendering logic (with left/right alignment)
+                  if (msg.type === "image" && msg.imageUrl) {
+                    return (
+                      <div key={idx} className="flex flex-col space-y-2 my-2">
+                        <img
+                          src={msg.imageUrl || "/placeholder.svg"}
+                          alt="Dataset"
+                          className="max-w-full h-auto rounded"
+                        />
+                        <div className="flex gap-2">
+                          {msg.wmsUrl && (
+                            <Button
+                              onClick={() =>
+                                msg.wmsUrl && replaceIframe(msg.wmsUrl)
+                              }
+                              className="bg-green-500 text-white text-xs"
+                            >
+                              Vis
+                            </Button>
+                          )}
+                          {msg.downloadUrl && (
+                            <Button
+                              onClick={() =>
+                                handleDatasetDownload(msg.downloadUrl!)
+                              }
+                              className="bg-green-500 text-white text-xs"
+                            >
+                              Last ned datasett
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  } else {
+                    // Determine alignment based on message content
+                    let content = msg.content || "";
+                    let isUser = false;
+                    if (content.startsWith("You: ")) {
+                      isUser = true;
+                      content = content.slice("You: ".length);
+                    } else if (content.startsWith("System: ")) {
+                      content = content.slice("System: ".length);
+                    }
+                    // Replace markdown bold syntax
+                    content = content.replace(
+                      /\*\*(.*?)\*\*/g,
+                      "<strong>$1</strong>"
+                    );
+                    return (
+                      <div
+                        key={idx}
+                        className={`flex ${
+                          isUser ? "justify-end" : "justify-start"
+                        }`}
+                      >
+                        <div
+                          className={`max-w-[80%] p-2 rounded shadow text-sm whitespace-pre-wrap ${
+                            isUser ? "bg-blue-100" : "bg-gray-100"
+                          }`}
+                        >
+                          {isUser ? (
+                            <strong>You:</strong>
+                          ) : (
+                            <strong>System:</strong>
+                          )}
+                          <span
+                            className="ml-1"
+                            dangerouslySetInnerHTML={{ __html: content }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  }
+                })}
+                <div ref={chatEndRef} />
+              </div>
+
+              <form
+                onSubmit={onChatSubmit}
+                className="flex items-center border-t border-gray-300 p-2"
+              >
+                <input
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  placeholder="Spør GeoGPT..."
+                  className="flex-1 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <Button type="submit" className="ml-2 text-sm">
+                  Send
+                </Button>
+              </form>
+            </div>
+          </PopoverContent>
+        </Popover>
+      )}
+
+      {/* Full Screen Chat UI */}
+      {isFullScreen && (
+        <div className="fixed inset-0 z-50 bg-white ">
+          <div className="flex justify-between items-center p-4 border-b container mx-auto">
+            <h2 className="text-xl font-semibold">GeoGPT Chat</h2>
+            <Button variant="outline" onClick={exitFullScreen}>
+              Exit Full Screen
+            </Button>
+          </div>
+          <div className="p-4 h-full">
+            <FullScreenChat
+              messages={transformMessagesForChatKit()}
+              handleSubmit={fullScreenHandleSubmit}
+              input={chatInput}
+              handleInputChange={fullScreenHandleInputChange}
+              isGenerating={false}
+              stop={() => {}}
+              append={handleAppend}
+              suggestions={suggestions}
+              onWmsClick={replaceIframe}
+              onDownloadClick={handleDatasetDownload}
+              onExitFullScreen={exitFullScreen}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-export default Demo;
+export default DemoV2;
