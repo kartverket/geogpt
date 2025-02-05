@@ -1,12 +1,11 @@
 import pandas as pd
 import requests
 import json
-from config import config  # Importer config
-
+import config  # Importer konfigurasjonen
 
 API_URL = "https://api.openai.com/v1/embeddings"
-API_KEY = config["api"]["openai_embedding_api_key"]
-MODEL = config["api"]["model"]
+API_KEY = config.OPENAI_EMBEDDING_API_KEY
+MODEL = config.OPENAI_MODEL
 
 def fetch_embeddings(texts, model=MODEL):
     headers = {
