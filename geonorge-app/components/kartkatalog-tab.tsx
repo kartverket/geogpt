@@ -109,7 +109,6 @@ export function KartkatalogTab({
       const newSet = new Set(prev);
       if (newSet.has(dataset.uuid)) {
         newSet.delete(dataset.uuid);
-        // Also remove from the info map
         setSelectedDatasetsInfo(prev => {
           const newMap = new Map(prev);
           newMap.delete(dataset.uuid);
