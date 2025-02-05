@@ -1,16 +1,16 @@
 import pandas as pd
 import requests
 import json
-from config import config  # Importer config
+import config
 
-
-API_URL = "https://api.openai.com/v1/embeddings"
-API_KEY = config["api"]["openai_embedding_api_key"]
-MODEL = config["api"]["model"]
+# Riktig API URL-format
+API_URL = f"{config.AZURE_EMBEDDING_BASEURL}/openai/deployments/text-embedding-3-large/embeddings?api-version=2023-05-15"
+API_KEY = config.AZURE_EMBEDDING_API_KEY
+MODEL = config.AZURE_GPT_API_KEY  # Hvis det er en spesifikk modell
 
 def fetch_embeddings(texts, model=MODEL):
     headers = {
-        "Authorization": f"Bearer {API_KEY}",
+        "api-key": f"{API_KEY}",
         "Content-Type": "application/json",
     }
     data = {"model": model, "input": texts}

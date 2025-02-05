@@ -1,0 +1,6 @@
+pandas
+openai
+python-dotenv
+requests
+psycopg2
+pgvector
