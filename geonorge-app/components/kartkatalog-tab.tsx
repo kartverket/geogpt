@@ -67,6 +67,7 @@ export function KartkatalogTab({
   const [isLoading, setIsLoading] = React.useState(false);
   const [hasSearched, setHasSearched] = React.useState(false);
   const [selectedDatasets, setSelectedDatasets] = React.useState<Set<string>>(new Set());
+  const [selectedDatasetsInfo, setSelectedDatasetsInfo] = React.useState<Map<string, SearchResult>>(new Map());
   const [showDownloadDialog, setShowDownloadDialog] = React.useState(false);
 
   React.useEffect(() => {
@@ -103,13 +104,25 @@ export function KartkatalogTab({
   };
 
   // Select/deselect dataset
-  const handleSelectDataset = (uuid: string) => {
+  const handleSelectDataset = (dataset: SearchResult) => {
     setSelectedDatasets(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(uuid)) {
-        newSet.delete(uuid);
+      if (newSet.has(dataset.uuid)) {
+        newSet.delete(dataset.uuid);
+        // Also remove from the info map
+        setSelectedDatasetsInfo(prev => {
+          const newMap = new Map(prev);
+          newMap.delete(dataset.uuid);
+          return newMap;
+        });
       } else {
-        newSet.add(uuid);
+        newSet.add(dataset.uuid);
+        // Store the dataset info
+        setSelectedDatasetsInfo(prev => {
+          const newMap = new Map(prev);
+          newMap.set(dataset.uuid, dataset);
+          return newMap;
+        });
       }
       return newSet;
     });
@@ -121,15 +134,11 @@ export function KartkatalogTab({
   };
 
   const initiateDownloads = () => {
-    const selectedItems = searchResults.filter(
-      result => result.downloadUrl && selectedDatasets.has(result.uuid)
-    );
-    
-    // Create hidden links and trigger downloads
-    selectedItems.forEach(item => {
-      if (item.downloadUrl) {
+    // Use the stored dataset information for downloads
+    selectedDatasetsInfo.forEach(dataset => {
+      if (dataset.downloadUrl) {
         const link = document.createElement('a');
-        link.href = item.downloadUrl;
+        link.href = dataset.downloadUrl;
         link.setAttribute('download', ''); 
         link.setAttribute('target', '_blank'); 
         link.style.display = 'none';
@@ -141,6 +150,7 @@ export function KartkatalogTab({
     
     setShowDownloadDialog(false);
     setSelectedDatasets(new Set()); // Clear selection after download
+    setSelectedDatasetsInfo(new Map());
   };
 
   // Loading skeleton component
@@ -305,7 +315,7 @@ export function KartkatalogTab({
                         {result.downloadUrl && (
                           <Checkbox
                             checked={selectedDatasets.has(result.uuid)}
-                            onCheckedChange={() => handleSelectDataset(result.uuid)}
+                            onCheckedChange={() => handleSelectDataset(result)}
                             className="mt-1"
                           />
                         )}
@@ -327,7 +337,7 @@ export function KartkatalogTab({
         >
           <div className="flex flex-col items-center gap-3">
             <Layers className="h-5 w-5" />
-            <div className="writing-mode-vertical-lr transform rotate-180 text-sm font-medium whitespace-nowrap">
+            <div className="writing-mode-vertical-lr transform rotate-180 text-sm font- medium whitespace-nowrap">
               KARTKATALOGEN
             </div>
             {isExpanded ? (
