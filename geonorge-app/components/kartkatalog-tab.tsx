@@ -28,6 +28,16 @@ import {
   TooltipProvider,
 } from "@/components/ui/tooltip";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
 
 interface SearchResult {
   uuid: string;
@@ -57,6 +67,7 @@ export function KartkatalogTab({
   const [isLoading, setIsLoading] = React.useState(false);
   const [hasSearched, setHasSearched] = React.useState(false);
   const [selectedDatasets, setSelectedDatasets] = React.useState<Set<string>>(new Set());
+  const [showDownloadDialog, setShowDownloadDialog] = React.useState(false);
 
   React.useEffect(() => {
     if (ws) {
@@ -105,22 +116,31 @@ export function KartkatalogTab({
   };
 
   // Bulk download selected datasets
-  const handleBulkDownload = async () => {
+  const handleBulkDownload = () => {
+    setShowDownloadDialog(true);
+  };
+
+  const initiateDownloads = () => {
     const selectedItems = searchResults.filter(
       result => result.downloadUrl && selectedDatasets.has(result.uuid)
     );
-    // Download each dataset, delay between each download to prevent browser blocking
-    for (let i = 0; i < selectedItems.length; i++) {
-      const result = selectedItems[i];
-      if (result.downloadUrl) {
-        onDatasetDownload(result.downloadUrl);
-        if (i < selectedItems.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 1500));
-        }
-      }
-    }
     
-    setSelectedDatasets(new Set()); // Clear after download
+    // Create hidden links and trigger downloads
+    selectedItems.forEach(item => {
+      if (item.downloadUrl) {
+        const link = document.createElement('a');
+        link.href = item.downloadUrl;
+        link.setAttribute('download', ''); 
+        link.setAttribute('target', '_blank'); 
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    });
+    
+    setShowDownloadDialog(false);
+    setSelectedDatasets(new Set()); // Clear selection after download
   };
 
   // Loading skeleton component
@@ -324,6 +344,24 @@ export function KartkatalogTab({
           }
         `}</style>
       </div>
+
+      <AlertDialog open={showDownloadDialog} onOpenChange={setShowDownloadDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Last ned {selectedDatasets.size} datasett</AlertDialogTitle>
+            <AlertDialogDescription>
+              Nedlastingen vil starte umiddelbart for alle valgte datasett.
+              Nettleseren din vil håndtere nedlastingene automatisk.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Avbryt</AlertDialogCancel>
+            <AlertDialogAction onClick={initiateDownloads}>
+              Start nedlasting
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </TooltipProvider>
   );
 }
