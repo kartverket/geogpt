@@ -48,6 +48,9 @@ function DemoV2() {
   const [chatInput, setChatInput] = useState("");
   const [forceUpdate, setForceUpdate] = useState(0);
 
+  // State for chat streaming
+  const [isChatStreaming, setIsChatStreaming] = useState(false);
+
   // State for full screen mode and popover open state
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
@@ -88,6 +91,7 @@ function DemoV2() {
     console.log("Incoming action:", action, "payload:", payload);
     switch (action) {
       case "chatStream":
+        setIsChatStreaming(true);
         if (payload.isNewMessage && !payload.payload) break;
         setChatMessages((prev) => {
           const lastMsg = prev[prev.length - 1];
@@ -111,6 +115,7 @@ function DemoV2() {
         break;
 
       case "streamComplete":
+        setIsChatStreaming(false); // Re-enable send button after stream complete
         setChatMessages((prev) => {
           const lastMsg = prev[prev.length - 1];
           if (!lastMsg || lastMsg.type !== "streaming") return prev;
@@ -165,13 +170,23 @@ function DemoV2() {
   // For the non-fullscreen chat submit handler
   const onChatSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    ws.send(JSON.stringify({ action: "chatFormSubmit", payload: chatInput }));
+    const trimmedInput = chatInput.trim();
+    if (
+      !ws ||
+      ws.readyState !== WebSocket.OPEN ||
+      !trimmedInput ||
+      isChatStreaming
+    )
+      return;
+    ws.send(
+      JSON.stringify({ action: "chatFormSubmit", payload: trimmedInput })
+    );
     setChatMessages((prev) => [
       ...prev,
-      { type: "text", content: `You: ${chatInput}` },
+      { type: "text", content: `You: ${trimmedInput}` },
     ]);
     setChatInput("");
+    setIsChatStreaming(true);
   };
 
   // Shared function for sending a message
@@ -192,7 +207,7 @@ function DemoV2() {
     if (e && e.preventDefault) {
       e.preventDefault();
     }
-    if (!chatInput.trim()) return;
+    if (!chatInput.trim() || isChatStreaming) return;
     handleSendMessage(chatInput);
     setChatInput("");
   };
@@ -435,7 +450,11 @@ function DemoV2() {
                   placeholder="Spør GeoGPT..."
                   className="flex-1 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-                <Button type="submit" className="ml-2 text-sm">
+                <Button
+                  type="submit"
+                  className="ml-2 text-sm"
+                  disabled={isChatStreaming || !chatInput.trim()}
+                >
                   Send
                 </Button>
               </form>
