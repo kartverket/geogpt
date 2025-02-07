@@ -15,9 +15,8 @@ logger = logging.getLogger(__name__)
 # Add the project root to Python path
 sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 
-# Import config directly from project root
+# Import configuration and helpers
 from config import CONFIG
-
 from helpers.retrieval_augmented_generation import (
     get_rag_context,
     get_rag_response,
@@ -31,114 +30,87 @@ from helpers.download import (
 )
 from helpers.vector_database import get_vdb_response, get_vdb_search_response
 from helpers.websocket import send_websocket_message, send_websocket_action
+from helpers.memory_utils import build_memory_context
 
-
-def build_memory_context(messages: List[Dict[str, Any]]) -> str:
-    """
-    Build a memory context string from a list of messages (assumed to be in Q/A pairs).
-
-    Args:
-        messages: A list of message dictionaries.
-
-    Returns:
-        A string representing the conversation history.
-    """
-    if not messages:
-        return ""
-    conversation_pairs = []
-    # Group messages into Q&A pairs.
-    # Note: This assumes messages are stored as [user_message, system_message, ...]
-    for i in range(0, len(messages), 2):
-        if i + 1 < len(messages):
-            q = messages[i]["content"]
-            a = messages[i + 1]["content"]
-            conversation_pairs.append(f"Spørsmål: {q}\nSvar: {a}")
-    memory_context = "\n\nTidligere samtalehistorikk:\n" + "\n\n".join(conversation_pairs)
-    memory_context += (
-        "\n\nVIKTIG: Dette er et oppfølgingsspørsmål. Prioriter informasjon fra den tidligere samtalen "
-        "før du introduserer nye datasett. Hvis spørsmålet er relatert til tidligere nevnte datasett, fokuser på disse først.\n\n"
-    )
-    return memory_context
-
+# --- LangChain conversation chain imports ---
+from langchain.chains import ConversationChain
+from langchain.memory import ConversationBufferMemory
+# Use the updated AzureChatOpenAI from langchain_openai package (install via `pip install -U langchain-openai`)
+from langchain_openai import AzureChatOpenAI
 
 class ChatServer:
     """
     A WebSocket chat server handling chat and search form submissions.
+    This version uses a ConversationChain with memory for each client.
     """
 
     def __init__(self) -> None:
         self.clients: Set[Any] = set()
-        # Mapping of websocket -> message history (list of dicts)
-        self.client_messages: Dict[Any, List[Dict[str, Any]]] = {}
+        # Each client gets its own ConversationChain instance.
+        self.client_chains: Dict[Any, ConversationChain] = {}
 
     async def register(self, websocket: Any) -> None:
         """
-        Register a new websocket client and initialize its message history.
+        Register a new websocket client and initialize its conversation chain.
         """
         self.clients.add(websocket)
-        self.client_messages[websocket] = []
+        # Update memory key to "history" (the prompt expects ['history', 'input']).
+        memory = ConversationBufferMemory(memory_key="history", return_messages=True)
+        # Create a dedicated LLM instance (non‑streaming for chain memory management).
+        llm = AzureChatOpenAI(
+            deployment_name="gpt-4o-mini",  # Use your Azure deployment name
+            openai_api_key=CONFIG["api"]["azure_gpt_api_key"],
+            openai_api_version="2024-02-15-preview",
+            azure_endpoint=CONFIG["api"]["azure_gpt_endpoint"],
+            streaming=False,
+            verbose=True
+        )
+        # ConversationChain is still available for now but will be deprecated in future versions.
+        chain = ConversationChain(llm=llm, memory=memory)
+        self.client_chains[websocket] = chain
 
     async def unregister(self, websocket: Any) -> None:
         """
         Unregister a websocket client.
         """
         self.clients.remove(websocket)
-        self.client_messages.pop(websocket, None)
+        self.client_chains.pop(websocket, None)
 
     async def handle_chat_form_submit(self, websocket: Any, user_question: str) -> None:
         """
-        Handle chat form submission by processing the user's question and sending a response.
-
-        Args:
-            websocket: The client websocket connection.
-            user_question: The question submitted by the user.
+        Handle chat form submission by processing the user's question using
+        the ConversationChain (which automatically includes past chat history).
+        We also integrate additional RAG context from our vector database.
         """
-        messages = self.client_messages.get(websocket, [])
-        memory = messages[-10:]  # Use the last 10 messages for context
         try:
-            # Get VDB response and RAG context
+            # Get the vector DB response and build the base RAG context.
             vdb_response = await get_vdb_response(user_question)
-            rag_context = await get_rag_context(vdb_response)
+            base_rag_context = await get_rag_context(vdb_response)
 
-            # Enhanced memory context formatting if available
-            if memory:
-                memory_context = build_memory_context(memory)
-                rag_context = memory_context + rag_context
-                logger.debug("Context being used: %s", rag_context[:500] + "...")
+            # Retrieve the chain for this client.
+            chain = self.client_chains.get(websocket)
+            if not chain:
+                logger.error("No conversation chain found for client.")
+                return
 
-            # Display user question in chat
+            # Build an enhanced memory context (for example, summarizing previous messages)
+            # The chain's memory messages are stored under the "history" key.
+            memory_context = await build_memory_context(chain.memory.chat_memory.messages)
+            # Combine the memory context, RAG context, and the new user question.
+            combined_input = memory_context + base_rag_context + "\n\n" + user_question
+
+            # Display the user's question.
             await send_websocket_message("userMessage", user_question, websocket)
 
-            # Send RAG request with context and instruction
-            full_rag_response = await get_rag_response(
-                user_question,
-                memory,
-                rag_context,
-                websocket
-            )
+            # Use the conversation chain to get the answer.
+            answer = chain.predict(input=combined_input)
+
+            await send_websocket_message("chatStream", answer, websocket)
             await send_websocket_action("streamComplete", websocket)
+            await insert_image_rag_response(answer, vdb_response, websocket)
 
-            # Add messages to history with timestamp and exchange_id
-            timestamp = datetime.datetime.now().isoformat()
-            exchange_id = len(messages) // 2
-            messages.extend([
-                {
-                    "role": "user",
-                    "content": user_question,
-                    "timestamp": timestamp,
-                    "exchange_id": exchange_id,
-                },
-                {
-                    "role": "system",
-                    "content": full_rag_response,
-                    "timestamp": timestamp,
-                    "exchange_id": exchange_id,
-                }
-            ])
-
-            # Handle image UI and markdown formatting
-            await insert_image_rag_response(full_rag_response, vdb_response, websocket)
-            await send_websocket_action("formatMarkdown", websocket)  # Frontend may use this action to format output
+            # Tell the frontend to format markdown if needed.
+            await send_websocket_action("formatMarkdown", websocket)
 
         except Exception as error:
             logger.error("Server controller failed: %s", str(error))
@@ -148,10 +120,6 @@ class ChatServer:
     async def handle_search_form_submit(self, websocket: Any, query: str) -> None:
         """
         Handle search form submission by processing the query and sending search results.
-
-        Args:
-            websocket: The client websocket connection.
-            query: The search query submitted by the user.
         """
         try:
             vdb_search_response = await get_vdb_search_response(query)
@@ -161,17 +129,6 @@ class ChatServer:
         except Exception as error:
             logger.error("Search failed: %s", str(error))
             logger.error("Stack trace: %s", traceback.format_exc())
-
-    # Uncomment and update if needed for dataset download functionality.
-    # async def handle_download_dataset(self, websocket: Any, dataset_uuid: str, chosen_formats: List[str]) -> None:
-    #     try:
-    #         is_downloadable = await dataset_has_download(dataset_uuid)
-    #         if is_downloadable:
-    #             dataset_download_url = await get_download_url(dataset_uuid, chosen_formats)
-    #             await send_websocket_message("downloadDatasetOrder", dataset_download_url, websocket)
-    #     except Exception as error:
-    #         logger.error("Download failed: %s", str(error))
-    #         logger.error("Stack trace: %s", traceback.format_exc())
 
     async def handle_message(self, websocket: Any, message: str) -> None:
         """
@@ -194,7 +151,7 @@ class ChatServer:
                 return
                 
             elif action == "showDataset":
-                # TODO: Implement WMS logic
+                # TODO: Implement WMS logic if needed.
                 pass
                 
             else:
@@ -207,14 +164,6 @@ class ChatServer:
         except Exception as e:
             logger.error(f"Unexpected error handling message: {e}")
             logger.debug(f"Message that caused error: {message}")
-
-        # elif action == "downloadDataset":
-        #     await self.handle_download_dataset(
-        #         websocket,
-        #         data["payload"]["uuid"],
-        #         data["payload"]["selectedFormats"]
-        #     )
-
 
     async def ws_handler(self, websocket: Any) -> None:
         """
@@ -229,13 +178,11 @@ class ChatServer:
         finally:
             await self.unregister(websocket)
 
-
 async def main() -> None:
     """
     Initialize and run the WebSocket server.
     """
     server = ChatServer()
-    # Use host and port from configuration if available, else default values
     host = CONFIG.get("host", "localhost")
     port = CONFIG.get("port", 8080)
     async with websockets.serve(
@@ -246,7 +193,6 @@ async def main() -> None:
     ):
         logger.info("WebSocket server running on ws://%s:%s", host, port)
         await asyncio.Future()  # Run forever
-
 
 if __name__ == "__main__":
     asyncio.run(main())
