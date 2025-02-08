@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import L from "leaflet";
 import {
   Search,
   ChevronLeft,
@@ -66,9 +67,23 @@ export function KartkatalogTab({
   const [searchResults, setSearchResults] = React.useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
   const [hasSearched, setHasSearched] = React.useState(false);
-  const [selectedDatasets, setSelectedDatasets] = React.useState<Set<string>>(new Set());
-  const [selectedDatasetsInfo, setSelectedDatasetsInfo] = React.useState<Map<string, SearchResult>>(new Map());
+  const [selectedDatasets, setSelectedDatasets] = React.useState<Set<string>>(
+    new Set()
+  );
+  const [selectedDatasetsInfo, setSelectedDatasetsInfo] = React.useState<
+    Map<string, SearchResult>
+  >(new Map());
   const [showDownloadDialog, setShowDownloadDialog] = React.useState(false);
+
+  // Create a ref for the main panel container
+  const panelRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (panelRef.current) {
+      // This will prevent the scroll (wheel) events on the panel from propagating to the map.
+      L.DomEvent.disableScrollPropagation(panelRef.current);
+    }
+  }, []);
 
   React.useEffect(() => {
     if (ws) {
@@ -105,11 +120,11 @@ export function KartkatalogTab({
 
   // Select/deselect dataset
   const handleSelectDataset = (dataset: SearchResult) => {
-    setSelectedDatasets(prev => {
+    setSelectedDatasets((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(dataset.uuid)) {
         newSet.delete(dataset.uuid);
-        setSelectedDatasetsInfo(prev => {
+        setSelectedDatasetsInfo((prev) => {
           const newMap = new Map(prev);
           newMap.delete(dataset.uuid);
           return newMap;
@@ -117,7 +132,7 @@ export function KartkatalogTab({
       } else {
         newSet.add(dataset.uuid);
         // Store the dataset info
-        setSelectedDatasetsInfo(prev => {
+        setSelectedDatasetsInfo((prev) => {
           const newMap = new Map(prev);
           newMap.set(dataset.uuid, dataset);
           return newMap;
@@ -134,19 +149,19 @@ export function KartkatalogTab({
 
   const initiateDownloads = () => {
     // Use the stored dataset information for downloads
-    selectedDatasetsInfo.forEach(dataset => {
+    selectedDatasetsInfo.forEach((dataset) => {
       if (dataset.downloadUrl) {
-        const link = document.createElement('a');
+        const link = document.createElement("a");
         link.href = dataset.downloadUrl;
-        link.setAttribute('download', ''); 
-        link.setAttribute('target', '_blank'); 
-        link.style.display = 'none';
+        link.setAttribute("download", "");
+        link.setAttribute("target", "_blank");
+        link.style.display = "none";
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
       }
     });
-    
+
     setShowDownloadDialog(false);
     setSelectedDatasets(new Set()); // Clear selection after download
     setSelectedDatasetsInfo(new Map());
@@ -168,18 +183,20 @@ export function KartkatalogTab({
       <div className="fixed right-[18px] top-1/4 flex items-start ">
         {/* Main Panel */}
         <div
+          ref={panelRef}
           className={cn(
-            "bg-white shadow-[-1px_1px_3px_0_rgba(0,0,0,0.24)] transition-all duration-300 transform rounded-l rounded-br ",
+            "bg-white shadow-[-1px_1px_3px_0_rgba(0,0,0,0.24)] transition-all duration-300 transform rounded-l rounded-br",
             isExpanded ? "w-[300px] translate-x-0" : "w-0 translate-x-full",
             className
           )}
           style={{ overflow: "hidden" }}
         >
           <div className="min-w-[300px] bg-white font-['Helvetica_Neue',_Arial,_sans-serif]">
+            {/* Header and search form */}
             <div className="border-b">
               <div className="px-4 py-3 bg-white">
                 <div className="flex items-center">
-                  <h2 className="text-xl  text-[#262626] mb-3 flex items-center gap-1">
+                  <h2 className="text-xl text-[#262626] mb-3 flex items-center gap-1">
                     <Library className="h-5 w-5" />
                     <span>KARTKATALOGEN</span>
                   </h2>
@@ -229,7 +246,6 @@ export function KartkatalogTab({
               )}
               <div className="divide-y divide-gray-200">
                 {isLoading ? (
-                  // Show 3 loading skeletons while searching
                   <>
                     <SearchSkeleton />
                     <SearchSkeleton />
@@ -238,17 +254,16 @@ export function KartkatalogTab({
                     <SearchSkeleton />
                   </>
                 ) : hasSearched && searchResults.length === 0 ? (
-                  // Show message when no results found
                   <div className="px-4 py-6 text-center text-gray-500">
                     Ingen resultater funnet
                   </div>
                 ) : (
-                  // Show actual results
                   searchResults.map((result) => (
                     <div
                       key={result.uuid}
                       className="px-4 py-3 hover:bg-[#F5F5F5] transition-colors"
                     >
+                      {/* ...result content */}
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1">
                           <a
@@ -266,7 +281,8 @@ export function KartkatalogTab({
                             {result.wmsUrl && result.wmsUrl !== "None" ? (
                               <button
                                 onClick={() =>
-                                  result.wmsUrl && onReplaceIframe(result.wmsUrl)
+                                  result.wmsUrl &&
+                                  onReplaceIframe(result.wmsUrl)
                                 }
                                 className="px-3 py-1.5 text-sm bg-[#FF8B65] hover:bg-[#FE642F] text-white rounded-[2px] transition-colors flex items-center gap-1"
                               >
@@ -279,7 +295,8 @@ export function KartkatalogTab({
                                     disabled
                                     className="px-3 py-1.5 text-sm bg-gray-100 text-gray-400 rounded-[2px] cursor-pointer flex items-center gap-1"
                                   >
-                                    <XCircle className="h-4 w-4" /> Utilgjengelig
+                                    <XCircle className="h-4 w-4" />{" "}
+                                    Utilgjengelig
                                   </button>
                                 </TooltipTrigger>
                                 <TooltipContent>
@@ -354,18 +371,29 @@ export function KartkatalogTab({
         `}</style>
       </div>
 
-      <AlertDialog open={showDownloadDialog} onOpenChange={setShowDownloadDialog}>
+      {/* AlertDialog and other elements */}
+      <AlertDialog
+        open={showDownloadDialog}
+        onOpenChange={setShowDownloadDialog}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Last ned {selectedDatasets.size} datasett</AlertDialogTitle>
+            <AlertDialogTitle>
+              Last ned {selectedDatasets.size} datasett
+            </AlertDialogTitle>
             <AlertDialogDescription>
               Nedlastingen vil starte umiddelbart for alle valgte datasett.
               Nettleseren din vil håndtere nedlastingene automatisk.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-[2px]">Avbryt</AlertDialogCancel>
-            <AlertDialogAction onClick={initiateDownloads} className="rounded-[2px]">
+            <AlertDialogCancel className="rounded-[2px]">
+              Avbryt
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={initiateDownloads}
+              className="rounded-[2px]"
+            >
               Start nedlasting
             </AlertDialogAction>
           </AlertDialogFooter>
