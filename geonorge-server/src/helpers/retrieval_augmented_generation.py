@@ -5,10 +5,12 @@ from openai import AzureOpenAI
 from config import CONFIG
 from helpers.websocket import send_websocket_message
 from helpers.download import dataset_has_download, get_download_url, get_standard_or_first_format
-from helpers.fetch_valid_download_api_data import get_wms  
+from helpers.fetch_valid_download_api_data import get_wms
+from helpers.langchain_memory import EnhancedConversationMemory
 import asyncio
+from typing import List, Dict, Any
 
-# Replace OpenAI client with AzureOpenAI client
+# Initialize Azure OpenAI client
 client = AzureOpenAI(
     api_key=CONFIG["api"]["azure_gpt_api_key"],
     api_version="2024-02-15-preview",
@@ -46,23 +48,31 @@ async def get_rag_context(vdb_response):
     return rag_context
 
 async def get_rag_response(user_question, memory, rag_context, websocket):
+    # Create conversation memory using LangChain implementation
+    conversation_memory = EnhancedConversationMemory()
+    
+    # Add existing memory messages
+    for msg in memory:
+        conversation_memory.add_message(msg["role"], msg["content"])
+    
     # Create RAG instruction
     rag_instruction = {
         "role": "system",
-        "content": rag_context
+        "content": rag_context + conversation_memory.get_context_string()
     }
     
-    # Clean up memory messages to only include role and content
-    cleaned_memory = [
-        {"role": msg["role"], "content": msg["content"]}
-        for msg in memory
-    ]
+    # Add current question to memory
+    conversation_memory.add_message("user", user_question)
     
-    # Combine messages
-    messages = [*cleaned_memory, rag_instruction, {"role": "user", "content": user_question}]
+    # Combine messages for the API request
+    messages = [rag_instruction, {"role": "user", "content": user_question}]
     
     # Get response using streaming
     full_response = await send_api_chat_request(messages, websocket)
+    
+    # Add response to memory
+    conversation_memory.add_message("assistant", full_response)
+    
     return full_response
 
 async def send_api_chat_request(messages, websocket):

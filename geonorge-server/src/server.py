@@ -68,43 +68,23 @@ class ChatServer:
 
     def __init__(self) -> None:
         self.clients: Set[Any] = set()
-        # Mapping of websocket -> message history (list of dicts)
         self.client_messages: Dict[Any, List[Dict[str, Any]]] = {}
 
     async def register(self, websocket: Any) -> None:
-        """
-        Register a new websocket client and initialize its message history.
-        """
         self.clients.add(websocket)
         self.client_messages[websocket] = []
 
     async def unregister(self, websocket: Any) -> None:
-        """
-        Unregister a websocket client.
-        """
         self.clients.remove(websocket)
         self.client_messages.pop(websocket, None)
 
     async def handle_chat_form_submit(self, websocket: Any, user_question: str) -> None:
-        """
-        Handle chat form submission by processing the user's question and sending a response.
-
-        Args:
-            websocket: The client websocket connection.
-            user_question: The question submitted by the user.
-        """
         messages = self.client_messages.get(websocket, [])
         memory = messages[-10:]  # Use the last 10 messages for context
         try:
             # Get VDB response and RAG context
             vdb_response = await get_vdb_response(user_question)
             rag_context = await get_rag_context(vdb_response)
-
-            # Enhanced memory context formatting if available
-            if memory:
-                memory_context = build_memory_context(memory)
-                rag_context = memory_context + rag_context
-                logger.debug("Context being used: %s", rag_context[:500] + "...")
 
             # Display user question in chat
             await send_websocket_message("userMessage", user_question, websocket)
@@ -138,7 +118,7 @@ class ChatServer:
 
             # Handle image UI and markdown formatting
             await insert_image_rag_response(full_rag_response, vdb_response, websocket)
-            await send_websocket_action("formatMarkdown", websocket)  # Frontend may use this action to format output
+            await send_websocket_action("formatMarkdown", websocket)
 
         except Exception as error:
             logger.error("Server controller failed: %s", str(error))
