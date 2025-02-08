@@ -9,6 +9,9 @@ from helpers.fetch_valid_download_api_data import get_wms
 from helpers.langchain_memory import EnhancedConversationMemory
 import asyncio
 from typing import List, Dict, Any
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.prompts import ChatPromptTemplate
+from langchain.schema import StrOutputParser
 
 # Initialize Azure OpenAI client
 client = AzureOpenAI(
@@ -18,54 +21,70 @@ client = AzureOpenAI(
 )
 
 async def get_rag_context(vdb_response):
-    """Generate RAG context from vector database response"""
-    columns_to_exclude = ['uuid', '_vector', 'distance', 'image']
-    
+    """Generate RAG context from vector database response using Langchain's text splitter"""
     # Convert tuple results to dictionaries with named fields
     field_names = ['uuid', 'title', 'abstract', 'image']
     dict_response = [dict(zip(field_names, row)) for row in vdb_response]
     
-    # Filter headers
-    headers_keys = [k for k in field_names if not any(excl in k for excl in columns_to_exclude)]
-    headers = " | ".join(headers_keys)
-    
-    # Build results string
-    vdb_results = "\n\n".join(" | ".join(str(row[k]) for k in headers_keys) for row in dict_response)
-    
-    rag_context = (
-        "Du vil få en detaljert beskrivelse av ulike datasett på norsk, "
-        f"innrammet i triple backticks (```). Svar brukeren sitt spørsmål basert på konteksten:```{headers}\n\n{vdb_results}``` "
-        "Ved spørsmål knyttet til leting etter datasett, bruk datasettbeskrivelsene "
-        "til å svare på spørsmålet så detaljert som mulig. Du skal kun bruke informasjonen i beskrivelsene. "
-        "VIKTIG: Hvis du refererer til et datasett, MÅ du starte svaret med "
-        "datasettets tittel i markdown bold format (f.eks. **FKB-Tiltak**). "
-        "Dette er OBLIGATORISK hver gang du nevner et datasett fra konteksten. "
-        "Du kan også svare på generelle spørsmål om GIS, Geomatikk, og geografiske data, "
-        "men prioriter alltid å referere til relevante datasett fra konteksten hvis de finnes. "
-        "Avstå fra å svare på spørsmål som ikke er relatert til Geomatikk, Geonorge, "
-        "geografiske datasett, eller GIS. Gi svaret på norsk."
+    # Create a text splitter
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=1000,
+        chunk_overlap=200,
+        length_function=len,
+        separators=["\n\n", "\n", " ", ""]
     )
-    return rag_context
+    
+    # Prepare the context
+    context_texts = []
+    for row in dict_response:
+        context = f"Tittel: {row['title']}\nBeskrivelse: {row['abstract']}"
+        context_texts.append(context)
+    
+    # Split the context into chunks
+    chunks = text_splitter.create_documents(context_texts)
+    
+    # Create the system prompt template
+    system_template = """Du er en ekspert på geografiske datasett fra Geonorge. 
+    Bruk følgende kontekst for å svare på spørsmål:
+    
+    {context}
+    
+    VIKTIG: Hvis du refererer til et datasett, MÅ du starte svaret med datasettets tittel i markdown bold format (f.eks. **FKB-Tiltak**).
+    Gi svaret på norsk og bruk kun informasjonen i konteksten."""
+    
+    human_template = "{question}"
+    
+    chat_prompt = ChatPromptTemplate.from_messages([
+        ("system", system_template),
+        ("human", human_template),
+    ])
+    
+    # Join the chunks with appropriate spacing
+    context = "\n\n".join([chunk.page_content for chunk in chunks])
+    
+    return chat_prompt, context
 
 async def get_rag_response(user_question, memory, rag_context, websocket):
-    # Create conversation memory using LangChain implementation
+    chat_prompt, context = rag_context
     conversation_memory = EnhancedConversationMemory()
     
     # Add existing memory messages
     for msg in memory:
         conversation_memory.add_message(msg["role"], msg["content"])
     
-    # Create RAG instruction
-    rag_instruction = {
-        "role": "system",
-        "content": rag_context + conversation_memory.get_context_string()
-    }
+    # Combine the context with memory
+    full_context = context + conversation_memory.get_context_string()
     
-    # Add current question to memory
-    conversation_memory.add_message("user", user_question)
+    # Create the chain
+    chain = chat_prompt | client.chat.completions.create | StrOutputParser()
     
-    # Combine messages for the API request
-    messages = [rag_instruction, {"role": "user", "content": user_question}]
+    # Stream the response
+    await send_websocket_message("chatStream", {"payload": "", "isNewMessage": True}, websocket)
+    
+    messages = [
+        {"role": "system", "content": full_context},
+        {"role": "user", "content": user_question}
+    ]
     
     # Get response using streaming
     full_response = await send_api_chat_request(messages, websocket)
