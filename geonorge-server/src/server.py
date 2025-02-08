@@ -20,46 +20,17 @@ from config import CONFIG
 
 from helpers.retrieval_augmented_generation import (
     get_rag_context,
-    get_rag_response,
-    insert_image_rag_response,
+    get_rag_response
 )
 from helpers.download import (
     get_standard_or_first_format,
     dataset_has_download,
     get_download_url,
-    get_dataset_download_and_wms_status,
+    get_dataset_download_formats, 
+    get_dataset_download_and_wms_status
 )
 from helpers.vector_database import get_vdb_response, get_vdb_search_response
 from helpers.websocket import send_websocket_message, send_websocket_action
-
-
-def build_memory_context(messages: List[Dict[str, Any]]) -> str:
-    """
-    Build a memory context string from a list of messages (assumed to be in Q/A pairs).
-
-    Args:
-        messages: A list of message dictionaries.
-
-    Returns:
-        A string representing the conversation history.
-    """
-    if not messages:
-        return ""
-    conversation_pairs = []
-    # Group messages into Q&A pairs.
-    # Note: This assumes messages are stored as [user_message, system_message, ...]
-    for i in range(0, len(messages), 2):
-        if i + 1 < len(messages):
-            q = messages[i]["content"]
-            a = messages[i + 1]["content"]
-            conversation_pairs.append(f"Spørsmål: {q}\nSvar: {a}")
-    memory_context = "\n\nTidligere samtalehistorikk:\n" + "\n\n".join(conversation_pairs)
-    memory_context += (
-        "\n\nVIKTIG: Dette er et oppfølgingsspørsmål. Prioriter informasjon fra den tidligere samtalen "
-        "før du introduserer nye datasett. Hvis spørsmålet er relatert til tidligere nevnte datasett, fokuser på disse først.\n\n"
-    )
-    return memory_context
-
 
 class ChatServer:
     """
@@ -68,56 +39,41 @@ class ChatServer:
 
     def __init__(self) -> None:
         self.clients: Set[Any] = set()
-        # Mapping of websocket -> message history (list of dicts)
         self.client_messages: Dict[Any, List[Dict[str, Any]]] = {}
 
     async def register(self, websocket: Any) -> None:
-        """
-        Register a new websocket client and initialize its message history.
-        """
         self.clients.add(websocket)
         self.client_messages[websocket] = []
 
     async def unregister(self, websocket: Any) -> None:
-        """
-        Unregister a websocket client.
-        """
         self.clients.remove(websocket)
         self.client_messages.pop(websocket, None)
 
     async def handle_chat_form_submit(self, websocket: Any, user_question: str) -> None:
-        """
-        Handle chat form submission by processing the user's question and sending a response.
-
-        Args:
-            websocket: The client websocket connection.
-            user_question: The question submitted by the user.
-        """
         messages = self.client_messages.get(websocket, [])
-        memory = messages[-10:]  # Use the last 10 messages for context
         try:
-            # Get VDB response and RAG context
             vdb_response = await get_vdb_response(user_question)
-            rag_context = await get_rag_context(vdb_response)
-
-            # Enhanced memory context formatting if available
-            if memory:
-                memory_context = build_memory_context(memory)
-                rag_context = memory_context + rag_context
-                logger.debug("Context being used: %s", rag_context[:500] + "...")
-
-            # Display user question in chat
+            
+            # Get only download formats for each dataset in vdb_response
+            datasets_with_formats = []
+            if vdb_response:
+                datasets_with_formats = await get_dataset_download_formats(vdb_response)
+            
             await send_websocket_message("userMessage", user_question, websocket)
 
-            # Send RAG request with context and instruction
+            # Send RAG request with streaming
             full_rag_response = await get_rag_response(
                 user_question,
-                memory,
-                rag_context,
+                datasets_with_formats, 
+                vdb_response,
                 websocket
             )
+            
+            if datasets_with_formats:
+                await send_websocket_message("chatDatasets", datasets_with_formats, websocket)
+            
             await send_websocket_action("streamComplete", websocket)
-
+    
             # Add messages to history with timestamp and exchange_id
             timestamp = datetime.datetime.now().isoformat()
             exchange_id = len(messages) // 2
@@ -133,13 +89,12 @@ class ChatServer:
                     "content": full_rag_response,
                     "timestamp": timestamp,
                     "exchange_id": exchange_id,
+                    "datasets": datasets_with_formats if datasets_with_formats else None
                 }
             ])
-
-            # Handle image UI and markdown formatting
-            await insert_image_rag_response(full_rag_response, vdb_response, websocket)
-            await send_websocket_action("formatMarkdown", websocket)  # Frontend may use this action to format output
-
+            
+            await send_websocket_action("formatMarkdown", websocket)
+    
         except Exception as error:
             logger.error("Server controller failed: %s", str(error))
             logger.error("Stack trace: %s", traceback.format_exc())
