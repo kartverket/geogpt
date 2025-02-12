@@ -33,7 +33,9 @@ services:
       - "8080:8080"
 
   frontend:
-    build: ./geonorge-app
+    build:
+      context: ./geonorge-app
+      dockerfile: Dockerfile
     container_name: geogpt_frontend
     depends_on:
       - backend
