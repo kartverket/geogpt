@@ -38,14 +38,22 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 
 interface SearchResult {
   uuid: string;
   title?: string;
+  description?: string;
   wmsUrl?: string;
   downloadUrl?: string | null;
   restricted?: boolean;
   selected?: boolean;
+  fetchedDescription?: string;
+  isLoadingDescription?: boolean;
 }
 
 interface KartkatalogTabProps {
@@ -69,6 +77,7 @@ export function KartkatalogTab({
   const [selectedDatasets, setSelectedDatasets] = React.useState<Set<string>>(new Set());
   const [selectedDatasetsInfo, setSelectedDatasetsInfo] = React.useState<Map<string, SearchResult>>(new Map());
   const [showDownloadDialog, setShowDownloadDialog] = React.useState(false);
+  const [descriptionsCache, setDescriptionsCache] = React.useState<Map<string, string>>(new Map());
 
   React.useEffect(() => {
     if (ws) {
@@ -150,6 +159,36 @@ export function KartkatalogTab({
     setShowDownloadDialog(false);
     setSelectedDatasets(new Set()); // Clear selection after download
     setSelectedDatasetsInfo(new Map());
+  };
+
+  const fetchDatasetDescription = async (uuid: string) => {
+    if (descriptionsCache.has(uuid)) return;
+
+    try {
+      const response = await fetch(`https://kartkatalog.geonorge.no/api/metadata/${uuid}`);
+      const data = await response.json();
+
+      console.log("[DEBUG] Entire metadata response:", data);
+
+      let extractedAbstract = data.Abstract
+        || data.abstract
+        || data.metadata?.abstract
+        || data.purpose
+        || "Ingen beskrivelse tilgjengelig";
+      
+      setDescriptionsCache(prev => {
+        const newCache = new Map(prev);
+        newCache.set(uuid, extractedAbstract);
+        return newCache;
+      });
+    } catch (error) {
+      console.error('Error fetching dataset description:', error);
+      setDescriptionsCache(prev => {
+        const newCache = new Map(prev);
+        newCache.set(uuid, 'Kunne ikke laste beskrivelse');
+        return newCache;
+      });
+    }
   };
 
   // Loading skeleton component
@@ -245,23 +284,47 @@ export function KartkatalogTab({
                 ) : (
                   // Show actual results
                   searchResults.map((result) => (
-                    <div
-                      key={result.uuid}
-                      className="px-4 py-3 hover:bg-[#F5F5F5] transition-colors"
-                    >
+                    <div key={result.uuid} className="px-4 py-3 hover:bg-[#F5F5F5] transition-colors">
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1">
-                          <a
-                            href={`https://kartkatalog.geonorge.no/metadata/${encodeURIComponent(
-                              result.title || "Dataset"
-                            )}/${result.uuid}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-[15px] text-gray-900 hover:text-gray-600 mb-2 max-w-max underline underline-offset-4 flex items-center gap-1"
-                          >
-                            {result.title || "Dataset"}
-                            <ExternalLink className="h-4 w-4" />
-                          </a>
+                          <HoverCard openDelay={200} closeDelay={0} onOpenChange={(open) => {
+                            if (open && !descriptionsCache.has(result.uuid)) {
+                              fetchDatasetDescription(result.uuid);
+                            }
+                          }}>
+                            <HoverCardTrigger asChild>
+                              <a
+                                href={`https://kartkatalog.geonorge.no/metadata/${encodeURIComponent(
+                                  result.title || "Dataset"
+                                )}/${result.uuid}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[15px] text-gray-900 hover:text-gray-600 mb-2 max-w-max underline underline-offset-4 flex items-center gap-1"
+                              >
+                                {result.title || "Dataset"}
+                                <ExternalLink className="h-4 w-4" />
+                              </a>
+                            </HoverCardTrigger>
+                            <HoverCardContent 
+                              side="left"
+                              className="w-80"
+                            >
+                              <div className="space-y-2">
+                                <h4 className="font-medium">{result.title}</h4>
+                                {!descriptionsCache.has(result.uuid) ? (
+                                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Laster beskrivelse...
+                                  </div>
+                                ) : (
+                                  <p className="text-sm text-gray-600">
+                                    {descriptionsCache.get(result.uuid)}
+                                  </p>
+                                )}
+                              </div>
+                            </HoverCardContent>
+                          </HoverCard>
+                          
                           <div className="flex gap-2">
                             {result.wmsUrl && result.wmsUrl !== "None" ? (
                               <button
