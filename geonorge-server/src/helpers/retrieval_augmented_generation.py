@@ -10,8 +10,11 @@ from helpers.langchain_memory import EnhancedConversationMemory
 import asyncio
 from typing import List, Dict, Any
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.prompts import ChatPromptTemplate
+from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.schema import StrOutputParser
+from langchain.chains.history_aware_retriever import create_history_aware_retriever
+from langchain.chains.retrieval import create_retrieval_chain
+from langchain_community.chat_message_histories import ChatMessageHistory
 
 # Initialize Azure OpenAI client
 client = AzureOpenAI(
@@ -20,77 +23,81 @@ client = AzureOpenAI(
     azure_endpoint=CONFIG["api"]["azure_gpt_endpoint"]
 )
 
+class GeoNorgeRAGChain:
+    def __init__(self):
+        self.store = {}
+        self.text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1000,
+            chunk_overlap=200,
+            length_function=len,
+            separators=["\n\n", "\n", " ", ""]
+        )
+
+    def get_session_history(self, session_id: str) -> ChatMessageHistory:
+        if session_id not in self.store:
+            self.store[session_id] = ChatMessageHistory()
+        return self.store[session_id]
+
+    async def create_context_aware_prompt(self, vdb_response):
+        field_names = ['uuid', 'title', 'abstract', 'image']
+        dict_response = [dict(zip(field_names, row)) for row in vdb_response]
+        
+        context_texts = []
+        for row in dict_response:
+            context = f"Kilde: https://kartkatalog.geonorge.no/metadata/{row['title']}/{row['uuid']}\nBeskrivelse: {row['abstract']}"
+            print("HVA ER ABSTRACT", row['abstract'])
+            context_texts.append(context)
+        
+        chunks = self.text_splitter.create_documents(context_texts)
+        
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", """Du er en assistent som heter GeoGPT. Når du gir et svar, skal du inkludere 
+            en tydelig referanse til kilden eller dokumentet der du fant informasjonen. Hvis du ikke vet svaret, 
+            skal du si at du ikke vet. Følgende kontekst er tilgjengelig: {context}
+            
+            VIKTIG: Hvis du refererer til et datasett, MÅ du starte svaret med datasettets tittel i markdown 
+            bold format (f.eks. **FKB-Tiltak**). Dette er OBLIGATORISK hver gang du nevner et datasett fra konteksten."""),
+            MessagesPlaceholder(variable_name="chat_history"),
+            ("human", "{question}"),
+            ("system", "Bruk følgende kontekst for å svare på spørsmålet:\n{context}")
+        ])
+        
+        return prompt, "\n\n".join([chunk.page_content for chunk in chunks])
+
+
+
+# Initialize the global RAG chain
+rag_chain = GeoNorgeRAGChain()
+
 async def get_rag_context(vdb_response):
-    """Generate RAG context from vector database response using Langchain's text splitter"""
-    # Convert tuple results to dictionaries with named fields
-    field_names = ['uuid', 'title', 'abstract', 'image']
-    dict_response = [dict(zip(field_names, row)) for row in vdb_response]
-    
-    # Create a text splitter
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,
-        chunk_overlap=200,
-        length_function=len,
-        separators=["\n\n", "\n", " ", ""]
-    )
-    
-    # Prepare the context
-    context_texts = []
-    for row in dict_response:
-        context = f"Tittel: {row['title']}\nBeskrivelse: {row['abstract']}"
-        context_texts.append(context)
-    
-    # Split the context into chunks
-    chunks = text_splitter.create_documents(context_texts)
-    
-    # Create the system prompt template
-    system_template = """Du er en ekspert på geografiske datasett fra Geonorge. 
-    Bruk følgende kontekst for å svare på spørsmål:
-    
-    {context}
-    
-    VIKTIG: Hvis du refererer til et datasett, MÅ du starte svaret med datasettets tittel i markdown bold format (f.eks. **FKB-Tiltak**).
-    Gi svaret på norsk og bruk kun informasjonen i konteksten."""
-    
-    human_template = "{question}"
-    
-    chat_prompt = ChatPromptTemplate.from_messages([
-        ("system", system_template),
-        ("human", human_template),
-    ])
-    
-    # Join the chunks with appropriate spacing
-    context = "\n\n".join([chunk.page_content for chunk in chunks])
-    
-    return chat_prompt, context
+    return await rag_chain.create_context_aware_prompt(vdb_response)
 
 async def get_rag_response(user_question, memory, rag_context, websocket):
     chat_prompt, context = rag_context
-    conversation_memory = EnhancedConversationMemory()
+    session_id = str(id(websocket))
     
-    # Add existing memory messages
-    for msg in memory:
-        conversation_memory.add_message(msg["role"], msg["content"])
+    history = rag_chain.get_session_history(session_id)
+    history.add_user_message(user_question)
     
-    # Combine the context with memory
-    full_context = context + conversation_memory.get_context_string()
+    # Format messages using the chat prompt
+    langchain_messages = chat_prompt.format_messages(
+        question=user_question,
+        context=context,
+        chat_history=history.messages
+    )
     
-    # Create the chain
-    chain = chat_prompt | client.chat.completions.create | StrOutputParser()
-    
-    # Stream the response
-    await send_websocket_message("chatStream", {"payload": "", "isNewMessage": True}, websocket)
-    
-    messages = [
-        {"role": "system", "content": full_context},
-        {"role": "user", "content": user_question}
+    # Convert Langchain messages to OpenAI format
+    openai_messages = [
+        {"role": "system" if msg.type == "system" else "user" if msg.type == "human" else "assistant",
+         "content": msg.content}
+        for msg in langchain_messages
     ]
     
-    # Get response using streaming
-    full_response = await send_api_chat_request(messages, websocket)
+    # Stream the response
+    full_response = await send_api_chat_request(openai_messages, websocket)
     
-    # Add response to memory
-    conversation_memory.add_message("assistant", full_response)
+    # Add the response to history
+    history.add_ai_message(full_response)
     
     return full_response
 
