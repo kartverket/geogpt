@@ -1,0 +1,41 @@
+services:
+  database:
+    image: pgvector/pgvector:pg16
+    container_name: pgvector_container
+    environment:
+      POSTGRES_USER: asd
+      POSTGRES_PASSWORD: asd
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-U", "asd" ]
+      interval: 5s
+      retries: 5
+      timeout: 3s
+
+  backend:
+    build:
+      context: .
+      dockerfile: geonorge-server/Dockerfile
+    volumes:
+      - .:/app
+    working_dir: /app/geonorge-server
+    depends_on:
+      database:
+        condition: service_healthy
+    command: >
+      sh -c "
+        python /app/scripts/create_vector.py &&
+        python /app/scripts/insert_csv.py &&
+        python src/server.py
+      "
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build: ./geonorge-app
+    container_name: geogpt_frontend
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"

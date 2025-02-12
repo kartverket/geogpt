@@ -236,7 +236,7 @@ async def main() -> None:
     """
     server = ChatServer()
     # Use host and port from configuration if available, else default values
-    host = CONFIG.get("host", "localhost")
+    host = CONFIG.get("host", "0.0.0.0")
     port = CONFIG.get("port", 8080)
     async with websockets.serve(
         server.ws_handler,

@@ -1,0 +1,39 @@
+name: Docker Build & Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test-docker:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Sjekker ut koden
+        uses: actions/checkout@v4
+
+      - name: Bygger backend Docker-image
+        run: |
+          docker build -t geogpt-backend -f geonorge-server/Dockerfile .
+
+      - name: Bygger frontend Docker-image
+        run: |
+          docker build -t geogpt-frontend -f geonorge-app/Dockerfile .
+
+      - name: Starter opp Docker Compose (test-miljø)
+        run: |
+          docker compose up -d
+          sleep 10  # Gir tjenester tid til å starte
+
+      - name: Tester om backend svarer
+        run: curl --fail http://localhost:8080 || exit 1
+
+      - name: Tester om frontend svarer
+        run: curl --fail http://localhost:3000 || exit 1
+
+      - name: Stopper og rydder opp
+        run: docker compose down
