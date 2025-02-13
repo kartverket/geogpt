@@ -6,14 +6,11 @@ from config import CONFIG
 from helpers.websocket import send_websocket_message
 from helpers.download import dataset_has_download, get_download_url, get_standard_or_first_format
 from helpers.fetch_valid_download_api_data import get_wms
-from helpers.langchain_memory import EnhancedConversationMemory
 import asyncio
 from typing import List, Dict, Any
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.schema import StrOutputParser
-from langchain.chains.history_aware_retriever import create_history_aware_retriever
-from langchain.chains.retrieval import create_retrieval_chain
 from langchain_community.chat_message_histories import ChatMessageHistory
 
 # Initialize Azure OpenAI client
@@ -44,8 +41,14 @@ class GeoNorgeRAGChain:
         
         context_texts = []
         for row in dict_response:
-            context = f"Kilde: https://kartkatalog.geonorge.no/metadata/{row['title']}/{row['uuid']}\nBeskrivelse: {row['abstract']}"
-            print("HVA ER ABSTRACT", row['abstract'])
+
+            
+            url_formatted_title = row['title'].replace(' ', '-')
+            
+            context = f"Kilde: https://kartkatalog.geonorge.no/metadata/{url_formatted_title}/{row['uuid']}"
+            # \nBeskrivelse: {row['abstract']}"
+            # print("HVA ER ABSTRACT", row['abstract'])
+            # print("HVA ER IMAGEGEGE", row['image'])
             context_texts.append(context)
         
         chunks = self.text_splitter.create_documents(context_texts)
@@ -118,7 +121,7 @@ async def send_api_chat_request(messages, websocket):
                 if hasattr(delta, 'content') and delta.content:
                     content = delta.content
                     await send_websocket_message("chatStream", {"payload": content}, websocket)
-                    await asyncio.sleep(0.01)
+                    # await asyncio.sleep(0.01)
                     full_response += content
     
     except Exception as e:

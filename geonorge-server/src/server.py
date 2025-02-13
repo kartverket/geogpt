@@ -32,35 +32,6 @@ from helpers.download import (
 from helpers.vector_database import get_vdb_response, get_vdb_search_response
 from helpers.websocket import send_websocket_message, send_websocket_action
 
-
-def build_memory_context(messages: List[Dict[str, Any]]) -> str:
-    """
-    Build a memory context string from a list of messages (assumed to be in Q/A pairs).
-
-    Args:
-        messages: A list of message dictionaries.
-
-    Returns:
-        A string representing the conversation history.
-    """
-    if not messages:
-        return ""
-    conversation_pairs = []
-    # Group messages into Q&A pairs.
-    # Note: This assumes messages are stored as [user_message, system_message, ...]
-    for i in range(0, len(messages), 2):
-        if i + 1 < len(messages):
-            q = messages[i]["content"]
-            a = messages[i + 1]["content"]
-            conversation_pairs.append(f"Spørsmål: {q}\nSvar: {a}")
-    memory_context = "\n\nTidligere samtalehistorikk:\n" + "\n\n".join(conversation_pairs)
-    memory_context += (
-        "\n\nVIKTIG: Dette er et oppfølgingsspørsmål. Prioriter informasjon fra den tidligere samtalen "
-        "før du introduserer nye datasett. Hvis spørsmålet er relatert til tidligere nevnte datasett, fokuser på disse først.\n\n"
-    )
-    return memory_context
-
-
 class ChatServer:
     """
     A WebSocket chat server handling chat and search form submissions.
@@ -80,7 +51,7 @@ class ChatServer:
 
     async def handle_chat_form_submit(self, websocket: Any, user_question: str) -> None:
         messages = self.client_messages.get(websocket, [])
-        memory = messages[-10:]  # Use the last 10 messages for context
+        memory = messages[-4:]  
         try:
             # Get VDB response and RAG context
             vdb_response = await get_vdb_response(user_question)
@@ -116,7 +87,6 @@ class ChatServer:
                 }
             ])
 
-            # Handle image UI and markdown formatting
             await insert_image_rag_response(full_rag_response, vdb_response, websocket)
             await send_websocket_action("formatMarkdown", websocket)
 
