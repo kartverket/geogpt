@@ -1,192 +1,238 @@
 import os
-import json
-import aiohttp
+from typing import List, Dict, Any
+from dataclasses import dataclass, field, asdict
+
+from typing import Optional, Any
+
+import asyncio
+from typing import Optional, Any, Dict
 from openai import AzureOpenAI
 from config import CONFIG
 from helpers.websocket import send_websocket_message
 from helpers.download import dataset_has_download, get_download_url, get_standard_or_first_format
 from helpers.fetch_valid_download_api_data import get_wms
-import asyncio
-from typing import List, Dict, Any
+from helpers.vector_database import get_vdb_response
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain.prompts import ChatPromptTemplate
 from langchain.schema import StrOutputParser
-from langchain_community.chat_message_histories import ChatMessageHistory
+from langchain_core.documents import Document
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.graph import START, END, StateGraph
+from langchain_openai import AzureChatOpenAI
 
 # Initialize Azure OpenAI client
-client = AzureOpenAI(
-    api_key=CONFIG["api"]["azure_gpt_api_key"],
-    api_version="2024-02-15-preview",
-    azure_endpoint=CONFIG["api"]["azure_gpt_endpoint"]
+llm = AzureChatOpenAI(
+    openai_api_version="2024-02-15-preview",
+    azure_deployment="gpt-4o-mini",
+    azure_endpoint=CONFIG["api"]["azure_gpt_endpoint"],
+    openai_api_key=CONFIG["api"]["azure_gpt_api_key"],
+    temperature=0.3,
+    streaming=True  
 )
+
+SYSTEM_PROMPT = """Du er GeoGPT, en spesialisert assistent for GeoNorge. Du kan kun svare på spørsmål relatert til:
+- GeoNorge sine datatjenester og datasett
+- Kartdata og geografisk informasjon i Norge
+
+- Tekniske spørsmål om GeoNorge sine tjenester
+- Norske standarder for geografisk informasjon
+
+Hvis du får spørsmål om andre temaer, forklar høflig at du kun kan svare på spørsmål relatert til GeoNorge og geografisk informasjon i Norge.
+
+Når du refererer til spesifikke datasett, sett alltid tittelen i **bold**.
+
+Bruk tidligere samtalehistorikk og kontekst til å gi presise og relevante svar."""
+
+class GeoNorgeVectorRetriever:
+    async def get_relevant_documents(self, query: str):
+        vdb_response = await get_vdb_response(query)
+        documents = []
+        for row in vdb_response:
+            metadata = {
+                "uuid": row[0],
+                "title": row[1],
+                "image": row[3] if len(row) > 3 else None
+            }
+            url_formatted_title = row[1].replace(' ', '-')
+            source_url = f"https://kartkatalog.geonorge.no/metadata/{url_formatted_title}/{row[0]}"
+            content = f"Kilde: {source_url}"
+            if len(row) > 2 and row[2]:
+                content += f"\nBeskrivelse: {row[2]}"
+            documents.append(Document(
+                page_content=content,
+                metadata=metadata
+            ))
+        return documents, vdb_response
+
+@dataclass
+class SerializableState:
+    messages: list = None
+    chat_history: str = ""
+    context: str = ""
+    metadata_context: list = None
+    websocket_id: str = None
+    
+    def __post_init__(self):
+        if self.messages is None:
+            self.messages = []
+        if self.metadata_context is None:
+            self.metadata_context = []
+
+    def to_dict(self) -> Dict:
+        return asdict(self)
 
 class GeoNorgeRAGChain:
     def __init__(self):
-        self.store = {}
+        self.memory = MemorySaver()
+        self.retriever = GeoNorgeVectorRetriever()
         self.text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=1000,
             chunk_overlap=200,
             length_function=len,
             separators=["\n\n", "\n", " ", ""]
         )
+        self.chain = self._build_chain()
+        self.sessions = {}
+        self.active_websockets = {}
 
-    def get_session_history(self, session_id: str) -> ChatMessageHistory:
-        if session_id not in self.store:
-            self.store[session_id] = ChatMessageHistory()
-        return self.store[session_id]
-
-    async def create_context_aware_prompt(self, vdb_response):
-        field_names = ['uuid', 'title', 'abstract', 'image']
-        dict_response = [dict(zip(field_names, row)) for row in vdb_response]
-        
-        context_texts = []
-        for row in dict_response:
-
+    def _build_chain(self):
+        async def retriever(state: Dict) -> Dict:
+            """Node that retrieves relevant context."""
+            current_state = SerializableState(**state)
+            messages = current_state.messages
+            last_message = messages[-1]["content"] if messages else ""
             
-            url_formatted_title = row['title'].replace(' ', '-')
+            documents, vdb_response = await self.retriever.get_relevant_documents(last_message)
             
-            context = f"Kilde: https://kartkatalog.geonorge.no/metadata/{url_formatted_title}/{row['uuid']}"
-            # \nBeskrivelse: {row['abstract']}"
-            # print("HVA ER ABSTRACT", row['abstract'])
-            # print("HVA ER IMAGEGEGE", row['image'])
-            context_texts.append(context)
-        
-        chunks = self.text_splitter.create_documents(context_texts)
-        
-        prompt = ChatPromptTemplate.from_messages([
-            ("system", """Du er en assistent som heter GeoGPT. Når du gir et svar, skal du inkludere 
-            en tydelig referanse til kilden eller dokumentet der du fant informasjonen. Hvis du ikke vet svaret, 
-            skal du si at du ikke vet. Følgende kontekst er tilgjengelig: {context}
+            # Update state while maintaining websocket_id
+            current_state.context = "\n\n".join(doc.page_content for doc in documents)
+            current_state.metadata_context = vdb_response
             
-            VIKTIG: Hvis du refererer til et datasett, MÅ du starte svaret med datasettets tittel i markdown 
-            bold format (f.eks. **FKB-Tiltak**). Dette er OBLIGATORISK hver gang du nevner et datasett fra konteksten."""),
-            MessagesPlaceholder(variable_name="chat_history"),
-            ("human", "{question}"),
-            ("system", "Bruk følgende kontekst for å svare på spørsmålet:\n{context}")
-        ])
+            return current_state.to_dict()
+
+        async def generate_response(state: Dict) -> Dict:
+            """Node that generates the response using the LLM."""
+            current_state = SerializableState(**state)
+            
+            # Get active websocket
+            websocket = self.active_websockets.get(current_state.websocket_id)
+            if not websocket:
+                raise ValueError(f"No active websocket found for ID: {current_state.websocket_id}")
+
+            prompt = ChatPromptTemplate.from_messages([
+                ("system", SYSTEM_PROMPT),
+                ("human", "{input}"),
+                ("system", "Chat Historikk:\n{chat_history}"),
+                ("system", "Kontekst:\n{context}")
+            ])
+            
+            messages = current_state.messages
+            last_message = messages[-1]["content"] if messages else ""
+            
+            chain = prompt | llm
+            response_chunks = []
+            
+            await send_websocket_message("chatStream", {"payload": "", "isNewMessage": True}, websocket)
+            
+            async for chunk in chain.astream({
+                "input": last_message,
+                "chat_history": current_state.chat_history,
+                "context": current_state.context
+            }):
+                if hasattr(chunk, 'content'):
+                    response_chunks.append(chunk.content)
+                    await send_websocket_message("chatStream", {"payload": chunk.content}, websocket)
+            
+            full_response = "".join(response_chunks)
+            messages.append({"role": "assistant", "content": full_response})
+            
+            # Update state
+            current_state.messages = messages
+            current_state.chat_history = self._format_history(messages)
+            
+            return current_state.to_dict()
+
+        workflow = StateGraph(Dict)
+        workflow.add_node("retriever", retriever)
+        workflow.add_node("generate_response", generate_response)
+        workflow.add_edge(START, "retriever")
+        workflow.add_edge("retriever", "generate_response")
+        workflow.add_edge("generate_response", END)
         
-        return prompt, "\n\n".join([chunk.page_content for chunk in chunks])
+        return workflow.compile(checkpointer=self.memory)
 
+    async def chat(self, query: str, session_id: str, websocket) -> str:
+        # Store websocket in active connections
+        websocket_id = str(id(websocket))
+        self.active_websockets[websocket_id] = websocket
+        
+        try:
+            # Initialize or get existing session state
+            if session_id not in self.sessions:
+                current_state = SerializableState(websocket_id=websocket_id)
+            else:
+                current_state = SerializableState(**self.sessions[session_id])
+                current_state.websocket_id = websocket_id
+            
+            # Add new message
+            current_state.messages.append({"role": "human", "content": query})
+            current_state.chat_history = self._format_history(current_state.messages)
+            
+            # Run chain with dictionary state
+            config = {"configurable": {"thread_id": session_id}}
+            final_state = await self.chain.ainvoke(current_state.to_dict(), config=config)
+            
+            # Convert final state back to SerializableState and store
+            final_serializable_state = SerializableState(**final_state)
+            self.sessions[session_id] = final_serializable_state.to_dict()
+            
+            if final_serializable_state.messages:
+                last_message = final_serializable_state.messages[-1]["content"]
+                await insert_image_rag_response(
+                    last_message,
+                    final_serializable_state.metadata_context,
+                    websocket
+                )
+                return last_message
+            
+            return "No response generated."
+            
+        finally:
+            # Clean up websocket reference
+            self.active_websockets.pop(websocket_id, None)
 
+    def _format_history(self, messages: list) -> str:
+        return "\n".join(f'{m["role"]}: {m["content"]}' for m in messages)
 
-# Initialize the global RAG chain
-rag_chain = GeoNorgeRAGChain()
+    # Remove or comment out the _stream_response method as it's no longer needed
+    async def _stream_response(self, response: str, websocket):
+        await send_websocket_message("chatStream", {"payload": "", "isNewMessage": True}, websocket)
+        for chunk in response.split():
+            await send_websocket_message("chatStream", {"payload": chunk + " "}, websocket)
 
-async def get_rag_context(vdb_response):
-    return await rag_chain.create_context_aware_prompt(vdb_response)
-
-async def get_rag_response(user_question, memory, rag_context, websocket):
-    chat_prompt, context = rag_context
-    session_id = str(id(websocket))
-    
-    history = rag_chain.get_session_history(session_id)
-    history.add_user_message(user_question)
-    
-    # Format messages using the chat prompt
-    langchain_messages = chat_prompt.format_messages(
-        question=user_question,
-        context=context,
-        chat_history=history.messages
-    )
-    
-    # Convert Langchain messages to OpenAI format
-    openai_messages = [
-        {"role": "system" if msg.type == "system" else "user" if msg.type == "human" else "assistant",
-         "content": msg.content}
-        for msg in langchain_messages
-    ]
-    
-    # Stream the response
-    full_response = await send_api_chat_request(openai_messages, websocket)
-    
-    # Add the response to history
-    history.add_ai_message(full_response)
-    
-    return full_response
-
-async def send_api_chat_request(messages, websocket):
-    await send_websocket_message("chatStream", {"payload": "", "isNewMessage": True}, websocket)
-    
-    stream = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=messages,
-        stream=True
-    )
-    
-    full_response = ""
-    try:
-        for chunk in stream:
-            if chunk and hasattr(chunk, 'choices') and chunk.choices:
-                delta = chunk.choices[0].delta
-                if hasattr(delta, 'content') and delta.content:
-                    content = delta.content
-                    await send_websocket_message("chatStream", {"payload": content}, websocket)
-                    # await asyncio.sleep(0.01)
-                    full_response += content
-    
-    except Exception as e:
-        print(f"Error during streaming: {e}")
-        logger.error(f"Streaming error details: {str(e)}")
-        raise
-    
-    if not full_response:
-        logger.warning("No response content received from Azure OpenAI")
-        full_response = "Beklager, jeg kunne ikke generere et svar. Vennligst prøv igjen."
-    
-    return full_response
-
+# Image handling functions remain the same
 async def check_image_signal(gpt_response, metadata_context_list):
     import re
-    
-    # Convert tuples to dictionaries
     field_names = ['uuid', 'title', 'abstract', 'image', 'distance']
     dict_response = [dict(zip(field_names, row)) for row in metadata_context_list]
-    
-    # Fetch WMS URLs for each dataset
     for row in dict_response:
         row['wmsUrl'] = await get_wms(row['uuid'])
-    
-    # Debug print for dataset titles and full objects
-    # print("\nDebug: Full dataset objects:")
-    # for row in dict_response:
-    #     print(f"UUID: {row.get('uuid')}")
-    #     print(f"Title: {row.get('title')}")
-    #     print(f"Image: {row.get('image')}")
-    #     print(f"WMS URL: {row.get('wmsUrl')}")
-    #     print("---")
-
-    print("\nGPT Response:", gpt_response)
     bold_titles = re.findall(r'\*\*(.*?)\*\*', gpt_response)
-    print("Detected bold titles:", bold_titles)
-    
     if not bold_titles:
         return False
-
-    # Check each dataset with detailed logging
-    for obj in dict_response:  # Use the converted dictionary response
+    for obj in dict_response:
         title = obj.get("title", "").lower()
-        print(f"\nChecking title: {title}")
-        
         for bold_text in bold_titles:
             bold_lower = bold_text.lower().replace(" ", "")
             title_lower = title.replace(" ", "")
-            print(f"Comparing with bold text: {bold_text}")
-            print(f"Normalized comparison: '{title_lower}' vs '{bold_lower}'")
-            
             if bold_lower in title_lower:
-                print("Match found!")
                 if obj.get("uuid") and obj.get("image"):
                     image_field = obj["image"]
-                    print(f"Image field found: {image_field}")
                     image_urls = [s.strip() for s in image_field.split(",") if s.strip()]
                     if not image_urls:
-                        print("No valid image URLs found")
                         continue
-                    
                     dataset_image_url = image_urls[-1]
                     dataset_uuid = obj["uuid"]
-                    
-                    # Try to get download URL
                     download_url = None
                     try:
                         if await dataset_has_download(dataset_uuid):
@@ -195,22 +241,15 @@ async def check_image_signal(gpt_response, metadata_context_list):
                                 download_url = await get_download_url(dataset_uuid, standard_format)
                     except Exception as e:
                         print(f"Failed to get download URL: {e}")
-                    
                     return {
                         "uuid": dataset_uuid,
                         "datasetImageUrl": dataset_image_url,
                         "downloadUrl": download_url,
                         "wmsUrl": obj.get("wmsUrl", None)
                     }
-                else:
-                    print(f"Missing required fields - UUID: {obj.get('uuid')}, Image: {obj.get('image')}")
-
-    print("No matching dataset found with required fields")
     return False
 
-
 async def insert_image_rag_response(full_response, vdb_response, websocket):
-    """Insert image UI elements into RAG response"""
     dataset_info = await check_image_signal(full_response, vdb_response)
     if dataset_info:
         await send_websocket_message(
@@ -219,7 +258,17 @@ async def insert_image_rag_response(full_response, vdb_response, websocket):
                 "datasetUuid": dataset_info["uuid"],
                 "datasetImageUrl": dataset_info["datasetImageUrl"],
                 "datasetDownloadUrl": dataset_info["downloadUrl"],
-                "wmsUrl": dataset_info["wmsUrl"] 
+                "wmsUrl": dataset_info["wmsUrl"]
             },
             websocket
         )
+
+# Initialize the chain
+rag_chain = GeoNorgeRAGChain()
+
+async def get_rag_response(user_question, memory, rag_context, websocket):
+    session_id = str(id(websocket))
+    return await rag_chain.chat(user_question, session_id, websocket)
+
+async def get_rag_context(vdb_response):
+    return None, None

@@ -20,8 +20,7 @@ from config import CONFIG
 
 from helpers.retrieval_augmented_generation import (
     get_rag_context,
-    get_rag_response,
-    insert_image_rag_response,
+    get_rag_response
 )
 from helpers.download import (
     get_standard_or_first_format,
@@ -51,24 +50,23 @@ class ChatServer:
 
     async def handle_chat_form_submit(self, websocket: Any, user_question: str) -> None:
         messages = self.client_messages.get(websocket, [])
-        memory = messages[-4:]  
         try:
-            # Get VDB response and RAG context
+            # Get VDB response (still needed for image handling)
             vdb_response = await get_vdb_response(user_question)
-            rag_context = await get_rag_context(vdb_response)
-
+            
             # Display user question in chat
             await send_websocket_message("userMessage", user_question, websocket)
-
-            # Send RAG request with context and instruction
+    
+            # Send RAG request with streaming
             full_rag_response = await get_rag_response(
                 user_question,
-                memory,
-                rag_context,
+                None,
+                None,
                 websocket
             )
+            
             await send_websocket_action("streamComplete", websocket)
-
+    
             # Add messages to history with timestamp and exchange_id
             timestamp = datetime.datetime.now().isoformat()
             exchange_id = len(messages) // 2
@@ -86,10 +84,9 @@ class ChatServer:
                     "exchange_id": exchange_id,
                 }
             ])
-
-            await insert_image_rag_response(full_rag_response, vdb_response, websocket)
+    
             await send_websocket_action("formatMarkdown", websocket)
-
+    
         except Exception as error:
             logger.error("Server controller failed: %s", str(error))
             logger.error("Stack trace: %s", traceback.format_exc())
