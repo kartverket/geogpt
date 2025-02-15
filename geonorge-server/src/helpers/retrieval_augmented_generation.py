@@ -18,28 +18,37 @@ from langchain.schema import StrOutputParser
 from langchain_core.documents import Document
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import START, END, StateGraph
-from langchain_openai import AzureChatOpenAI
+from langchain_openai import AzureChatOpenAI, ChatOpenAI
 
 # Initialize Azure OpenAI client
-llm = AzureChatOpenAI(
-    openai_api_version="2024-02-15-preview",
-    azure_deployment="gpt-4o-mini",
-    azure_endpoint=CONFIG["api"]["azure_gpt_endpoint"],
-    openai_api_key=CONFIG["api"]["azure_gpt_api_key"],
+# llm = AzureChatOpenAI(
+#     openai_api_version="2024-02-15-preview",
+#     azure_deployment="gpt-4o-mini",
+#     azure_endpoint=CONFIG["api"]["azure_gpt_endpoint"],
+#     openai_api_key=CONFIG["api"]["azure_gpt_api_key"],
+#     temperature=0.3,
+#     streaming=True  
+# )
+# Initialize Gemini client with OpenAI compatibility
+llm = ChatOpenAI(
+    model_name="gemini-1.5-flash",
+    openai_api_key=CONFIG["api"]["gemini_api_key"],
+    openai_api_base=CONFIG["api"]["gemini_base_endpoint"],
+    streaming=True,
     temperature=0.3,
-    streaming=True  
 )
 
 SYSTEM_PROMPT = """Du er GeoGPT, en spesialisert assistent for GeoNorge. Du kan kun svare på spørsmål relatert til:
 - GeoNorge sine datatjenester og datasett
 - Kartdata og geografisk informasjon i Norge
-
 - Tekniske spørsmål om GeoNorge sine tjenester
 - Norske standarder for geografisk informasjon
 
 Hvis du får spørsmål om andre temaer, forklar høflig at du kun kan svare på spørsmål relatert til GeoNorge og geografisk informasjon i Norge.
 
 Når du refererer til spesifikke datasett, sett alltid tittelen i **bold**.
+
+Inkluder alltid relevante kilder fra konteksten i svaret ditt, formatert som en liste på slutten av svaret.
 
 Bruk tidligere samtalehistorikk og kontekst til å gi presise og relevante svar."""
 
@@ -55,13 +64,25 @@ class GeoNorgeVectorRetriever:
             }
             url_formatted_title = row[1].replace(' ', '-')
             source_url = f"https://kartkatalog.geonorge.no/metadata/{url_formatted_title}/{row[0]}"
-            content = f"Kilde: {source_url}"
+            
+            # Improved content formatting to make it more clear for the LLM
+            content = f"Datasett: {row[1]}\n"
             if len(row) > 2 and row[2]:
-                content += f"\nBeskrivelse: {row[2]}"
+                content += f"Beskrivelse: {row[2]}\n"
+            content += f"Mer informasjon: {source_url}"
+            
             documents.append(Document(
                 page_content=content,
                 metadata=metadata
             ))
+        
+        # If no documents were found, add a fallback document
+        if not documents:
+            documents.append(Document(
+                page_content="Beklager, jeg fant ingen relevante datasett for dette spørsmålet i GeoNorge sin database.",
+                metadata={"fallback": True}
+            ))
+            
         return documents, vdb_response
 
 @dataclass
@@ -114,16 +135,21 @@ class GeoNorgeRAGChain:
             """Node that generates the response using the LLM."""
             current_state = SerializableState(**state)
             
-            # Get active websocket
             websocket = self.active_websockets.get(current_state.websocket_id)
             if not websocket:
                 raise ValueError(f"No active websocket found for ID: {current_state.websocket_id}")
 
             prompt = ChatPromptTemplate.from_messages([
-                ("system", SYSTEM_PROMPT),
-                ("human", "{input}"),
-                ("system", "Chat Historikk:\n{chat_history}"),
-                ("system", "Kontekst:\n{context}")
+                ("human", f"""Instructions for this conversation:
+            {SYSTEM_PROMPT}
+            
+            User Question: {{input}}
+            
+            Previous Conversation:
+            {{chat_history}}
+            
+            Available Context:
+            {{context}}""")
             ])
             
             messages = current_state.messages
