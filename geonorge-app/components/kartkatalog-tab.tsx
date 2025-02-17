@@ -171,7 +171,6 @@ export function KartkatalogTab({
       console.log("[DEBUG] Entire metadata response:", data);
 
       let extractedAbstract = data.Abstract
-        || data.abstract
         || data.metadata?.abstract
         || data.purpose
         || "Ingen beskrivelse tilgjengelig";
@@ -309,18 +308,8 @@ export function KartkatalogTab({
                               side="left"
                               className="w-80"
                             >
-                              <div className="space-y-2">
-                                <h4 className="font-medium">{result.title}</h4>
-                                {!descriptionsCache.has(result.uuid) ? (
-                                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                    Laster beskrivelse...
-                                  </div>
-                                ) : (
-                                  <p className="text-sm text-gray-600">
-                                    {descriptionsCache.get(result.uuid)}
-                                  </p>
-                                )}
+                              <div className="line-clamp-6 overflow-hidden text-ellipsis space-y-2">
+                                {descriptionsCache.get(result.uuid)}
                               </div>
                             </HoverCardContent>
                           </HoverCard>
