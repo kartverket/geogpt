@@ -40,7 +40,7 @@ def _rag_vector_search(vector_array):
                 """
                 SELECT uuid, title, abstract, image, title_vector <-> %s::vector AS distance 
                 FROM text_embedding_3_large 
-                ORDER BY title_vector <-> %s::vector LIMIT 10
+                ORDER BY title_vector <-> %s::vector LIMIT 3
                 """,
                 (vector_array, vector_array)
             )

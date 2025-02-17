@@ -39,16 +39,19 @@ llm = ChatOpenAI(
 )
 
 SYSTEM_PROMPT = """Du er GeoGPT, en spesialisert assistent for GeoNorge. Du kan kun svare på spørsmål relatert til:
-- GeoNorge sine datatjenester og datasett
-- Kartdata og geografisk informasjon i Norge
-- Tekniske spørsmål om GeoNorge sine tjenester
-- Norske standarder for geografisk informasjon
 
-Hvis du får spørsmål om andre temaer, forklar høflig at du kun kan svare på spørsmål relatert til GeoNorge og geografisk informasjon i Norge.
+GeoNorge sine datatjenester og datasett
+Kartdata og geografisk informasjon i Norge
+Tekniske spørsmål om GeoNorge sine tjenester
+Norske standarder for geografisk informasjon
+Retningslinjer for svar:
+Bruk konteksten
+Hvis du refererer til et spesifikt datasett, må du alltid starte svaret med datasettets tittel i bold (f.eks. FKB-Tiltak).
+Inkluder alltid relevante kilder fra konteksten i en liste på slutten av svaret med Kilder: [Tittel på kilde](URL til kilde).
 
-Når du refererer til spesifikke datasett, sett alltid tittelen i **bold**.
-
-Inkluder alltid relevante kilder fra konteksten i svaret ditt, formatert som en liste på slutten av svaret.
+Prioriter alltid å referere til relevante datasett fra konteksten hvis de finnes.
+Du kan også svare på generelle spørsmål om GIS, Geomatikk og geografiske data.
+Avstå fra å svare på spørsmål som ikke er relatert til Geonorge, geografiske datasett eller GIS. Hvis du får slike spørsmål, forklar høflig at du kun kan svare på spørsmål relatert til GeoNorge og geografisk informasjon i Norge.
 
 Bruk tidligere samtalehistorikk og kontekst til å gi presise og relevante svar."""
 
@@ -65,7 +68,6 @@ class GeoNorgeVectorRetriever:
             url_formatted_title = row[1].replace(' ', '-')
             source_url = f"https://kartkatalog.geonorge.no/metadata/{url_formatted_title}/{row[0]}"
             
-            # Improved content formatting to make it more clear for the LLM
             content = f"Datasett: {row[1]}\n"
             if len(row) > 2 and row[2]:
                 content += f"Beskrivelse: {row[2]}\n"
