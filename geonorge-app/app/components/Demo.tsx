@@ -142,6 +142,21 @@ function DemoV2() {
         ]);
         break;
 
+      case "areaData":
+        console.log("Received area data:", payload);
+        if (payload && Array.isArray(payload)) {
+          setChatMessages((prev) => [
+            ...prev,
+            {
+              type: "text",
+              content: `System: Available download formats:\n${payload
+                .map((area: any) => `- ${area.name}`)
+                .join("\n")}`,
+            },
+          ]);
+        }
+        break;
+
       default:
         console.log("Unknown action:", data);
     }

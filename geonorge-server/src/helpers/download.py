@@ -18,13 +18,13 @@ async def fetch_area_data(uuid: str) -> List[Dict[str, Any]]:
     Returns a list (parsed JSON). If not valid, returns an empty list.
     """
     url = f"https://nedlasting.geonorge.no/api/codelists/area/{uuid}"
-    logger.info("Fetching area data for UUID: %s from URL: %s", uuid, url)
+    # logger.info("Fetching area data for UUID: %s from URL: %s", uuid, url)
 
     # Optional: Define a timeout for the request.
     timeout = aiohttp.ClientTimeout(total=10)
     async with aiohttp.ClientSession(timeout=timeout) as session:
         async with session.get(url) as response:
-            logger.info("Response status: %s, URL: %s", response.status, response.url)
+            # logger.info("Response status: %s, URL: %s", response.status, response.url)
             if not response.ok:
                 raise RuntimeError(f"HTTP error! status: {response.status}")
             # Check if redirected to a login page.
@@ -172,6 +172,30 @@ async def get_download_url(metadata_uuid: str, download_formats: Dict[str, Any])
                 return files[0].get("downloadUrl")
             return None
 
+
+async def get_dataset_download_formats(vdb_search_response: List[tuple]) -> List[Dict[str, Any]]:
+    """
+    For each item in vdb_search_response, fetch only the download formats
+    and return minimal dataset information.
+    Returns a list of datasets with uuid, title and download formats.
+    """
+    # Convert tuples to dictionaries with only needed fields
+    field_names = ['uuid', 'title', 'abstract', 'image', 'distance']
+    dict_response = [dict(zip(field_names, row)) for row in vdb_search_response]
+
+    async def fetch_formats(dataset: Dict[str, Any]) -> Dict[str, Any]:
+        uuid = dataset.get("uuid")
+        formats_api_response = await fetch_area_data(uuid)
+        
+        return {
+            "uuid": dataset["uuid"],
+            "title": dataset["title"],
+            "downloadFormats": formats_api_response
+        }
+
+    tasks = [fetch_formats(ds) for ds in dict_response]
+    results = await asyncio.gather(*tasks, return_exceptions=False)
+    return results
 
 async def get_dataset_download_and_wms_status(vdb_search_response: List[tuple]) -> List[Dict[str, Any]]:
     """
