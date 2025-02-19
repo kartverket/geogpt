@@ -18,7 +18,11 @@ cd pgvector_docker
 ./run_pgvector.sh
 cd ..
 
-# 3️⃣ Generer vektorer og sett dem inn i databasen
+# 3️⃣ Installer Python-avhengigheter
+echo "🐍 Installerer Python-avhengigheter..."
+pip install -r scripts/requirements.txt
+
+# 4️⃣ Generer vektorer og sett dem inn i databasen
 echo "🔢 Genererer vektorer..."
 cd scripts
 python create_vector.py
@@ -27,7 +31,7 @@ echo "📤 Setter inn data i databasen..."
 python insert_csv.py
 cd ..
 
-# 4️⃣ Start backend-serveren
+# 5️⃣ Start backend-serveren
 echo "🖥️ Starter backend-serveren..."
 cd geonorge-server/src
 python server.py &

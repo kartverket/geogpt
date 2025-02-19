@@ -29,6 +29,10 @@ export function MessageList({
   onDownloadClick,
   onExitFullScreen,
 }: MessageListProps) {
+  const isValidWmsUrl = (url: string | undefined | null): boolean => {
+    return url !== undefined && url !== null && url !== "None";
+  };
+
   return (
     <div className="space-y-4 overflow-visible">
       {messages.map((message, index) => {
@@ -46,18 +50,23 @@ export function MessageList({
                 className="max-w-[300px] h-auto rounded"
               />
               <div className="flex gap-2 z-10">
-                {message.wmsUrl && (
-                  <Button
-                    onClick={() => {
+                <Button
+                  onClick={() => {
+                    if (isValidWmsUrl(message.wmsUrl)) {
                       onWmsClick?.(message.wmsUrl!);
                       onExitFullScreen?.();
-                    }}
-                    variant="secondary"
-                    className="hover:bg-green-600 bg-green-500 text-white hover:text-white transition-colors relative"
-                  >
-                    Vis
-                  </Button>
-                )}
+                    }
+                  }}
+                  variant="secondary"
+                  className={`transition-colors relative ${
+                    isValidWmsUrl(message.wmsUrl)
+                      ? "hover:bg-green-600 bg-green-500 text-white hover:text-white"
+                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  }`}
+                  disabled={!isValidWmsUrl(message.wmsUrl)}
+                >
+                  Vis
+                </Button>
                 {message.downloadUrl && (
                   <Button
                     onClick={() => onDownloadClick?.(message.downloadUrl!)}
