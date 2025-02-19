@@ -24,7 +24,6 @@ jobs:
             echo "$line" >> $GITHUB_ENV
           done
 
-
     env:
       DB_HOST: pgvector_container
       DB_PORT: 5432
@@ -40,7 +39,7 @@ jobs:
       GEMINI_BASE_ENDPOINT: ${{ env.GEMINI_BASE_ENDPOINT }}
       GEMINI_FULL_ENDPOINT: ${{ env.GEMINI_FULL_ENDPOINT }}
 
-    steps:
+      steps:
       - name: Installer WebSocket-klient (wscat)
         run: npm install -g wscat
 
