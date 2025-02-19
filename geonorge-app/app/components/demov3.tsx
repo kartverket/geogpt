@@ -79,10 +79,16 @@ const DemoV3 = () => {
   useEffect(() => {
     if (!mapRef.current || map) return;
 
-    const mapInstance = L.map(mapRef.current).setView([63, 10], 5);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: "&copy; OpenStreetMap contributors",
-    }).addTo(mapInstance);
+    const mapInstance = L.map(mapRef.current).setView([65.5, 13.5], 5);
+    // Replace the OpenStreetMap tile layer with Kartverket's
+    L.tileLayer(
+      "https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png",
+      {
+        maxZoom: 18,
+        attribution:
+          '&copy; <a href="http://www.kartverket.no/">Kartverket</a>',
+      }
+    ).addTo(mapInstance);
 
     setMap(mapInstance);
     fetchWMSInfo();
@@ -120,7 +126,6 @@ const DemoV3 = () => {
       layers: selectedLayer,
       format: "image/png",
       transparent: true,
-      attribution: "&copy; DSB",
       version: "1.3.0",
     });
 
@@ -491,102 +496,115 @@ const DemoV3 = () => {
   };
 
   return (
-    <div className="mx-auto w-full max-w-[93%]">
-      <h2 className="text-2xl mb-4">
-        Leaflet WMS - Geonorge Søk + WMS + Min Posisjon
-      </h2>
-      <div className="flex flex-col gap-4 mb-4">
-        <div>
-          <label htmlFor="wms-url" className="block mb-2">
-            WMS URL:
-          </label>
-          <input
-            type="text"
-            id="wms-url"
-            value={wmsUrl}
-            onChange={(e) => setWmsUrl(e.target.value)}
-            className="w-full p-2 border rounded"
-          />
-        </div>
-        <button
-          onClick={fetchWMSInfo}
-          className="bg-blue-500 text-white px-4 py-2 rounded"
-        >
-          Hent WMS-data
-        </button>
-        <div>
-          <label htmlFor="layer-select" className="block mb-2">
-            Velg Lag:
-          </label>
-          <select
-            id="layer-select"
-            value={selectedLayer}
-            onChange={(e) => setSelectedLayer(e.target.value)}
-            className="w-full p-2 border rounded"
+    <>
+      <style>
+        {`
+          #map {
+            background-color: #FAFAFA;
+          }
+        `}
+      </style>
+      <div className="mx-auto w-full max-w-[93%]">
+        <h2 className="text-3xl mb-4">
+          Leaflet WMS - Geonorge Søk + WMS + Min Posisjon
+        </h2>
+        <div className="flex flex-col gap-4 mb-4">
+          <div>
+            <label htmlFor="wms-url" className="block mb-2">
+              WMS URL:
+            </label>
+            <input
+              type="text"
+              id="wms-url"
+              value={wmsUrl}
+              onChange={(e) => setWmsUrl(e.target.value)}
+              className="w-full p-2 border rounded"
+            />
+          </div>
+          <button
+            onClick={fetchWMSInfo}
+            className="bg-blue-500 text-white px-4 py-2 rounded"
           >
-            {availableLayers.map((layer) => (
-              <option key={layer.name} value={layer.name}>
-                {layer.title}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div className="relative">
-        {/* Adding a container for the map controls with higher z-index */}
-        <div className="relative">
-          <div className="absolute inset-x-0 top-4 z-[20] flex justify-center">
-            <div className="w-96 flex">
-              <input
-                type="text"
-                placeholder="Søk etter adresse..."
-                onChange={(e) => searchAddress(e.target.value)}
-                className="w-full p-2 border rounded-lg "
-              />
-              {searchResults2.length > 0 && (
-                <div className="absolute top-full mt-1 w-full border bg-white rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                  {searchResults2.map((addr, index) => (
-                    <div
-                      key={index}
-                      onClick={() => selectAddress(addr)}
-                      className="p-2 hover:bg-gray-100 cursor-pointer"
-                    >
-                      {addr.adressetekst}
-                      {addr.poststed && `, ${addr.poststed}`}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-          {/* Map container */}
-          <div ref={mapRef} className="h-[100vh] w-full relative z-0">
-            {/* Search bar centered at the top */}
-
-            {/* KartkatalogTab in middle-right */}
-            <div className="absolute top-1/3 right-0 -translate-y-1/2 z-[401] rounded-lg shadow-lg">
-              <KartkatalogTab
-                onReplaceIframe={replaceIframe}
-                onDatasetDownload={handleDatasetDownload}
-                ws={ws}
-              />
-            </div>
-
-            {/* Location button in top-right */}
-            <button
-              onClick={getUserLocation}
-              className="absolute top-4 right-4  bg-white p-2 rounded-lg shadow-lg hover:bg-gray-100 flex items-center gap-2 z-[1000]"
+            Hent WMS-data
+          </button>
+          <div>
+            <label htmlFor="layer-select" className="block mb-2">
+              Velg Lag:
+            </label>
+            <select
+              id="layer-select"
+              value={selectedLayer}
+              onChange={(e) => setSelectedLayer(e.target.value)}
+              className="w-full p-2 border rounded"
             >
-              <span role="img" aria-label="location">
-                📍
-              </span>
-              Min Posisjon
-            </button>
+              {availableLayers.map((layer) => (
+                <option key={layer.name} value={layer.name}>
+                  {layer.title}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="relative">
+          {/* Adding a container for the map controls with higher z-index */}
+          <div className="relative">
+            <div className="absolute inset-x-0 top-4 z-[20] flex justify-center mx-auto max-w-min">
+              <div className="w-96 flex">
+                <input
+                  type="text"
+                  placeholder="Søk etter adresse..."
+                  onChange={(e) => searchAddress(e.target.value)}
+                  className="w-full p-2 border rounded-lg "
+                />
+                {searchResults2.length > 0 && (
+                  <div className="absolute top-full mt-1 w-full border bg-white rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    {searchResults2.map((addr, index) => (
+                      <div
+                        key={index}
+                        onClick={() => selectAddress(addr)}
+                        className="p-2 hover:bg-gray-100 cursor-pointer"
+                      >
+                        {addr.adressetekst}
+                        {addr.poststed && `, ${addr.poststed}`}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            {/* Map container */}
+            <div
+              ref={mapRef}
+              className="h-[100vh] w-full relative z-0"
+              id="map"
+            >
+              {/* Search bar centered at the top */}
+
+              {/* KartkatalogTab in middle-right */}
+              <div className="absolute top-1/3 right-0 -translate-y-1/2 z-[401] rounded-lg shadow-lg">
+                <KartkatalogTab
+                  onReplaceIframe={replaceIframe}
+                  onDatasetDownload={handleDatasetDownload}
+                  ws={ws}
+                />
+              </div>
+
+              {/* Location button in top-right */}
+              <button
+                onClick={getUserLocation}
+                className="text-sm absolute top-4 right-4 bg-white p-3 rounded-lg border hover:bg-gray-100 flex items-center gap-2 z-[1000]"
+              >
+                <span role="img" aria-label="location">
+                  📍
+                </span>
+                Min Posisjon
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
