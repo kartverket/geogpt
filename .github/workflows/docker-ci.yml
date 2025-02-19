@@ -54,11 +54,11 @@ jobs:
             sleep 5
           done
 
-      - name: Tester om backend svarer
-        run: curl --retry 5 --retry-delay 5 --retry-connrefused --fail http://localhost:8080/health || exit 1
-
       - name: Tester om frontend svarer
         run: curl --retry 5 --retry-delay 5 --retry-connrefused --fail http://localhost:3000 || exit 1
+
+      - name: Tester om backend svarer
+        run: curl --retry 5 --retry-delay 5 --retry-connrefused --fail http://localhost:8080/health || exit 1
 
       - name: Stopper og rydder opp
         run: docker compose down
