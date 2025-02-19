@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 
 # Finn riktig sti til .env-filen
-env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'geonorge-server', 'src' , '.env')
+env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'geonorge-server', 'src', '.env')
 
 # Last inn miljøvariabler fra .env-filen
 load_dotenv(env_path)
