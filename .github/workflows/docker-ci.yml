@@ -32,6 +32,9 @@ jobs:
       - name: Sjekker ut koden
         uses: actions/checkout@v4
 
+      - name: Sjekk om package.json er tilgjengelig
+        run: ls -l geonorge-app/
+
       - name: Bygger backend Docker-image
         run: |
           docker build -t geogpt-backend -f geonorge-server/Dockerfile .
