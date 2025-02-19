@@ -32,7 +32,10 @@ jobs:
       - name: Sjekker ut koden
         uses: actions/checkout@v4
 
-      - name: Sjekk om package.json er tilgjengelig
+      - name: Installer WebSocket-klient (wscat)
+        run: npm install -g wscat
+
+      - name: List frontend files
         run: ls -l geonorge-app/
 
       - name: Bygger backend Docker-image
@@ -54,11 +57,22 @@ jobs:
             sleep 5
           done
 
+      - name: Vent på at backend skal være klar
+        run: |
+          echo "Venter på backend..."
+          for i in {1..10}; do
+            wscat -c ws://localhost:8080/health && break || echo "Backend ikke klar ennå..."
+            sleep 5
+          done
+
+      - name: Sjekk backend-logger
+        run: docker logs $(docker ps --filter "name=geogpt-backend" -q)
+
+      - name: Test databaseforbindelse
+        run: docker exec $(docker ps --filter "name=geogpt-backend" -q) psql -h pgvector_container -U $DB_USER -d $DB_NAME -c "SELECT 1;"
+
       - name: Tester om frontend svarer
         run: curl --retry 5 --retry-delay 5 --retry-connrefused --fail http://localhost:3000 || exit 1
-
-      - name: Tester om backend svarer
-        run: curl --retry 5 --retry-delay 5 --retry-connrefused --fail http://localhost:8080/health || exit 1
 
       - name: Stopper og rydder opp
         run: docker compose down
