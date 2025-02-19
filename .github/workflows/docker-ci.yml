@@ -1,0 +1,60 @@
+name: Docker Build & Test
+
+on:
+  push:
+    branches:
+      - main
+      - feat/GEON-1496-Oppsett-av-testmiljø
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test-docker:
+    runs-on: ubuntu-latest
+
+    env:
+      DB_HOST: database
+      DB_PORT: 5432
+      DB_NAME: postgres
+      DB_USER: ${{ secrets.DB_USER }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      AZURE_GPT_API_KEY: ${{ secrets.AZURE_GPT_API_KEY }}
+      AZURE_GPT_ENDPOINT: ${{ secrets.AZURE_GPT_ENDPOINT }}
+      AZURE_EMBEDDING_BASEURL: ${{ secrets.AZURE_EMBEDDING_BASEURL }}
+      AZURE_EMBEDDING_API_KEY: ${{ secrets.AZURE_EMBEDDING_API_KEY }}
+      AZURE_EMBEDDING_ENDPOINT: ${{ secrets.AZURE_EMBEDDING_ENDPOINT }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_BASE_ENDPOINT: ${{ secrets.GEMINI_BASE_ENDPOINT }}
+      GEMINI_FULL_ENDPOINT: ${{ secrets.GEMINI_FULL_ENDPOINT }}
+
+    steps:
+      - name: Sjekker ut koden
+        uses: actions/checkout@v4
+
+      - name: Bygger backend Docker-image
+        run: |
+          docker build -t geogpt-backend -f geonorge-server/Dockerfile .
+
+      - name: Bygger frontend Docker-image
+        run: |
+          docker build -t geogpt-frontend -f geonorge-app/Dockerfile .
+
+      - name: Starter opp Docker Compose (test-miljø)
+        run: |
+          docker compose up -d
+          echo "Venter på at databasen skal være klar..."
+          for i in {1..10}; do
+            docker exec pgvector_container pg_isready -U asd && break
+            echo "Venter på database..."
+            sleep 5
+          done
+
+      - name: Tester om backend svarer
+        run: curl --retry 5 --retry-delay 5 --retry-connrefused --fail http://localhost:8080/health || exit 1
+
+      - name: Tester om frontend svarer
+        run: curl --retry 5 --retry-delay 5 --retry-connrefused --fail http://localhost:3000 || exit 1
+
+      - name: Stopper og rydder opp
+        run: docker compose down
