@@ -41,7 +41,8 @@ jobs:
 
       - name: Bygger frontend Docker-image
         run: |
-          docker build -t geogpt-frontend -f geonorge-app/Dockerfile .
+          docker build -t geogpt-frontend -f geonorge-app/Dockerfile ./geonorge-app
+
 
       - name: Starter opp Docker Compose (test-miljø)
         run: |
