@@ -7,6 +7,11 @@ import datetime
 import logging
 import traceback
 from typing import Any, Dict, List, Set
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+import requests
+from xml.etree import ElementTree
+from concurrent.futures import ThreadPoolExecutor
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -31,6 +36,13 @@ from helpers.download import (
 )
 from helpers.vector_database import get_vdb_response, get_vdb_search_response
 from helpers.websocket import send_websocket_message, send_websocket_action
+
+# Initialize Flask app 
+app = Flask(__name__)
+CORS(app)
+
+# Create a thread pool executor for running blocking operations
+executor = ThreadPoolExecutor()
 
 class ChatServer:
     """
@@ -184,24 +196,72 @@ class ChatServer:
         finally:
             await self.unregister(websocket)
 
+# Add WMS endpoint
+@app.route('/wms-info', methods=['GET'])
+def get_wms_info():
+    """ Handle WMS information requests """
+    wms_url = request.args.get('url')
+    if not wms_url:
+        return jsonify({"error": "WMS URL is required"}), 400
+
+    try:
+        response = requests.get(wms_url, timeout=10)
+        response.raise_for_status()
+        tree = ElementTree.fromstring(response.content)
+
+        ns = {"wms": "http://www.opengis.net/wms"}
+
+        layers = []
+        for layer in tree.findall(".//wms:Layer", ns):
+            name = layer.find("wms:Name", ns)
+            title = layer.find("wms:Title", ns)
+            if name is not None and title is not None:
+                layers.append({"name": name.text, "title": title.text})
+
+        formats = [
+            fmt.text for fmt in tree.findall(".//wms:GetMap/wms:Format", ns)
+        ]
+
+        return jsonify({
+            "wms_url": wms_url,
+            "available_layers": layers,
+            "available_formats": formats
+        })
+
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": str(e)}), 500
+    except ElementTree.ParseError:
+        return jsonify({"error": "Failed to parse WMS XML response"}), 500
+
+def run_flask():
+    """Run Flask in a separate thread"""
+    host = CONFIG.get("host", "localhost")
+    http_port = CONFIG.get("http_port", 5000)
+    app.run(host=host, port=http_port, debug=False, use_reloader=False)
 
 async def main() -> None:
     """
-    Initialize and run the WebSocket server.
+    Initialize and run both the WebSocket server and Flask app
     """
     server = ChatServer()
-    # Use host and port from configuration if available, else default values
     host = CONFIG.get("host", "localhost")
-    port = CONFIG.get("port", 8080)
-    async with websockets.serve(
+    ws_port = CONFIG.get("port", 8080)
+
+    # Start WebSocket server
+    ws_server = await websockets.serve(
         server.ws_handler,
         host,
-        port,
-        compression=None  # Disable compression for better compatibility
-    ):
-        logger.info("WebSocket server running on ws://%s:%s", host, port)
-        await asyncio.Future()  # Run forever
+        ws_port,
+        compression=None
+    )
+    logger.info("WebSocket server running on ws://%s:%s", host, ws_port)
 
+    # Start Flask server in a separate thread
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, run_flask)
+
+    # Keep the WebSocket server running
+    await ws_server.wait_closed()
 
 if __name__ == "__main__":
     asyncio.run(main())
