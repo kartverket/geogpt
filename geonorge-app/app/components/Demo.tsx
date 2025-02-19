@@ -304,6 +304,10 @@ function DemoV2() {
     setIsPopoverOpen(true);
   };
 
+  const isValidWmsUrl = (url: string | null | undefined) => {
+    return url !== undefined && url !== null && url !== "None";
+  };
+
   return (
     <div className="relative h-screen w-screen font-['Helvetica_Neue',_Arial,_sans-serif]">
       {/* Map Iframe */}
@@ -387,16 +391,21 @@ function DemoV2() {
                           className="max-w-full h-auto rounded"
                         />
                         <div className="flex gap-2">
-                          {msg.wmsUrl && (
-                            <Button
-                              onClick={() =>
-                                msg.wmsUrl && replaceIframe(msg.wmsUrl)
+                          <Button
+                            onClick={() => {
+                              if (isValidWmsUrl(msg.wmsUrl)) {
+                                replaceIframe(msg.wmsUrl!);
                               }
-                              className="bg-green-500 text-white text-xs"
-                            >
-                              Vis
-                            </Button>
-                          )}
+                            }}
+                            className={`text-xs ${
+                              isValidWmsUrl(msg.wmsUrl)
+                                ? "bg-green-500 text-white"
+                                : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                            }`}
+                            disabled={!isValidWmsUrl(msg.wmsUrl)}
+                          >
+                            Vis
+                          </Button>
                           {msg.downloadUrl && (
                             <Button
                               onClick={() =>
