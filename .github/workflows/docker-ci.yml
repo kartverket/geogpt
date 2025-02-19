@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      DB_HOST: database
+      DB_HOST: pgvector_container
       DB_PORT: 5432
       DB_NAME: postgres
       DB_USER: ${{ secrets.DB_USER }}
