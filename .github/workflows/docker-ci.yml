@@ -24,6 +24,7 @@ jobs:
             echo "$line" >> $GITHUB_ENV
           done
 
+
     env:
       DB_HOST: pgvector_container
       DB_PORT: 5432
