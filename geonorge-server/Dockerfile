@@ -6,7 +6,7 @@ WORKDIR /app
 
 # Installer systemavhengigheter for psycopg2
 RUN apt-get update && apt-get install -y \
-    libpq-dev gcc && \
+    libpq-dev gcc postgresql-client && \
     rm -rf /var/lib/apt/lists/*
 
 # Kopier kun requirements.txt først for caching

@@ -56,13 +56,14 @@ jobs:
             sleep 5
           done
 
-      - name: Vent på at backend skal være klar
+      - name: Vent på at backend WebSocket skal svare
         run: |
-          echo "Venter på backend..."
+          echo "Venter på WebSocket-server..."
           for i in {1..10}; do
-            wscat -c ws://localhost:8080/health && break || echo "Backend ikke klar ennå..."
+            nc -zv localhost 8080 && echo "WebSocket-serveren er oppe!" && break
+            echo "WebSocket ikke klar ennå..."
             sleep 5
-          done
+          done || { echo "WebSocket-server feilet!"; exit 1; }
 
       - name: Sjekk backend-logger
         run: docker logs $(docker ps --filter "name=geogpt-backend" -q)
