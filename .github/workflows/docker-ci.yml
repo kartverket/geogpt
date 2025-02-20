@@ -13,16 +13,24 @@ jobs:
   test-docker:
     runs-on: ubuntu-latest
 
+    env:
+      DB_HOST: pgvector_container
+      DB_PORT: 5432
+      DB_NAME: postgres
+      DB_USER: ${{ secrets.DB_USER }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      AZURE_GPT_API_KEY: ${{ secrets.AZURE_GPT_API_KEY }}
+      AZURE_GPT_ENDPOINT: ${{ secrets.AZURE_GPT_ENDPOINT }}
+      AZURE_EMBEDDING_BASEURL: ${{ secrets.AZURE_EMBEDDING_BASEURL }}
+      AZURE_EMBEDDING_API_KEY: ${{ secrets.AZURE_EMBEDDING_API_KEY }}
+      AZURE_EMBEDDING_ENDPOINT: ${{ secrets.AZURE_EMBEDDING_ENDPOINT }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_BASE_ENDPOINT: ${{ secrets.GEMINI_BASE_ENDPOINT }}
+      GEMINI_FULL_ENDPOINT: ${{ secrets.GEMINI_FULL_ENDPOINT }}
+
     steps:
       - name: Sjekker ut koden
         uses: actions/checkout@v4
-
-      - name: Ekstraher miljøvariabler fra GitHub Secrets
-        run: |
-          echo "${{ secrets.ENV }}" > .env
-          cat .env | while IFS= read -r line; do
-            echo "$line" >> $GITHUB_ENV
-          done
 
       - name: Installer WebSocket-klient (wscat)
         run: npm install -g wscat
@@ -31,54 +39,37 @@ jobs:
         run: ls -l geonorge-app/
 
       - name: Bygger backend Docker-image
-        run: docker build -t geogpt-backend -f geonorge-server/Dockerfile .
+        run: |
+          docker build -t geogpt-backend -f geonorge-server/Dockerfile .
 
       - name: Bygger frontend Docker-image
-        run: docker build -t geogpt-frontend -f geonorge-app/Dockerfile ./geonorge-app
+        run: |
+          docker build -t geogpt-frontend -f geonorge-app/Dockerfile ./geonorge-app
 
       - name: Starter opp Docker Compose (test-miljø)
         run: |
           docker compose up -d
           echo "Venter på at databasen skal være klar..."
           for i in {1..10}; do
-            docker exec pgvector_container pg_isready -U $DB_USER && break
+            docker exec pgvector_container pg_isready -U asd && break
             echo "Venter på database..."
             sleep 5
           done
 
-      - name: Kopier miljøvariabler til backend-container
+      - name: Vent på at backend WebSocket skal svare
         run: |
-          BACKEND_CONTAINER=$(docker ps --filter "name=geogpt-backend" -q)
-          echo "✅ Backend-container ID: $BACKEND_CONTAINER"
-          docker cp .env $BACKEND_CONTAINER:/app/.env
+          echo "Venter på WebSocket-server..."
+          for i in {1..10}; do
+            nc -zv localhost 8080 && echo "WebSocket-serveren er oppe!" && break
+            echo "WebSocket ikke klar ennå..."
+            sleep 5
+          done || { echo "WebSocket-server feilet!"; exit 1; }
 
-      - name: Sjekk kjørende containere
-        run: docker ps -a
-
-      - name: Sjekk backend-logger etter oppstart
-        run: |
-          echo "🟡 Henter backend-logs..."
-          docker logs $(docker ps --filter "name=geogpt-backend" -q) || echo "❌ Ingen backend-logs funnet!"
-
-      - name: Sjekk backend-containerens prosesser
-        run: |
-          echo "🟡 Kjører kommando: docker top"
-          docker top $(docker ps --filter "name=geogpt-backend" -q)
-
-      - name: Sjekk backend-containerens filsystem
-        run: |
-          echo "🟡 Sjekker backend-filer..."
-          docker exec $(docker ps --filter "name=geogpt-backend" -q) ls -l /app/scripts
-
-      - name: Sjekk backend-containerens miljøvariabler
-        run: docker exec $(docker ps --filter "name=geogpt-backend" -q) env
+      - name: Sjekk backend-logger
+        run: docker logs $(docker ps --filter "name=geogpt-backend" -q)
 
       - name: Test databaseforbindelse
-        run: |
-          export DB_USER=$(grep DB_USER .env | cut -d '=' -f2)
-          export DB_NAME=$(grep DB_NAME .env | cut -d '=' -f2)
-          export DB_PASSWORD=$(grep DB_PASSWORD .env | cut -d '=' -f2)
-          docker exec -e PGPASSWORD=$DB_PASSWORD pgvector_container psql -h pgvector_container -U $DB_USER -d $DB_NAME -c "SELECT 1;"
+        run: docker exec $(docker ps --filter "name=geogpt-backend" -q) psql -h pgvector_container -U $DB_USER -d $DB_NAME -c "SELECT 1;"
 
       - name: Vent på at backend skript skal kjøre
         run: |
@@ -95,17 +86,10 @@ jobs:
       - name: Sjekk feilmeldinger fra create_vector.py
         run: |
           echo "🔍 Innhold av create_vector.log (med feil)"
-          docker exec $(docker ps --filter "name=geogpt-backend" -q) cat /app/scripts/create_vector.log || echo "❌ Ingen logg funnet!"
+          docker exec $(docker ps --filter "name=geogpt-backend" -q) cat /app/scripts/create_vector.log || echo "❌ Ingen logg funnet!"      
 
-
-      - name: Vent på at frontend skal starte
-        run: |
-          echo "Venter på at frontend-serveren skal starte..."
-          for i in {1..10}; do
-            curl --fail http://localhost:3000 && echo "Frontend er oppe!" && break
-            echo "Frontend ikke klar ennå..."
-            sleep 5
-          done || { echo "Frontend-server feilet!"; exit 1; }
+      - name: Tester om frontend svarer
+        run: curl --retry 5 --retry-delay 5 --retry-connrefused --fail http://localhost:3000 || exit 1
 
       - name: Stopper og rydder opp
         run: docker compose down
