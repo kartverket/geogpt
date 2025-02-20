@@ -9,7 +9,7 @@ services:
     ports:
       - "5432:5432"
     healthcheck:
-      test: [ "CMD", "pg_isready", "-U", "asd" ]
+      test: ["CMD", "pg_isready", "-U", "asd"]
       interval: 5s
       retries: 5
       timeout: 3s
@@ -28,7 +28,10 @@ services:
       POSTGRES_USER: asd
       POSTGRES_PASSWORD: asd
       POSTGRES_DB: postgres
-      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST: pgvector_container
+      DB_PORT: "5432"
+      DB_USER: asd
+      DB_PASSWORD: asd
       AZURE_GPT_API_KEY: ${AZURE_GPT_API_KEY}
       AZURE_GPT_ENDPOINT: ${AZURE_GPT_ENDPOINT}
       AZURE_EMBEDDING_API_KEY: ${AZURE_EMBEDDING_API_KEY}
