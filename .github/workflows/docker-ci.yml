@@ -60,16 +60,6 @@ jobs:
           echo "🟡 Henter backend-logs..."
           docker logs $(docker ps --filter "name=geogpt-backend" -q) || echo "❌ Ingen backend-logs funnet!"
 
-      - name: Sjekk om backend-container kjører
-        run: |
-          CONTAINER_ID=$(docker ps --filter "name=geogpt-backend" -q)
-          if [ -z "$CONTAINER_ID" ]; then
-            echo "❌ Backend-containeren kjører ikke!"
-            exit 1
-          else
-            echo "✅ Backend-container kjører med ID: $CONTAINER_ID"
-          fi
-
       - name: Sjekk backend-containerens prosesser
         run: |
           echo "🟡 Kjører kommando: docker top"
@@ -90,8 +80,17 @@ jobs:
           export DB_PASSWORD=$(grep DB_PASSWORD .env | cut -d '=' -f2)
           docker exec -e PGPASSWORD=$DB_PASSWORD pgvector_container psql -h pgvector_container -U $DB_USER -d $DB_NAME -c "SELECT 1;"
 
-      - name: Sjekk frontend-logger
-        run: docker logs $(docker ps --filter "name=geogpt_frontend" -q)
+      - name: Vent på at backend skript skal kjøre
+        run: |
+          echo "⏳ Venter på at backend-skript fullføres..."
+          sleep 10
+
+      - name: Hent backend-loggfiler for debugging
+        run: |
+          echo "🔍 Henter backend-loggfiler..."
+          docker exec $(docker ps -a --filter "name=geogpt-backend" -q) cat /app/scripts/create_vector.log || echo "❌ Ingen create_vector.log funnet!"
+          docker exec $(docker ps -a --filter "name=geogpt-backend" -q) cat /app/scripts/insert_csv.log || echo "❌ Ingen insert_csv.log funnet!"
+          docker exec $(docker ps -a --filter "name=geogpt-backend" -q) cat /app/scripts/server.log || echo "❌ Ingen server.log funnet!"
 
       - name: Vent på at frontend skal starte
         run: |
@@ -101,22 +100,6 @@ jobs:
             echo "Frontend ikke klar ennå..."
             sleep 5
           done || { echo "Frontend-server feilet!"; exit 1; }
-
-      - name: Hent backend-loggfiler for debugging
-        run: |
-          echo "🔍 Henter backend-loggfiler..."
-          docker cp $(docker ps -a --filter "name=geogpt-backend" -q):/app/scripts/create_vector.log ./create_vector.log || echo "❌ Kunne ikke hente create_vector.log"
-          docker cp $(docker ps -a --filter "name=geogpt-backend" -q):/app/scripts/insert_csv.log ./insert_csv.log || echo "❌ Kunne ikke hente insert_csv.log"
-          docker cp $(docker ps -a --filter "name=geogpt-backend" -q):/app/scripts/server.log ./server.log || echo "❌ Kunne ikke hente server.log"
-
-      - name: Vis backend-loggfiler
-        run: |
-          echo "🔍 Innhold av create_vector.log:"
-          cat create_vector.log || echo "❌ Ingen logg funnet!"
-          echo "🔍 Innhold av insert_csv.log:"
-          cat insert_csv.log || echo "❌ Ingen logg funnet!"
-          echo "🔍 Innhold av server.log:"
-          cat server.log || echo "❌ Ingen logg funnet!"
 
       - name: Stopper og rydder opp
         run: docker compose down

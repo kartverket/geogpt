@@ -27,8 +27,11 @@ services:
       - .env  # ✅ Bruker .env-fil for miljøvariabler
     command: >
       sh -c "
-        python /app/scripts/create_vector.py > /app/scripts/create_vector.log 2>&1 &&
-        python /app/scripts/insert_csv.py > /app/scripts/insert_csv.log 2>&1 &&
+        echo '🚀 Starter create_vector.py' &&
+        python /app/scripts/create_vector.py > /app/scripts/create_vector.log 2>&1 || echo '❌ create_vector.py feilet!' &&
+        echo '🚀 Starter insert_csv.py' &&
+        python /app/scripts/insert_csv.py > /app/scripts/insert_csv.log 2>&1 || echo '❌ insert_csv.py feilet!' &&
+        echo '🚀 Starter server.py' &&
         python src/server.py > /app/scripts/server.log 2>&1 || echo '❌ server.py feilet!';
         tail -f /dev/null
       "
