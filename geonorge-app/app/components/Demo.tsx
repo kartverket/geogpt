@@ -41,7 +41,13 @@ interface ChatMessage {
 }
 
 interface SearchResult {
-  downloadFormats: any;
+  downloadFormats: {
+    type: string;
+    name: string;
+    code: string;
+    projections?: { name: string; code: string }[];
+    formats?: { name: string }[];
+  }[];
   uuid: string;
   title?: string;
   wmsUrl?: string;
@@ -445,9 +451,10 @@ function DemoV2() {
     handleSendMessage(message.content);
   };
 
+  // Handles dataset download from chat
   const handleDatasetDownload = (msg: ChatMessage) => {
     console.log("🚀 ~ handleDatasetDownload ~ msg:", msg);
-    setPendingDownloadUrl(msg.downloadUrl);
+    setPendingDownloadUrl(msg.downloadUrl || null);
     if (msg.datasetOptions) {
       setGeographicalAreas(msg.datasetOptions.geographicalAreas);
       setProjections(msg.datasetOptions.projections);
@@ -457,6 +464,7 @@ function DemoV2() {
     setFileDownloadModalOpen(true);
   };
 
+  // Confirm download from modal
   const confirmDownload = () => {
     if (!pendingDownloadUrl) return;
     const link = document.createElement("a");
@@ -468,6 +476,21 @@ function DemoV2() {
     document.body.removeChild(link);
     setFileDownloadModalOpen(false);
     setPendingDownloadUrl(null);
+  };
+
+  // Downloads dataset immediately from catalog.
+  const executeDatasetDownload = (downloadUrl: string) => {
+    if (!downloadUrl) {
+      console.error("No download URL provided.");
+      return;
+    }
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.target = "_blank";
+    link.download = "";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   // When entering full screen, close the popover
@@ -495,7 +518,7 @@ function DemoV2() {
       {/* KartkatalogTab Component */}
       <KartkatalogTab
         onReplaceIframe={replaceIframe}
-        onDatasetDownload={handleDatasetDownload}
+        onDatasetDownload={executeDatasetDownload}
         ws={ws}
       />
 
