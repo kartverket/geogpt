@@ -24,12 +24,6 @@ jobs:
             echo "$line" >> $GITHUB_ENV
           done
 
-      - name: Kopier miljøvariabler til backend-container
-        run: |
-          docker create --name temp_container alpine
-          docker cp .env temp_container:/app/.env
-          docker rm temp_container
-
       - name: Installer WebSocket-klient (wscat)
         run: npm install -g wscat
 
@@ -51,6 +45,12 @@ jobs:
             echo "Venter på database..."
             sleep 5
           done
+
+      - name: Kopier miljøvariabler til backend-container
+        run: |
+          BACKEND_CONTAINER=$(docker ps --filter "name=geogpt-backend" -q)
+          echo "✅ Backend-container ID: $BACKEND_CONTAINER"
+          docker cp .env $BACKEND_CONTAINER:/app/.env
 
       - name: Sjekk kjørende containere
         run: docker ps -a
