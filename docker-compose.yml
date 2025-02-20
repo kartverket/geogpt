@@ -27,7 +27,8 @@ services:
       sh -c "
         python /app/scripts/create_vector.py > /app/scripts/create_vector.log 2>&1 &&
         python /app/scripts/insert_csv.py > /app/scripts/insert_csv.log 2>&1 &&
-        python src/server.py > /app/scripts/server.log 2>&1
+        python src/server.py > /app/scripts/server.log 2>&1 || echo '❌ server.py feilet!';
+        tail -f /dev/null
       "
     ports:
       - "8080:8080"
