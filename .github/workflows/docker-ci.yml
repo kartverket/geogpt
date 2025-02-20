@@ -96,5 +96,24 @@ jobs:
             sleep 5
           done || { echo "Frontend-server feilet!"; exit 1; }
 
+      - name: Hent backend-loggfiler for debugging
+        run: |
+          echo "🔍 Henter backend-loggfiler..."
+          docker cp $(docker ps -a --filter "name=geogpt-backend" -q):/app/scripts/create_vector.log ./create_vector.log || echo "❌ Kunne ikke hente create_vector.log"
+          docker cp $(docker ps -a --filter "name=geogpt-backend" -q):/app/scripts/insert_csv.log ./insert_csv.log || echo "❌ Kunne ikke hente insert_csv.log"
+          docker cp $(docker ps -a --filter "name=geogpt-backend" -q):/app/scripts/server.log ./server.log || echo "❌ Kunne ikke hente server.log"
+
+      - name: Vis backend-loggfiler
+        run: |
+          echo "🔍 Innhold av create_vector.log:"
+          cat create_vector.log || echo "❌ Ingen logg funnet!"
+          echo "🔍 Innhold av insert_csv.log:"
+          cat insert_csv.log || echo "❌ Ingen logg funnet!"
+          echo "🔍 Innhold av server.log:"
+          cat server.log || echo "❌ Ingen logg funnet!"
+
+      - name: Stopper og rydder opp
+        run: docker compose down
+
       - name: Stopper og rydder opp
         run: docker compose down
