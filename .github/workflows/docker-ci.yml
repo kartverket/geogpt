@@ -73,8 +73,14 @@ jobs:
 
       - name: Test databaseforbindelse
         run: |
-          export PGPASSWORD=${{ secrets.DB_PASSWORD }}
-          docker exec $(docker ps --filter "name=geogpt-backend" -q) psql -h pgvector_container -U $DB_USER -d $DB_NAME -c "SELECT 1;"
+          echo "🔍 Tester databaseforbindelse..."
+          export DB_USER=$(grep DB_USER .env | cut -d '=' -f2)
+          export DB_NAME=$(grep DB_NAME .env | cut -d '=' -f2)
+          export DB_PASSWORD=$(grep DB_PASSWORD .env | cut -d '=' -f2)
+          echo "PGPASSWORD=$DB_PASSWORD" > ~/.pgpass
+          chmod 600 ~/.pgpass
+          docker exec -e PGPASSWORD=$DB_PASSWORD $(docker ps --filter "name=geogpt-backend" -q) \
+            psql -h pgvector_container -U $DB_USER -d $DB_NAME -c "SELECT 1;"
 
       - name: Vent på at backend skript skal kjøre
         run: |
