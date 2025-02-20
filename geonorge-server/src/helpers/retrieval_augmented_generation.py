@@ -1,7 +1,6 @@
 import os
-from typing import List, Dict, Any, Optional, Annotated, TypedDict
-from dataclasses import dataclass, field, asdict
-import asyncio
+from typing import List, Dict, Any, Optional, Annotated
+from dataclasses import dataclass, field
 from openai import AzureOpenAI
 from config import CONFIG
 from helpers.websocket import send_websocket_message
@@ -15,16 +14,9 @@ from langchain_core.documents import Document
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import START, END, StateGraph
 from langchain_openai import AzureChatOpenAI, ChatOpenAI
+from instructions.prompt_instructions import SYSTEM_PROMPT, QUERY_REWRITE_PROMPT
 
-# Define the state schema
-class ChatState(TypedDict):
-    messages: list
-    chat_history: str
-    context: str
-    metadata_context: list
-    websocket_id: str
-
-# Initialize Gemini client with OpenAI compatibility
+# Gemini LLM
 llm = ChatOpenAI(
     model_name="gemini-2.0-flash",
     openai_api_key=CONFIG["api"]["gemini_api_key"],
@@ -32,33 +24,41 @@ llm = ChatOpenAI(
     streaming=True,
     temperature=0.3,
 )
-
-SYSTEM_PROMPT = """Du er GeoGPT, en spesialisert assistent for GeoNorge. Du kan kun svare på spørsmål relatert til:
-
-GeoNorge sine datatjenester og datasett
-Kartdata og geografisk informasjon i Norge
-Tekniske spørsmål om GeoNorge sine tjenester
-Norske standarder for geografisk informasjon
-Retningslinjer for svar:
-Bruk konteksten
-Hvis du refererer til et spesifikt datasett, må du alltid starte svaret med datasettets tittel i bold (f.eks. FKB-Tiltak).
-Inkluder alltid relevante kilder fra konteksten i en liste på slutten av svaret med Kilder: [Tittel på kilde](URL til kilde).
-
-Prioriter alltid å referere til relevante datasett fra konteksten hvis de finnes.
-Du kan også svare på generelle spørsmål om GIS, Geomatikk og geografiske data.
-Avstå fra å svare på spørsmål som ikke er relatert til Geonorge, geografiske datasett eller GIS. Hvis du får slike spørsmål, forklar høflig at du kun kan svare på spørsmål relatert til GeoNorge og geografisk informasjon i Norge.
-
-Bruk tidligere samtalehistorikk og kontekst til å gi presise og relevante svar."""
+# Rewrite with Azure OpenAI
+rewrite_llm = AzureChatOpenAI(
+    api_key=CONFIG["api"]["azure_gpt_api_key"],
+    api_version="2024-02-15-preview",
+    azure_endpoint=CONFIG["api"]["azure_gpt_endpoint"],
+    streaming=True,
+    temperature=0.3,
+)
 
 class GeoNorgeVectorRetriever:
+    async def _transform_query(self, query: str) -> str:
+        """Transform the query to improve retrieval quality."""
+        
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", QUERY_REWRITE_PROMPT),
+            ("human", query)
+        ])
+        
+        chain = prompt | rewrite_llm | StrOutputParser()
+        transformed_query = await chain.ainvoke({"query": query})
+
+        return transformed_query.strip()
+
     async def get_relevant_documents(self, query: str):
-        vdb_response = await get_vdb_response(query)
+        transformed_query = await self._transform_query(query)
+        print(f"Transformed Query: {transformed_query}")
+        vdb_response = await get_vdb_response(transformed_query)
+        
         documents = []
         for row in vdb_response:
             metadata = {
                 "uuid": row[0],
                 "title": row[1],
-                "image": row[3] if len(row) > 3 else None
+                "image": row[3] if len(row) > 3 else None,
+                "metadatacreationdate": row[4] if len(row) > 4 else None  
             }
             url_formatted_title = row[1].replace(' ', '-')
             source_url = f"https://kartkatalog.geonorge.no/metadata/{url_formatted_title}/{row[0]}"
@@ -66,6 +66,14 @@ class GeoNorgeVectorRetriever:
             content = f"Datasett: {row[1]}\n"
             if len(row) > 2 and row[2]:
                 content += f"Beskrivelse: {row[2]}\n"
+            if metadata["metadatacreationdate"]:
+                try:
+                    date_parts = metadata["metadatacreationdate"].split('-')
+                    if len(date_parts) == 3:
+                        norwegian_date = f"{date_parts[2]}.{date_parts[1]}.{date_parts[0]}"
+                        content += f"Sist oppdatert: {norwegian_date}\n"
+                except:
+                    content += f"Sist oppdatert: {metadata['metadatacreationdate']}\n"
             content += f"Mer informasjon: {source_url}"
             
             documents.append(Document(
@@ -80,9 +88,6 @@ class GeoNorgeVectorRetriever:
             ))
             
         return documents, vdb_response
-
-from typing import List, Dict, Any, Optional, Annotated
-from dataclasses import dataclass, field
 
 @dataclass
 class ChatState:
@@ -138,17 +143,15 @@ class GeoNorgeRAGChain:
                 raise ValueError(f"No active websocket found for ID: {current_state.websocket_id}")
 
             prompt = ChatPromptTemplate.from_messages([
-                ("human", f"""Instructions for this conversation:
-            {SYSTEM_PROMPT}
-            
-            User Question: {{input}}
-            
-            Previous Conversation:
-            {{chat_history}}
-            
-            Available Context:
-            {{context}}""")
-            ])
+    ("system", SYSTEM_PROMPT),
+    ("user", """Bruker spørsmål: {input}
+
+Tidligere samtale:
+{chat_history}
+
+Tilgjengelig kontekst:
+{context}""")
+])
             
             messages = current_state.messages
             last_message = messages[-1]["content"] if messages else ""
@@ -175,7 +178,7 @@ class GeoNorgeRAGChain:
             
             return current_state.to_dict()
 
-        workflow = StateGraph(Annotated[Dict, "ChatState"])  # This is the key change
+        workflow = StateGraph(Annotated[Dict, "ChatState"])
         workflow.add_node("retriever", retriever)
         workflow.add_node("generate_response", generate_response)
         workflow.add_edge(START, "retriever")
@@ -280,7 +283,6 @@ async def insert_image_rag_response(full_response, vdb_response, websocket):
             websocket
         )
 
-# Initialize the chain
 rag_chain = GeoNorgeRAGChain()
 
 async def get_rag_response(

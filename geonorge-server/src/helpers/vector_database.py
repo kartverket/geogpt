@@ -38,7 +38,7 @@ def _rag_vector_search(vector_array):
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT uuid, title, abstract, image, title_vector <-> %s::vector AS distance 
+                SELECT uuid, title, abstract, image, metadatacreationdate, title_vector <-> %s::vector AS distance 
                 FROM text_embedding_3_large 
                 ORDER BY title_vector <-> %s::vector LIMIT 3
                 """,
