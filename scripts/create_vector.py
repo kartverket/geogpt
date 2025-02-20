@@ -3,7 +3,13 @@ import requests
 import json
 import config
 
+# Debugging: Sjekk om variabelen er riktig satt
+print(f"🔍 DEBUG: AZURE_EMBEDDING_BASEURL = {config.AZURE_EMBEDDING_BASEURL}")
+
 # Riktig API URL-format
+if not config.AZURE_EMBEDDING_BASEURL:
+    raise ValueError("❌ Feil: AZURE_EMBEDDING_BASEURL er ikke satt!")
+
 API_URL = f"{config.AZURE_EMBEDDING_BASEURL}/openai/deployments/text-embedding-3-large/embeddings?api-version=2023-05-15"
 API_KEY = config.AZURE_EMBEDDING_API_KEY
 MODEL = config.AZURE_GPT_API_KEY  # Hvis det er en spesifikk modell
