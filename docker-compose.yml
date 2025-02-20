@@ -23,6 +23,19 @@ services:
     depends_on:
       database:
         condition: service_healthy
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      AZURE_GPT_API_KEY: ${AZURE_GPT_API_KEY}
+      AZURE_GPT_ENDPOINT: ${AZURE_GPT_ENDPOINT}
+      AZURE_EMBEDDING_API_KEY: ${AZURE_EMBEDDING_API_KEY}
+      AZURE_EMBEDDING_BASEURL: ${AZURE_EMBEDDING_BASEURL}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_BASE_ENDPOINT: ${GEMINI_BASE_ENDPOINT}
+      GEMINI_FULL_ENDPOINT: ${GEMINI_FULL_ENDPOINT}
     command: >
       sh -c "
         echo '🚀 Starter create_vector.py' &&
