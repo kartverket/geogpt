@@ -18,9 +18,9 @@ CONFIG = {
     "db": {
         "host": os.getenv("DB_HOST") or os.environ.get("DB_HOST", "pgvector_container"),
         "port": int(os.getenv("DB_PORT") or os.environ.get("DB_PORT", "5432")),
-        "name": os.getenv("DB_NAME") or os.environ.get("DB_NAME", "postgres"),
-        "user": os.getenv("DB_USER") or os.environ.get("DB_USER", "asd"),
-        "password": os.getenv("DB_PASSWORD") or os.environ.get("DB_PASSWORD", "asd"),
+        "name": os.getenv("DB_NAME") or os.environ.get("DB_NAME", ""),
+        "user": os.getenv("DB_USER") or os.environ.get("DB_USER", ""),
+        "password": os.getenv("DB_PASSWORD") or os.environ.get("DB_PASSWORD", ""),
     },
     "api": {
         "openai_embedding_api_key": os.getenv("OPENAI_EMBEDDING_API_KEY") or os.environ.get("OPENAI_EMBEDDING_API_KEY", ""),
