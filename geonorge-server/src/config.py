@@ -29,6 +29,7 @@ CONFIG = {
         "openai_gpt_api_key": os.getenv("OPENAI_API_KEY") or os.environ.get("OPENAI_API_KEY", ""),
         "openai_gpt_api_model": os.getenv("OPENAI_GPT_API_MODEL") or os.environ.get("OPENAI_GPT_API_MODEL", ""),
         "azure_gpt_api_key": os.getenv("AZURE_GPT_API_KEY") or os.environ.get("AZURE_GPT_API_KEY", ""),
+        "azure_embedding_endpoint": os.getenv("AZURE_EMBEDDING_BASEURL") or os.environ.get("AZURE_EMBEDDING_BASEURL", ""),
         "azure_gpt_endpoint": os.getenv("AZURE_GPT_ENDPOINT") or os.environ.get("AZURE_GPT_ENDPOINT", ""),
         "azure_embedding_api_key": os.getenv("AZURE_EMBEDDING_API_KEY") or os.environ.get("AZURE_EMBEDDING_API_KEY", ""),
         "azure_embeddings_endpoint": os.getenv("AZURE_EMBEDDING_BASEURL", "https://kartai-openai.openai.azure.com") + "/openai/deployments/text-embedding-3-large/embeddings?api-version=2023-05-15",
