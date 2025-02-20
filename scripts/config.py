@@ -14,9 +14,9 @@ else:
 # Database-tilkobling
 DB_HOST = os.getenv("DB_HOST", os.environ.get("DB_HOST", "pgvector_container"))
 DB_PORT = os.getenv("DB_PORT", os.environ.get("DB_PORT", "5432"))
-DB_NAME = os.getenv("DB_NAME") or os.environ.get("DB_NAME")
-DB_USER = os.getenv("DB_USER") or os.environ.get("DB_USER")
-DB_PASSWORD = os.getenv("DB_PASSWORD") or os.environ.get("DB_PASSWORD")
+DB_NAME = os.getenv("DB_NAME") or os.environ.get("postgres")
+DB_USER = os.getenv("DB_USER") or os.environ.get("asd")
+DB_PASSWORD = os.getenv("DB_PASSWORD") or os.environ.get("asd")
 
 # Azure API-konfigurasjon
 AZURE_EMBEDDING_API_KEY = os.getenv("AZURE_EMBEDDING_API_KEY", os.environ.get("AZURE_EMBEDDING_API_KEY", ""))
