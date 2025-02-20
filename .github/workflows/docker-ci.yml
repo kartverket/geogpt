@@ -46,9 +46,6 @@ jobs:
             sleep 5
           done
 
-      - name: Sjekk backend-logger etter oppstart
-        run: docker logs $(docker ps --filter "name=geogpt-backend" -q)
-
       - name: Vent på at backend WebSocket skal svare
         run: |
           echo "Venter på WebSocket-server..."
