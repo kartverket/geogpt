@@ -114,6 +114,3 @@ jobs:
 
       - name: Stopper og rydder opp
         run: docker compose down
-
-      - name: Stopper og rydder opp
-        run: docker compose down
