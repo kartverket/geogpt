@@ -3,11 +3,11 @@
 import * as React from "react";
 import {
   Map,
-  Layers,
   PenTool,
   Share2,
   LineChart,
   HelpCircle,
+  Layers2,
   Mail,
   Shield,
 } from "lucide-react";
@@ -16,6 +16,8 @@ import { NavMain } from "@/components/nav-main";
 import { NavProjects } from "@/components/nav-projects";
 import { NavSecondary } from "@/components/nav-secondary";
 import { NavUser } from "@/components/nav-user";
+import Image from "next/image";
+import Icon from "../public/geonorge-logo.png";
 import {
   Sidebar,
   SidebarContent,
@@ -26,40 +28,12 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 
+interface WMSLayer {
+  name: string;
+  title: string;
+}
+
 const data = {
-  navMain: [
-    {
-      title: "BAKGRUNNSKART",
-      url: "#",
-      icon: Map,
-      items: [
-        {
-          title: "Landkart",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "TEMAKART",
-      url: "#",
-      icon: Layers,
-      items: [],
-    },
-  ],
-  quickClaySlides: [
-    {
-      title: "KvikkleireKartlagtOmrade",
-      checked: false,
-    },
-    {
-      title: "KvikkleireRisiko",
-      checked: false,
-    },
-    {
-      title: "KvikkleireFaregrad",
-      checked: false,
-    },
-  ],
   actions: [
     {
       title: "TEGNE OG MÅLE",
@@ -96,50 +70,75 @@ const data = {
   ],
 };
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const [quickClaySlides, setQuickClaySlides] = React.useState(
-    data.quickClaySlides
-  );
+export function AppSidebar({
+  selectedLayer,
+  setSelectedLayer,
+  availableLayers = [],
+  onLayerChange,
+  ...props
+}: React.ComponentProps<typeof Sidebar> & {
+  selectedLayer: string;
+  setSelectedLayer: (layerName: string) => void;
+  availableLayers?: WMSLayer[];
+  onLayerChange?: (layerName: string) => void;
+}) {
 
-  const handleCheckboxChange = (index: number) => {
-    setQuickClaySlides((prev) =>
-      prev.map((item, i) =>
-        i === index ? { ...item, checked: !item.checked } : item
-      )
-    );
+  const handleLayerChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedLayer(e.target.value);
+    onLayerChange?.(e.target.value);
+  };
+
+  const cn = (...classes: string[]) => {
+    return classes.filter(Boolean).join(' ');
   };
 
   return (
-    <Sidebar variant="inset" {...props}>
+    <Sidebar 
+      variant="inset" 
+      {...props} 
+      className={cn( // Cn takes in class based on state.
+        "border shadow-lg w-[350px] max-w-[90vw]",
+        "data-[state=open]:translate-x-0",
+        "data-[state=closed]:-translate-x-full"
+      )}
+    >
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
-              <a href="#">
-                <h1 className="font-semibold text-lg">GEONORGE - GeoGPT</h1>
-              </a>
-            </SidebarMenuButton>
+            <div className="flex items-center space-x-2">
+                  <Image src={Icon} alt="Geonorge Logo" className="w-7 mb-1" />
+                  <h1 className="font-semibold text-3xl">GEONORGE</h1>
+            </div>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
 
         <div className="px-4 py-2">
-          <h3 className="mb-2 text-sm font-medium">Kvikkleireskred</h3>
-          {quickClaySlides.map((item, index) => (
-            <div key={index} className="flex items-center space-x-2 py-1">
-              <input
-                type="checkbox"
-                id={item.title}
-                checked={item.checked}
-                onChange={() => handleCheckboxChange(index)}
-              />
-              <label htmlFor={item.title} className="text-sm">
-                {item.title}
+        <div className="flex items-center space-x-2">
+            <Layers2 className="mb-2"/>
+              <label htmlFor="layer-select" className="block mb-2">
+                Bakgrunnskart
               </label>
-            </div>
-          ))}
+          </div>
+          <div className="flex items-center space-x-2">
+            <Map className="mb-2 text-[#FE642F]"/>
+              <label htmlFor="layer-select" className="block mb-2">
+                Temakart
+              </label>
+          </div>
+          <select
+            id="layer-select"
+            value={selectedLayer}
+            onChange={handleLayerChange}
+            className="w-full p-2 border rounded"
+          >
+            {availableLayers.map((layer) => (
+              <option key={layer.name} value={layer.name}>
+                {layer.title}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="px-4 py-2">
