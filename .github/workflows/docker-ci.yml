@@ -68,8 +68,13 @@ jobs:
       - name: Sjekk backend-logger
         run: docker logs $(docker ps --filter "name=geogpt-backend" -q)
 
+      - name: Sjekk databasevariabler
+        run: docker exec $(docker ps --filter "name=geogpt-backend" -q) env | grep DB
+
       - name: Test databaseforbindelse
-        run: docker exec $(docker ps --filter "name=geogpt-backend" -q) psql -h pgvector_container -U $DB_USER -d $DB_NAME -c "SELECT 1;"
+        run: |
+          export PGPASSWORD=${{ secrets.DB_PASSWORD }}
+          docker exec $(docker ps --filter "name=geogpt-backend" -q) psql -h pgvector_container -U $DB_USER -d $DB_NAME -c "SELECT 1;"
 
       - name: Vent på at backend skript skal kjøre
         run: |
