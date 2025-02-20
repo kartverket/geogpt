@@ -18,7 +18,7 @@ jobs:
       DB_PORT: 5432
       DB_NAME: postgres
       DB_USER: ${{ secrets.DB_USER }}
-      DB_PASSWORD: ${{ secrets.password }}
+      DB_PASSWORD: ${{ secrets.DB_password }}
       AZURE_GPT_API_KEY: ${{ secrets.AZURE_GPT_API_KEY }}
       AZURE_GPT_ENDPOINT: ${{ secrets.AZURE_GPT_ENDPOINT }}
       AZURE_EMBEDDING_BASEURL: ${{ secrets.AZURE_EMBEDDING_BASEURL }}
