@@ -23,6 +23,8 @@ services:
     depends_on:
       database:
         condition: service_healthy
+    env_file:
+      - .env  # ✅ Bruker .env-fil for miljøvariabler
     command: >
       sh -c "
         python /app/scripts/create_vector.py > /app/scripts/create_vector.log 2>&1 &&

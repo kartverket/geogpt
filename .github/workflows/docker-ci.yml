@@ -24,6 +24,12 @@ jobs:
             echo "$line" >> $GITHUB_ENV
           done
 
+      - name: Kopier miljøvariabler til backend-container
+        run: |
+          docker create --name temp_container alpine
+          docker cp .env temp_container:/app/.env
+          docker rm temp_container
+
       - name: Installer WebSocket-klient (wscat)
         run: npm install -g wscat
 
