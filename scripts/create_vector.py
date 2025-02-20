@@ -2,9 +2,12 @@ import pandas as pd
 import requests
 import json
 import config
+import os
 
 # Debugging: Sjekk om variabelen er riktig satt
 print(f"🔍 DEBUG: AZURE_EMBEDDING_BASEURL = {config.AZURE_EMBEDDING_BASEURL}")
+print(f"🔍 DEBUG: AZURE_EMBEDDING_BASEURL={os.getenv('AZURE_EMBEDDING_BASEURL')}")
+print(f"🔍 DEBUG: API_URL={os.getenv('AZURE_EMBEDDING_BASEURL')}/openai/deployments/text-embedding-3-large/embeddings?api-version=2023-05-15")
 
 # Riktig API URL-format
 if not config.AZURE_EMBEDDING_BASEURL:

@@ -92,6 +92,12 @@ jobs:
           docker exec $(docker ps -a --filter "name=geogpt-backend" -q) cat /app/scripts/insert_csv.log || echo "❌ Ingen insert_csv.log funnet!"
           docker exec $(docker ps -a --filter "name=geogpt-backend" -q) cat /app/scripts/server.log || echo "❌ Ingen server.log funnet!"
 
+      - name: Sjekk feilmeldinger fra create_vector.py
+        run: |
+          echo "🔍 Innhold av create_vector.log (med feil)"
+          docker exec $(docker ps --filter "name=geogpt-backend" -q) cat /app/scripts/create_vector.log || echo "❌ Ingen logg funnet!"
+
+
       - name: Vent på at frontend skal starte
         run: |
           echo "Venter på at frontend-serveren skal starte..."
