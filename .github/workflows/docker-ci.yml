@@ -46,17 +46,36 @@ jobs:
             sleep 5
           done
 
-      - name: Vent på at backend WebSocket skal svare
-        run: |
-          echo "Venter på WebSocket-server..."
-          for i in {1..10}; do
-            nc -zv localhost 8080 && echo "WebSocket-serveren er oppe!" && break
-            echo "WebSocket ikke klar ennå..."
-            sleep 5
-          done || { echo "WebSocket-server feilet!"; exit 1; }
+      - name: Sjekk kjørende containere
+        run: docker ps -a
 
-      - name: Sjekk backend-logger
-        run: docker logs $(docker ps --filter "name=geogpt-backend" -q)
+      - name: Sjekk backend-logger etter oppstart
+        run: |
+          echo "🟡 Henter backend-logs..."
+          docker logs $(docker ps --filter "name=geogpt-backend" -q) || echo "❌ Ingen backend-logs funnet!"
+
+      - name: Sjekk om backend-container kjører
+        run: |
+          CONTAINER_ID=$(docker ps --filter "name=geogpt-backend" -q)
+          if [ -z "$CONTAINER_ID" ]; then
+            echo "❌ Backend-containeren kjører ikke!"
+            exit 1
+          else
+            echo "✅ Backend-container kjører med ID: $CONTAINER_ID"
+          fi
+
+      - name: Sjekk backend-containerens prosesser
+        run: |
+          echo "🟡 Kjører kommando: docker top"
+          docker top $(docker ps --filter "name=geogpt-backend" -q)
+
+      - name: Sjekk backend-containerens filsystem
+        run: |
+          echo "🟡 Sjekker backend-filer..."
+          docker exec $(docker ps --filter "name=geogpt-backend" -q) ls -l /app/scripts
+
+      - name: Sjekk backend-containerens miljøvariabler
+        run: docker exec $(docker ps --filter "name=geogpt-backend" -q) env
 
       - name: Test databaseforbindelse
         run: |
@@ -72,9 +91,9 @@ jobs:
         run: |
           echo "Venter på at frontend-serveren skal starte..."
           for i in {1..10}; do
-          curl --fail http://localhost:3000 && echo "Frontend er oppe!" && break
-          echo "Frontend ikke klar ennå..."
-          sleep 5
+            curl --fail http://localhost:3000 && echo "Frontend er oppe!" && break
+            echo "Frontend ikke klar ennå..."
+            sleep 5
           done || { echo "Frontend-server feilet!"; exit 1; }
 
       - name: Stopper og rydder opp
