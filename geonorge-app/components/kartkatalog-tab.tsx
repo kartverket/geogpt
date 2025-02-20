@@ -414,21 +414,27 @@ export function KartkatalogTab({
         {/* Tab Button */}
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className={`flex items-center bg-[#FF8B65] hover:bg-[#FE642F] text-white px-2 py-6 ${
+          className={`flex items-center bg-[#FE642F] hover:bg-[#f35a30] text-white px-2 py-6 ${
             isExpanded ? "rounded-r-[2px] border-l-2" : "rounded-[2px]"
           } -ml-px`}
         >
-          <div className="flex flex-col items-center gap-3">
-            <Layers className="h-5 w-5" />
-            <div className="writing-mode-vertical-lr transform rotate-180 text-sm font-medium whitespace-nowrap">
-              KARTKATALOGEN
-            </div>
-            {isExpanded ? (
-              <ChevronRight className="h-4 w-4" />
-            ) : (
-              <ChevronLeft className="h-4 w-4" />
-            )}
-          </div>
+    <div className="flex flex-col items-center gap-3">
+      <Layers className="h-7 w-7" />
+      <div className="flex flex-col">
+        {[..."KARTKATALOGEN"].map((letter, index) => (
+          <span key={index} className="text-md font-medium">
+            {letter}
+          </span>
+        ))}
+      </div>
+      {isExpanded ? (
+        <ChevronRight className="h-4 w-4" />
+      ) : (
+        <ChevronLeft className="h-4 w-4" />
+      )}
+    </div>
+
+
         </button>
 
         <style jsx>{`
