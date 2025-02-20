@@ -94,6 +94,14 @@ const SelectionPopover = ({
   placeholder: string;
   grouped?: boolean;
 }) => {
+  // Autofill the selected value if there is only one item in the list
+  useEffect(() => {
+    if (items.length === 1 && !selectedValue) {
+      setSelectedValue(items[0].name);
+      setOpen(false);
+    }
+  }, [items, selectedValue, setSelectedValue, setOpen]);
+
   return (
     <div>
       <div className="flex items-center gap-1 text-sm text-color-gn-secondary">
