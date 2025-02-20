@@ -1,7 +1,13 @@
 "use client";
-
 import { useState, useEffect, useRef, type FormEvent } from "react";
+import { Maximize } from "lucide-react";
+
+import Image from "next/image";
+
+// Custom components
+import FileDownloadModal from "./FileDownloadModal/FileDownloadModal";
 import { KartkatalogTab } from "@/components/kartkatalog-tab";
+
 // ShadCN UI components
 import {
   Popover,
@@ -9,9 +15,9 @@ import {
   PopoverContent,
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
+
 // Import the full screen Chat component from the kit
 import { Chat as FullScreenChat } from "@/components/ui/chat";
-import { Maximize } from "lucide-react";
 
 type MessageType = {
   action: string;
@@ -25,9 +31,17 @@ interface ChatMessage {
   imageUrl?: string;
   downloadUrl?: string | null;
   wmsUrl?: string | null;
+  datasetName?: string;
+  datasetOptions?: {
+    geographicalAreas: { type: string; name: string; code: string }[];
+    projections: { name: string; code: string }[];
+    formats: string[];
+    datasetName: string;
+  };
 }
 
 interface SearchResult {
+  downloadFormats: any;
   uuid: string;
   title?: string;
   wmsUrl?: string;
@@ -48,12 +62,78 @@ function DemoV2() {
   const [chatInput, setChatInput] = useState("");
   const [forceUpdate, setForceUpdate] = useState(0);
 
-  // State for chat streaming
-  const [isChatStreaming, setIsChatStreaming] = useState(false);
-
   // State for full screen mode and popover open state
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const [isFileDownloadModalOpen, setFileDownloadModalOpen] = useState(false);
+  const [pendingDownloadUrl, setPendingDownloadUrl] = useState<string | null>(
+    null
+  );
+
+  // Dataset title
+  const [datasetName, setDatasetName] = useState<string>("");
+
+  // Find specific object by UUID
+  const [uuidToFind, setUuidToFind] = useState<string>("");
+
+  // Find specific object by UUID
+  const [specificObject, setSpecificObject] = useState<SearchResult | null>(
+    null
+  );
+  // Find formats based on UUID
+  const [geographicalAreas, setGeographicalAreas] = useState<
+    { type: string; name: string; code: string }[]
+  >([]);
+  const [projections, setProjections] = useState<
+    { name: string; code: string }[]
+  >([]);
+  const [formats, setFormats] = useState<string[]>([]);
+
+  // Update the specific object when search results change
+  useEffect(() => {
+    if (!uuidToFind || searchResults.length === 0) return;
+
+    console.log("Running search with uuidToFind:", uuidToFind);
+    const specificObject = searchResults.find(
+      (item) => item.uuid === uuidToFind
+    );
+
+    if (specificObject) {
+      console.log("Found specificObject:", specificObject);
+
+      // Extract unique geographical areas
+      const uniqueGeographicalAreas = specificObject.downloadFormats.map(
+        (fmt: { type: string; name: string; code: string }) => ({
+          type: fmt.type,
+          name: fmt.name,
+          code: fmt.code,
+        })
+      );
+
+      // Extract unique projections from downloadFormats
+      const uniqueProjections = specificObject.downloadFormats
+        .flatMap((fmt: { projections?: { name: string; code: string }[] }) =>
+          fmt.projections ? fmt.projections : []
+        ) // Check if projections exist
+        .map((proj: { name: string; code: string }) => ({
+          name: proj.name,
+          code: proj.code,
+        }));
+
+      // Extract unique formats from downloadFormats
+      const uniqueFormats = specificObject.downloadFormats
+        .flatMap((fmt: { formats?: { name: string }[] }) =>
+          fmt.formats ? fmt.formats : []
+        ) // Check if formats exist
+        .map((format: { name: string }) => format.name);
+
+      // Set state variables
+      setGeographicalAreas(uniqueGeographicalAreas);
+      setProjections(uniqueProjections);
+      setFormats(uniqueFormats);
+      setDatasetName(specificObject.title || "");
+    }
+  }, [uuidToFind, searchResults]);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -88,10 +168,11 @@ function DemoV2() {
 
   const handleServerMessage = (data: MessageType) => {
     const { action, payload } = data;
-    console.log("Incoming action:", action, "payload:", payload);
+    console.log("🚀 ~ handleServerMessage ~ payload", payload);
+    console.log("🚀 ~ handleServerMessage ~ action", action);
+
     switch (action) {
       case "chatStream":
-        setIsChatStreaming(true);
         if (payload.isNewMessage && !payload.payload) break;
         setChatMessages((prev) => {
           const lastMsg = prev[prev.length - 1];
@@ -115,7 +196,6 @@ function DemoV2() {
         break;
 
       case "streamComplete":
-        setIsChatStreaming(false); // Re-enable send button after stream complete
         setChatMessages((prev) => {
           const lastMsg = prev[prev.length - 1];
           if (!lastMsg || lastMsg.type !== "streaming") return prev;
@@ -125,12 +205,82 @@ function DemoV2() {
         });
         break;
 
+      case "chatDatasets":
+        console.log("Case: chatDatasets triggered");
+
+        if (payload && Array.isArray(payload)) {
+          console.log("Payload received:", payload);
+
+          /* const formattedMessage = `System: For å hjelpe deg videre, har jeg vedlagt relevante datasett:\n${payload
+            .map((area: { title: string }) => `- ${area.title}`)
+            .join("\n")}`;
+
+          setChatMessages((prev) => [
+            ...prev,
+            { type: "text", content: formattedMessage },
+          ]); */
+
+          // Set the first dataset as
+          const firstUuid = payload[0].uuid;
+          setUuidToFind(firstUuid);
+          console.log("🚀 ~ handleServerMessage ~ firstUuid:", firstUuid);
+
+          const specificObject = payload.find(
+            (item: SearchResult) => item.uuid === firstUuid
+          );
+
+          // Set the specific object as the first dataset
+          setSpecificObject(specificObject || null);
+          console.log(
+            "🚀 ~ handleServerMessage ~ specificObject:",
+            specificObject
+          );
+
+          if (specificObject) {
+            // Extract unique geographical areas
+            const uniqueGeographicalAreas = specificObject.downloadFormats.map(
+              (fmt: { type: string; name: string; code: string }) => ({
+                type: fmt.type,
+                name: fmt.name,
+                code: fmt.code,
+              })
+            );
+
+            // Extract unique projections from downloadFormats
+            const uniqueProjections = specificObject.downloadFormats
+              .flatMap(
+                (fmt: { projections?: { name: string; code: string }[] }) =>
+                  fmt.projections ? fmt.projections : []
+              ) // Check if projections exist
+              .map((proj: { name: string; code: string }) => ({
+                name: proj.name,
+                code: proj.code,
+              }));
+
+            // Extract unique formats from downloadFormats
+            const uniqueFormats = specificObject.downloadFormats
+              .flatMap((fmt: { formats?: { name: string }[] }) =>
+                fmt.formats ? fmt.formats : []
+              ) // Check if formats exist
+              .map((format: { name: string }) => format.name);
+
+            // Set state variables
+            setGeographicalAreas(uniqueGeographicalAreas);
+            setProjections(uniqueProjections);
+            setFormats(uniqueFormats);
+            setDatasetName(specificObject.title || "");
+          }
+        }
+
+        break;
+
       case "searchVdbResults":
         setSearchResults(payload);
         break;
 
       case "insertImage":
         const { datasetImageUrl, datasetDownloadUrl, wmsUrl } = payload;
+
         setChatMessages((prev) => [
           ...prev,
           {
@@ -138,27 +288,54 @@ function DemoV2() {
             imageUrl: datasetImageUrl,
             downloadUrl: datasetDownloadUrl,
             wmsUrl: wmsUrl,
+            datasetOptions: {
+              geographicalAreas: payload.geographicalAreas || [],
+              projections: payload.projections || [],
+              formats: payload.formats || [],
+              datasetName: payload.datasetTitle || "",
+            },
           },
         ]);
-        break;
 
-      case "areaData":
-        console.log("Received area data:", payload);
-        if (payload && Array.isArray(payload)) {
-          setChatMessages((prev) => [
-            ...prev,
-            {
-              type: "text",
-              content: `System: Available download formats:\n${payload
-                .map((area: any) => `- ${area.name}`)
-                .join("\n")}`,
-            },
-          ]);
-        }
         break;
 
       default:
         console.log("Unknown action:", data);
+    }
+  };
+
+  // Updates projections and formats based on the selected area
+  const handleAreaChange = (selectedAreaCode: string) => {
+    if (!specificObject) return;
+
+    const selectedArea = specificObject.downloadFormats.find(
+      (fmt: {
+        type: string;
+        name: string;
+        code: string;
+        projections?: { name: string; code: string }[];
+        formats?: { name: string }[];
+      }) => fmt.code === selectedAreaCode
+    );
+
+    if (selectedArea) {
+      const updatedProjections = selectedArea.projections
+        ? selectedArea.projections.map(
+            (proj: { name: string; code: string }) => ({
+              name: proj.name,
+              code: proj.code,
+            })
+          )
+        : [];
+      setProjections(updatedProjections);
+
+      const updatedFormats = selectedArea.formats
+        ? selectedArea.formats.map((format: { name: string }) => format.name)
+        : [];
+      setFormats(updatedFormats);
+    } else {
+      setProjections([]);
+      setFormats([]);
     }
   };
 
@@ -185,23 +362,13 @@ function DemoV2() {
   // For the non-fullscreen chat submit handler
   const onChatSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const trimmedInput = chatInput.trim();
-    if (
-      !ws ||
-      ws.readyState !== WebSocket.OPEN ||
-      !trimmedInput ||
-      isChatStreaming
-    )
-      return;
-    ws.send(
-      JSON.stringify({ action: "chatFormSubmit", payload: trimmedInput })
-    );
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ action: "chatFormSubmit", payload: chatInput }));
     setChatMessages((prev) => [
       ...prev,
-      { type: "text", content: `You: ${trimmedInput}` },
+      { type: "text", content: `You: ${chatInput}` },
     ]);
     setChatInput("");
-    setIsChatStreaming(true);
   };
 
   // Shared function for sending a message
@@ -222,7 +389,7 @@ function DemoV2() {
     if (e && e.preventDefault) {
       e.preventDefault();
     }
-    if (!chatInput.trim() || isChatStreaming) return;
+    if (!chatInput.trim()) return;
     handleSendMessage(chatInput);
     setChatInput("");
   };
@@ -278,18 +445,29 @@ function DemoV2() {
     handleSendMessage(message.content);
   };
 
-  const handleDatasetDownload = (downloadUrl: string) => {
-    if (!downloadUrl) {
-      console.error("No download URL provided.");
-      return;
+  const handleDatasetDownload = (msg: ChatMessage) => {
+    console.log("🚀 ~ handleDatasetDownload ~ msg:", msg);
+    setPendingDownloadUrl(msg.downloadUrl);
+    if (msg.datasetOptions) {
+      setGeographicalAreas(msg.datasetOptions.geographicalAreas);
+      setProjections(msg.datasetOptions.projections);
+      setFormats(msg.datasetOptions.formats);
+      setDatasetName(msg.datasetOptions.datasetName);
     }
+    setFileDownloadModalOpen(true);
+  };
+
+  const confirmDownload = () => {
+    if (!pendingDownloadUrl) return;
     const link = document.createElement("a");
-    link.href = downloadUrl;
+    link.href = pendingDownloadUrl;
     link.target = "_blank";
     link.download = "";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    setFileDownloadModalOpen(false);
+    setPendingDownloadUrl(null);
   };
 
   // When entering full screen, close the popover
@@ -302,10 +480,6 @@ function DemoV2() {
   const exitFullScreen = () => {
     setIsFullScreen(false);
     setIsPopoverOpen(true);
-  };
-
-  const isValidWmsUrl = (url: string | null | undefined) => {
-    return url !== undefined && url !== null && url !== "None";
   };
 
   return (
@@ -385,32 +559,29 @@ function DemoV2() {
                   if (msg.type === "image" && msg.imageUrl) {
                     return (
                       <div key={idx} className="flex flex-col space-y-2 my-2">
-                        <img
+                        <Image
                           src={msg.imageUrl || "/placeholder.svg"}
                           alt="Dataset"
+                          width={400}
+                          height={300}
                           className="max-w-full h-auto rounded"
                         />
                         <div className="flex gap-2">
-                          <Button
-                            onClick={() => {
-                              if (isValidWmsUrl(msg.wmsUrl)) {
-                                replaceIframe(msg.wmsUrl!);
-                              }
-                            }}
-                            className={`text-xs ${
-                              isValidWmsUrl(msg.wmsUrl)
-                                ? "bg-green-500 text-white"
-                                : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                            }`}
-                            disabled={!isValidWmsUrl(msg.wmsUrl)}
-                          >
-                            Vis
-                          </Button>
-                          {msg.downloadUrl && (
+                          {msg.wmsUrl && (
                             <Button
                               onClick={() =>
-                                handleDatasetDownload(msg.downloadUrl!)
+                                msg.wmsUrl && replaceIframe(msg.wmsUrl)
                               }
+                              className="bg-green-500 text-white text-xs"
+                            >
+                              Vis
+                            </Button>
+                          )}
+                          {msg.downloadUrl && (
+                            <Button
+                              onClick={() => {
+                                handleDatasetDownload(msg);
+                              }}
                               className="bg-green-500 text-white text-xs"
                             >
                               Last ned datasett
@@ -474,11 +645,7 @@ function DemoV2() {
                   placeholder="Spør GeoGPT..."
                   className="flex-1 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-                <Button
-                  type="submit"
-                  className="ml-2 text-sm"
-                  disabled={isChatStreaming || !chatInput.trim()}
-                >
+                <Button type="submit" className="ml-2 text-sm">
                   Send
                 </Button>
               </form>
@@ -513,6 +680,17 @@ function DemoV2() {
           </div>
         </div>
       )}
+
+      <FileDownloadModal
+        isOpen={isFileDownloadModalOpen}
+        handleClose={() => setFileDownloadModalOpen(false)}
+        handleConfirmSelection={confirmDownload}
+        geographicalAreas={geographicalAreas}
+        projections={projections}
+        formats={formats}
+        datasetName={datasetName}
+        onAreaChange={handleAreaChange}
+      />
     </div>
   );
 }
