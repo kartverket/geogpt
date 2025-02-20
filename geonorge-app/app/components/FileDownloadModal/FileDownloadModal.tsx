@@ -334,9 +334,7 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
           <Progress
             value={(step / 3) * 100}
             className="my-4"
-            bgColor={
-              step % 3 === 0 ? "bg-color-kv-primary" : "bg-color-gn-primary"
-            }
+            bgColor={"bg-color-gn-primary"}
           />
           <div className="flex justify-between text-sm text-gray-600">
             {stepLabels.map((label, index) => (
