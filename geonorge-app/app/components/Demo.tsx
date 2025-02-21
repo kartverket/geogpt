@@ -32,14 +32,7 @@ interface ChatMessage {
   downloadUrl?: string | null;
   wmsUrl?: string | null;
   datasetName?: string;
-  datasetOptions?: {
-    geographicalAreas: { type: string; name: string; code: string }[];
-    projections: { name: string; code: string }[];
-    formats: string[];
-    datasetName: string;
-  };
 }
-
 
 interface SearchResult {
   downloadFormats: {
@@ -77,7 +70,7 @@ function DemoV2() {
     null
   );
   // State for chat streaming
-const [isChatStreaming, setIsChatStreaming] = useState(false);
+  const [isChatStreaming, setIsChatStreaming] = useState(false);
 
   // Dataset title
   const [datasetName, setDatasetName] = useState<string>("");
@@ -177,7 +170,6 @@ const [isChatStreaming, setIsChatStreaming] = useState(false);
 
   const handleServerMessage = (data: MessageType) => {
     const { action, payload } = data;
-    console.log("🚀 ~ handleServerMessage ~ payload", payload);
     console.log("🚀 ~ handleServerMessage ~ action", action);
 
     switch (action) {
@@ -299,12 +291,6 @@ const [isChatStreaming, setIsChatStreaming] = useState(false);
             imageUrl: datasetImageUrl,
             downloadUrl: datasetDownloadUrl,
             wmsUrl: wmsUrl,
-            datasetOptions: {
-              geographicalAreas: payload.geographicalAreas || [],
-              projections: payload.projections || [],
-              formats: payload.formats || [],
-              datasetName: payload.datasetTitle || "",
-            },
           },
         ]);
 
@@ -459,13 +445,34 @@ const [isChatStreaming, setIsChatStreaming] = useState(false);
 
   // Handles dataset download from chat
   const handleDatasetDownload = (msg: ChatMessage) => {
-    console.log("🚀 ~ handleDatasetDownload ~ msg:", msg);
     setPendingDownloadUrl(msg.downloadUrl || null);
-    if (msg.datasetOptions) {
-      setGeographicalAreas(msg.datasetOptions.geographicalAreas);
-      setProjections(msg.datasetOptions.projections);
-      setFormats(msg.datasetOptions.formats);
-      setDatasetName(msg.datasetOptions.datasetName);
+
+    if (specificObject) {
+      const uniqueGeographicalAreas = specificObject.downloadFormats.map(
+        (fmt: { type: string; name: string; code: string }) => ({
+          type: fmt.type,
+          name: fmt.name,
+          code: fmt.code,
+        })
+      );
+      const uniqueProjections = specificObject.downloadFormats
+        .flatMap((fmt: { projections?: { name: string; code: string }[] }) =>
+          fmt.projections ? fmt.projections : []
+        )
+        .map((proj: { name: string; code: string }) => ({
+          name: proj.name,
+          code: proj.code,
+        }));
+      const uniqueFormats = specificObject.downloadFormats
+        .flatMap((fmt: { formats?: { name: string }[] }) =>
+          fmt.formats ? fmt.formats : []
+        )
+        .map((format: { name: string }) => format.name);
+
+      setGeographicalAreas(uniqueGeographicalAreas);
+      setProjections(uniqueProjections);
+      setFormats(uniqueFormats);
+      setDatasetName(specificObject.title || "");
     }
     setFileDownloadModalOpen(true);
   };

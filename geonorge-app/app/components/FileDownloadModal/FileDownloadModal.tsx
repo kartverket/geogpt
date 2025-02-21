@@ -94,6 +94,7 @@ const SelectionPopover = ({
   placeholder: string;
   grouped?: boolean;
 }) => {
+  
   // Autofill the selected value if there is only one item in the list
   useEffect(() => {
     if (items.length === 1 && !selectedValue) {
@@ -107,7 +108,7 @@ const SelectionPopover = ({
       <div className="flex items-center gap-1 text-sm text-color-gn-secondary">
         <strong>{label}</strong>
         {label.includes(":") && (
-          <span className="text-color-gn-primary text-xl">*</span>
+          <span className="text-color-gn-primary text-sm">*</span>
         )}
         {helpLink && renderTooltip(helpLink, label)}
       </div>
@@ -214,6 +215,7 @@ const renderSelectionPopover = (
 );
 
 const stepLabels = [
+  "Standard nedlasting",
   "1. Velg område",
   "2. Velg brukergruppe",
   "3. Bekreft og last ned",
@@ -235,7 +237,7 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
   const [selectedFmt, setSelectedFmt] = useState<string>("");
   const [selectedGroup, setSelectedGroup] = useState<string>("");
   const [selectedGoal, setSelectedGoal] = useState<string>("");
-  const [step, setStep] = useState<number>(1);
+  const [step, setStep] = useState<number>(0);
   const [manualStepChange, setManualStepChange] = useState<boolean>(false);
 
   const [openLocation, setOpenLocation] = useState<boolean>(false);
@@ -243,6 +245,19 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
   const [openFmt, setOpenFmt] = useState<boolean>(false);
   const [openGroup, setOpenGroup] = useState<boolean>(false);
   const [openGoal, setOpenGoal] = useState<boolean>(false);
+
+  // Reset modal state when new modal is opened
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedLocation("");
+      setSelectedProj("");
+      setSelectedFmt("");
+      setSelectedGroup("");
+      setSelectedGoal("");
+      setStep(0);
+      setManualStepChange(false);
+    }
+  }, [isOpen]);
 
   const uniqueGeographicalAreas = sortGeographicalAreas(
     Array.from(
@@ -286,6 +301,13 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
     selectedGoal,
     manualStepChange,
   ]);
+
+  // Once step 3 is reached, lock auto-step progression by setting manualStepChange to true
+  useEffect(() => {
+    if (step === 3) {
+      setManualStepChange(true);
+    }
+  }, [step]);
 
   const handleConfirmSelectionWithLoading = async () => {
     try {
@@ -341,15 +363,30 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
               <span
                 key={index}
                 className={`${
-                  step === index + 1 ? "text-color-kv-secondary font-bold" : ""
+                  step === index ? "text-color-kv-secondary font-bold" : ""
                 } cursor-pointer`}
-                onClick={() => setStep(index + 1)} // Allow step navigation
+                onClick={() => setStep(index)}
               >
                 {label}
               </span>
             ))}
           </div>
           <div className="flex-1 overflow-y-auto">
+            {step === 0 && (
+              <div className="space-y-4 mt-4">
+                <Separator />
+                <span className="block mt-2 text-sm text-color-gn-secondary">
+                  <strong>Datasettets navn:</strong>{" "}
+                  <Badge
+                    variant="default"
+                    className="bg-color-gn-lightblue text-white"
+                  >
+                    {datasetName || "N/A"}
+                  </Badge>
+                </span>
+                {/* Add additional standard nedlasting info if needed */}
+              </div>
+            )}
             {step === 1 && (
               <div className="space-y-4 mt-4">
                 <Separator />
@@ -446,6 +483,15 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
             {step === 2 && (
               <div className="space-y-4 mt-4">
                 <Separator />
+                <span className="block mt-2 text-sm text-color-gn-secondary">
+                  <strong>Datasettets navn:</strong>{" "}
+                  <Badge
+                    variant="default"
+                    className="bg-color-gn-lightblue text-white"
+                  >
+                    {datasetName || "N/A"}
+                  </Badge>
+                </span>
 
                 {renderSelectionPopover(
                   "Brukergruppe:",
