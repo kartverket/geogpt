@@ -10,6 +10,7 @@ import {
   Layers2,
   Mail,
   Shield,
+  Search,
 } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
@@ -27,10 +28,17 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { Checkbox } from "./ui/checkbox";
 
 interface WMSLayer {
   name: string;
   title: string;
+}
+
+interface LayerChangeFunctions {
+  revertToBaseMap: () => void;
+  changeToGraattKart: () => void;
+  changeToRasterKart: () => void;
 }
 
 const data = {
@@ -71,32 +79,34 @@ const data = {
 };
 
 export function AppSidebar({
-  selectedLayer,
-  setSelectedLayer,
-  availableLayers = [],
+  selectedLayers,
   onLayerChange,
+  availableLayers = [],
+  onChangeBaseLayer,
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
-  selectedLayer: string;
-  setSelectedLayer: (layerName: string) => void;
+  selectedLayers: string[];
+  onLayerChange: (layerName: string, isChecked: boolean) => void;
   availableLayers?: WMSLayer[];
-  onLayerChange?: (layerName: string) => void;
+  onChangeBaseLayer?: LayerChangeFunctions;
 }) {
+  const [layerSearch, setLayerSearch] = React.useState("");
 
-  const handleLayerChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedLayer(e.target.value);
-    onLayerChange?.(e.target.value);
-  };
+  // Filter layers based on search input
+  const filteredLayers = availableLayers.filter((layer) =>
+    layer.title.toLowerCase().includes(layerSearch.toLowerCase())
+  );
 
   const cn = (...classes: string[]) => {
-    return classes.filter(Boolean).join(' ');
+    return classes.filter(Boolean).join(" ");
   };
 
   return (
-    <Sidebar 
-      variant="inset" 
-      {...props} 
-      className={cn( // Cn takes in class based on state.
+    <Sidebar
+      variant="inset"
+      {...props}
+      className={cn(
+        // Cn takes in class based on state.
         "border shadow-lg w-[350px] max-w-[90vw]",
         "data-[state=open]:translate-x-0",
         "data-[state=closed]:-translate-x-full"
@@ -105,40 +115,88 @@ export function AppSidebar({
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <div className="flex items-center space-x-2">
-                  <Image src={Icon} alt="Geonorge Logo" className="w-7 mb-1" />
-                  <h1 className="font-semibold text-3xl">GEONORGE</h1>
+            <div className="flex items-center space-x-2 mb-3">
+              <Image src={Icon} alt="Geonorge Logo" className="w-7 mb-1" />
+              <h1 className="font-semibold text-3xl">GEONORGE</h1>
             </div>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-
-        <div className="px-4 py-2">
-        <div className="flex items-center space-x-2">
-            <Layers2 className="mb-2"/>
-              <label htmlFor="layer-select" className="block mb-2">
+        <div className="px-4 py-2 space-y-6">
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <Map className="h-6 w-6" />
+              <label htmlFor="base-layer-select" className="font-medium">
                 Bakgrunnskart
               </label>
+            </div>
+            {onChangeBaseLayer && (
+              <select
+                id="base-layer-select"
+                onChange={(e) => {
+                  switch (e.target.value) {
+                    case "landskart":
+                      onChangeBaseLayer.revertToBaseMap();
+                      break;
+                    case "graatone":
+                      onChangeBaseLayer.changeToGraattKart();
+                      break;
+                    case "rasterkart":
+                      onChangeBaseLayer.changeToRasterKart();
+                      break;
+                  }
+                }}
+                className="w-full p-2 border rounded"
+              >
+                <option value="landskart">Landskart</option>
+                <option value="graatone">Gråtone</option>
+                <option value="rasterkart">Rasterkart</option>
+              </select>
+            )}
           </div>
-          <div className="flex items-center space-x-2">
-            <Map className="mb-2 text-[#FE642F]"/>
-              <label htmlFor="layer-select" className="block mb-2">
-                Temakart
-              </label>
+
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <Layers2 className="h-6 w-6 text-[#FE642F]" />
+              <label className="font-medium">Temakart</label>
+            </div>
+
+            {/* Add search input */}
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Søk i etter lag..."
+                value={layerSearch}
+                onChange={(e) => setLayerSearch(e.target.value)}
+                className="w-full pl-8 p-2 border rounded text-sm"
+              />
+            </div>
+
+            <div className="space-y-2 max-h-[200px] overflow-y-auto rounded p-2">
+              {filteredLayers.map((layer) => (
+                <div key={layer.name} className="flex items-center space-x-1 hover:bg-gray-100 h-8">
+                  <Checkbox
+                      checked={selectedLayers.includes(layer.name)}
+                      id={layer.name}
+                      onCheckedChange={(checked) => {
+                        onLayerChange(layer.name, checked as boolean);
+                      }}
+                      className="w-5 h-5 rounded-[2px]"
+                    />
+                  <label htmlFor={layer.name} className="text-md">
+                    {layer.title}
+                  </label>
+                </div>
+              ))}
+              {filteredLayers.length === 0 && (
+                <p className="text-sm text-gray-500 text-center py-2">
+                  Ingen lag funnet
+                </p>
+              )}
+            </div>
           </div>
-          <select
-            id="layer-select"
-            value={selectedLayer}
-            onChange={handleLayerChange}
-            className="w-full p-2 border rounded"
-          >
-            {availableLayers.map((layer) => (
-              <option key={layer.name} value={layer.name}>
-                {layer.title}
-              </option>
-            ))}
-          </select>
         </div>
 
         <div className="px-4 py-2">

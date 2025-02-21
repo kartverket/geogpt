@@ -56,7 +56,7 @@ const INITIAL_MAP_URL =
 
 const DemoV3 = () => {
   const [map, setMap] = useState<L.Map | null>(null);
-  const [wmsLayer, setWmsLayer] = useState<L.TileLayer.WMS | null>(null);
+  const [wmsLayer, setWmsLayer] = useState<Record<string, L.TileLayer.WMS>>({});
   const [searchResults2, setSearchResults2] = useState<Address[]>([]);
   const [searchResults, setSearchResults] = useState<Address[]>([]);
 
@@ -70,7 +70,8 @@ const DemoV3 = () => {
     "https://nve.geodataonline.no/arcgis/services/SkredKvikkleire2/MapServer/WMSServer?request=GetCapabilities&service=WMS"
   );
   const [availableLayers, setAvailableLayers] = useState<WMSLayer[]>([]);
-  const [selectedLayer, setSelectedLayer] = useState<string>("");
+  const [selectedLayers, setSelectedLayers] = useState<string[]>([]);
+  const [currentBaseLayer, setCurrentBaseLayer] = useState<L.TileLayer | null>(null);
 
   // Add this near the top of the file, after the imports
   useEffect(() => {
@@ -143,14 +144,16 @@ const DemoV3 = () => {
       .addTo(mapInstance);
 
     // Replace the OpenStreetMap tile layer with Kartverket's
-    L.tileLayer(
+    const initialLayer = L.tileLayer(
       "https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png",
       {
         maxZoom: 18,
         attribution:
           '&copy; <a href="http://www.kartverket.no/">Kartverket</a>',
       }
-    ).addTo(mapInstance);
+    );
+    initialLayer.addTo(mapInstance);
+    setCurrentBaseLayer(initialLayer);
 
     setMap(mapInstance);
     fetchWMSInfo();
@@ -169,30 +172,41 @@ const DemoV3 = () => {
       const data = await response.json();
       setAvailableLayers(data.available_layers);
       if (data.available_layers.length > 0) {
-        setSelectedLayer(data.available_layers[0].name);
+        setSelectedLayers([data.available_layers[0].name]);
       }
     } catch (error) {
       console.error("Error fetching WMS info:", error);
     }
   };
 
-  const updateLayer = () => {
-    if (!map || !selectedLayer) return;
+  // Update the layers displayed on the map
+  const updateLayers = () => {
+    if (!map) return;
 
-    if (wmsLayer) {
-      map.removeLayer(wmsLayer);
-    }
-
-    const baseWmsUrl = wmsUrl.split("?")[0];
-    const newWmsLayer = L.tileLayer.wms(baseWmsUrl, {
-      layers: selectedLayer,
-      format: "image/png",
-      transparent: true,
-      version: "1.3.0",
+    // Remove layers that are no longer selected
+    Object.entries(wmsLayer).forEach(([name, layer]) => {
+      if (!selectedLayers.includes(name)) {
+        map.removeLayer(layer);
+        delete wmsLayer[name];
+      }
     });
 
-    newWmsLayer.addTo(map);
-    setWmsLayer(newWmsLayer);
+    // Add or update selected layers
+    selectedLayers.forEach(layerName => {
+      if (!wmsLayer[layerName]) {
+        const baseWmsUrl = wmsUrl.split("?")[0];
+        const newWmsLayer = L.tileLayer.wms(baseWmsUrl, {
+          layers: layerName,
+          format: "image/png",
+          transparent: true,
+          version: "1.3.0",
+        });
+        newWmsLayer.addTo(map);
+        wmsLayer[layerName] = newWmsLayer;
+      }
+    });
+
+    setWmsLayer({...wmsLayer});
   };
 
   const searchAddress = async (query: string) => {
@@ -257,8 +271,8 @@ const DemoV3 = () => {
   };
 
   useEffect(() => {
-    updateLayer();
-  }, [selectedLayer]);
+    updateLayers();
+  }, [selectedLayers]);
 
   // Basic state
   const [iframeSrc, setIframeSrc] = useState(INITIAL_MAP_URL);
@@ -383,7 +397,7 @@ const DemoV3 = () => {
       if (wmsUrl.available_layers) {
         setAvailableLayers(wmsUrl.available_layers);
         if (wmsUrl.available_layers.length > 0) {
-          setSelectedLayer(wmsUrl.available_layers[0].name);
+          setSelectedLayers([wmsUrl.available_layers[0].name]);
         }
       }
       return;
@@ -410,7 +424,7 @@ const DemoV3 = () => {
         if (wmsData.available_layers) {
           setAvailableLayers(wmsData.available_layers);
           if (wmsData.available_layers.length > 0) {
-            setSelectedLayer(wmsData.available_layers[0].name);
+            setSelectedLayers([wmsData.available_layers[0].name]);
           }
         } else {
           // If no layers provided, fetch them
@@ -557,9 +571,46 @@ const DemoV3 = () => {
     setIsPopoverOpen(true);
   };
 
-  const handleLayerChangeFromSidebar = (layerName: string) => {
-    setSelectedLayer(layerName);
+  // Handles layer selection 
+  const handleLayerChange = (layerName: string, isChecked: boolean) => {
+    setSelectedLayers(prev => {
+      if (isChecked && !prev.includes(layerName)) {
+        return [...prev, layerName];
+      }
+      if (!isChecked && prev.includes(layerName)) {
+        return prev.filter(name => name !== layerName);
+      }
+      return prev;
+    });
   };
+
+  // Handles map layer changes
+  function setBaseLayer(url: string, options?: L.TileLayerOptions) {
+    if (!map) return;
+    if (currentBaseLayer) {
+      map.removeLayer(currentBaseLayer);
+    }
+    const layerOptions = {
+      maxZoom: 18,
+      attribution: '&copy; <a href="http://www.kartverket.no/">Kartverket</a>',
+      ...options,
+    };
+    const newLayer = L.tileLayer(url, layerOptions);
+    newLayer.addTo(map);
+    setCurrentBaseLayer(newLayer);
+  }
+
+  function revertToBaseMap() {
+    setBaseLayer("https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png");
+  }
+
+  function changeToGraattKart() {
+    setBaseLayer("https://cache.kartverket.no/v1/wmts/1.0.0/topograatone/default/webmercator/{z}/{y}/{x}.png");
+  }
+
+  function changeToRasterKart() {
+    setBaseLayer("https://cache.kartverket.no/v1/wmts/1.0.0/toporaster/default/webmercator/{z}/{y}/{x}.png");
+  }
 
   return (
     <>
@@ -604,202 +655,193 @@ const DemoV3 = () => {
       </style>
 
       <div className="flex flex-col h-screen w-full overflow-hidden">
-        <div className="relative flex-1">
-          <div className="absolute inset-x-0 top-4 z-[20] flex justify-center mx-auto max-w-min">
-            <div className="w-96 flex ">
-              {/* Sidebar button */}
-              <SidebarTrigger className="bg-[#FE642F] hover:bg-[#f35430] shadow-lg h-[42px] w-[42px] rounded-sm flex-shrink-0 mr-2" />
-              <input
-                type="text"
-                placeholder="Søk etter adresse..."
-                onChange={(e) => searchAddress(e.target.value)}
-                className="w-full p-2 border rounded-sm"
-              />
-              {searchResults2.length > 0 && (
-                <div className="absolute top-full mt-1 w-full border bg-white rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                  {searchResults2.map((addr, index) => (
-                    <div
-                      key={index}
-                      onClick={() => selectAddress(addr)}
-                      className="p-2 hover:bg-gray-100 cursor-pointer"
-                    >
-                      {addr.adressetekst}
-                      {addr.poststed && `, ${addr.poststed}`}
-                    </div>
-                  ))}
-                </div>
-              )}
-              {/* Location button in top-right */}
-              {/* <button
-                onClick={getUserLocation}
-                className="text-sm text-white fixed top-4 right-4 bg-[#FE642F] hover:bg-[#f35430] h-[42px] px-3 rounded-sm flex items-center gap-2 z-[1000]"
-              >
-                <MapPin className="h-4 w-4 text-white" />
-                Min Posisjon
-              </button> */}
-            </div>
+        <div className="absolute inset-x-0 top-4 z-[1000] flex justify-center mx-auto">
+          {/* Search bar container */}
+          <div className="w-96 flex relative">
+            <SidebarTrigger className="bg-[#FE642F] hover:bg-[#f35430] shadow-lg h-[42px] w-[42px] rounded-sm flex-shrink-0 mr-2" />
+            <input
+              type="text"
+              placeholder="Søk etter adresse..."
+              onChange={(e) => searchAddress(e.target.value)}
+              className="w-full p-2 border rounded-sm"
+            />
+            {/* Search bar */}
+            {searchResults2.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 border bg-white rounded-lg shadow-lg max-h-60 overflow-y-auto z-50">
+                {searchResults2.map((addr, index) => (
+                  <div
+                    key={index}
+                    onClick={() => selectAddress(addr)}
+                    className="p-2 hover:bg-gray-100 cursor-pointer"
+                  >
+                    {addr.adressetekst}
+                    {addr.poststed && `, ${addr.poststed}`}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Map container */}
+        <div ref={mapRef} className="absolute inset-0 z-0" id="map">
+          {/* KartkatalogTab */}
+          <div className="fixed top-1/3 right-0 -translate-y-1/2 z-[401] rounded-lg shadow-lg">
+            <KartkatalogTab
+              onReplaceIframe={replaceIframe}
+              onDatasetDownload={handleDatasetDownload}
+              ws={ws}
+            />
           </div>
 
-          {/* Map container */}
-          <div ref={mapRef} className="absolute inset-0 z-0" id="map">
-            {/* KartkatalogTab */}
-            <div className="fixed top-1/3 right-0 -translate-y-1/2 z-[401] rounded-lg shadow-lg">
-              <KartkatalogTab
-                onReplaceIframe={replaceIframe}
-                onDatasetDownload={handleDatasetDownload}
-                ws={ws}
-              />
-            </div>
-
-            <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  className="fixed bottom-6 right-10 bg-[#FE642F] hover:bg-[#f35a30] rounded-full p-0 h-16 w-16 flex items-center justify-center shadow-lg z-[1000]"
-                  variant="default"
-                >
-                  <MessageSquare className="h-auto w-auto" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent
-                side="top"
-                align="end"
-                className="w-96 h-[28rem] p-0 overflow-hidden shadow-lg rounded-lg"
+          <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                className="fixed bottom-6 right-10 bg-[#FE642F] hover:bg-[#f35a30] rounded-full p-0 h-16 w-16 flex items-center justify-center shadow-lg z-[1000]"
+                variant="default"
               >
-                <div className="flex flex-col h-full bg-white">
-                  <div className="bg-gray-200 px-4 py-2 flex justify-between items-center">
-                    <span className="font-semibold">GeoGPT Chat</span>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={enterFullScreen}
-                      >
-                        <Maximize />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="px-4"
-                        onClick={() => setIsPopoverOpen(false)}
-                      >
-                        X
-                      </Button>
-                    </div>
+                <MessageSquare className="h-auto w-auto" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              side="top"
+              align="end"
+              className="w-96 h-[28rem] p-0 overflow-hidden shadow-lg rounded-lg"
+            >
+              <div className="flex flex-col h-full bg-white">
+                <div className="bg-gray-200 px-4 py-2 flex justify-between items-center">
+                  <span className="font-semibold">GeoGPT Chat</span>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={enterFullScreen}
+                    >
+                      <Maximize />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="px-4"
+                      onClick={() => setIsPopoverOpen(false)}
+                    >
+                      X
+                    </Button>
                   </div>
+                </div>
 
-                  <div
-                    id="chatMessages"
-                    className="flex-1 p-4 overflow-y-auto space-y-2"
-                  >
-                    <div className="text-sm text-gray-600">
-                      Hei! Jeg er GeoGPT. Spør meg om geodata!
-                    </div>
-                    {chatMessages.map((msg, idx) => {
-                      if (msg.type === "image" && msg.imageUrl) {
-                        return (
-                          <div
-                            key={idx}
-                            className="flex flex-col space-y-2 my-2"
-                          >
-                            <img
-                              src={msg.imageUrl || "/placeholder.svg"}
-                              alt="Dataset"
-                              className="max-w-full h-auto rounded"
-                            />
-                            <div className="flex gap-2">
+                <div
+                  id="chatMessages"
+                  className="flex-1 p-4 overflow-y-auto space-y-2"
+                >
+                  <div className="text-sm text-gray-600">
+                    Hei! Jeg er GeoGPT. Spør meg om geodata!
+                  </div>
+                  {chatMessages.map((msg, idx) => {
+                    if (msg.type === "image" && msg.imageUrl) {
+                      return (
+                        <div
+                          key={idx}
+                          className="flex flex-col space-y-2 my-2"
+                        >
+                          <img
+                            src={msg.imageUrl || "/placeholder.svg"}
+                            alt="Dataset"
+                            className="max-w-full h-auto rounded"
+                          />
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={() => {
+                                if (msg.wmsUrl && msg.wmsUrl !== "None") {
+                                  replaceIframe(msg.wmsUrl);
+                                }
+                              }}
+                              className={`text-xs ${
+                                msg.wmsUrl && msg.wmsUrl !== "None"
+                                  ? "bg-green-500 text-white"
+                                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                              }`}
+                              disabled={!msg.wmsUrl || msg.wmsUrl === "None"}
+                            >
+                              Vis
+                            </Button>
+                            {msg.downloadUrl && (
                               <Button
-                                onClick={() => {
-                                  if (msg.wmsUrl && msg.wmsUrl !== "None") {
-                                    replaceIframe(msg.wmsUrl);
-                                  }
-                                }}
-                                className={`text-xs ${
-                                  msg.wmsUrl && msg.wmsUrl !== "None"
-                                    ? "bg-green-500 text-white"
-                                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                                }`}
-                                disabled={!msg.wmsUrl || msg.wmsUrl === "None"}
+                                onClick={() =>
+                                  handleDatasetDownload(msg.downloadUrl!)
+                                }
+                                className="bg-green-500 text-white text-xs"
                               >
-                                Vis
+                                Last ned datasett
                               </Button>
-                              {msg.downloadUrl && (
-                                <Button
-                                  onClick={() =>
-                                    handleDatasetDownload(msg.downloadUrl!)
-                                  }
-                                  className="bg-green-500 text-white text-xs"
-                                >
-                                  Last ned datasett
-                                </Button>
-                              )}
-                            </div>
+                            )}
                           </div>
-                        );
-                      } else {
-                        let content = msg.content || "";
-                        let isUser = false;
-                        if (content.startsWith("You: ")) {
-                          isUser = true;
-                          content = content.slice("You: ".length);
-                        } else if (content.startsWith("System: ")) {
-                          content = content.slice("System: ".length);
-                        }
-                        content = content.replace(
-                          /\*\*(.*?)\*\*/g,
-                          "<strong>$1</strong>"
-                        );
-                        return (
+                        </div>
+                      );
+                    } else {
+                      let content = msg.content || "";
+                      let isUser = false;
+                      if (content.startsWith("You: ")) {
+                        isUser = true;
+                        content = content.slice("You: ".length);
+                      } else if (content.startsWith("System: ")) {
+                        content = content.slice("System: ".length);
+                      }
+                      content = content.replace(
+                        /\*\*(.*?)\*\*/g,
+                        "<strong>$1</strong>"
+                      );
+                      return (
+                        <div
+                          key={idx}
+                          className={`flex ${
+                            isUser ? "justify-end" : "justify-start"
+                          }`}
+                        >
                           <div
-                            key={idx}
-                            className={`flex ${
-                              isUser ? "justify-end" : "justify-start"
+                            className={`max-w-[80%] p-2 rounded shadow text-sm whitespace-pre-wrap ${
+                              isUser ? "bg-blue-100" : "bg-gray-100"
                             }`}
                           >
-                            <div
-                              className={`max-w-[80%] p-2 rounded shadow text-sm whitespace-pre-wrap ${
-                                isUser ? "bg-blue-100" : "bg-gray-100"
-                              }`}
-                            >
-                              {isUser ? (
-                                <strong>You:</strong>
-                              ) : (
-                                <strong>System:</strong>
-                              )}
-                              <span
-                                className="ml-1"
-                                dangerouslySetInnerHTML={{ __html: content }}
-                              />
-                            </div>
+                            {isUser ? (
+                              <strong>You:</strong>
+                            ) : (
+                              <strong>System:</strong>
+                            )}
+                            <span
+                              className="ml-1"
+                              dangerouslySetInnerHTML={{ __html: content }}
+                            />
                           </div>
-                        );
-                      }
-                    })}
-                    <div ref={chatEndRef} />
-                  </div>
-
-                  <form
-                    onSubmit={onChatSubmit}
-                    className="flex items-center border-t border-gray-300 p-2"
-                  >
-                    <input
-                      type="text"
-                      value={chatInput}
-                      onChange={(e) => setChatInput(e.target.value)}
-                      placeholder="Spør GeoGPT..."
-                      className="flex-1 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <Button
-                      type="submit"
-                      className="ml-2 text-sm"
-                      disabled={isChatStreaming || !chatInput.trim()}
-                    >
-                      Send
-                    </Button>
-                  </form>
+                        </div>
+                      );
+                    }
+                  })}
+                  <div ref={chatEndRef} />
                 </div>
-              </PopoverContent>
-            </Popover>
-          </div>
+
+                <form
+                  onSubmit={onChatSubmit}
+                  className="flex items-center border-t border-gray-300 p-2"
+                >
+                  <input
+                    type="text"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    placeholder="Spør GeoGPT..."
+                    className="flex-1 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <Button
+                    type="submit"
+                    className="ml-2 text-sm"
+                    disabled={isChatStreaming || !chatInput.trim()}
+                  >
+                    Send
+                  </Button>
+                </form>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 
@@ -830,9 +872,14 @@ const DemoV3 = () => {
         </div>
       )}
       <AppSidebar
-        selectedLayer={selectedLayer}
-        setSelectedLayer={setSelectedLayer}
+        selectedLayers={selectedLayers}
+        onLayerChange={handleLayerChange}
         availableLayers={availableLayers ?? []}
+        onChangeBaseLayer={{
+          revertToBaseMap,
+          changeToGraattKart,
+          changeToRasterKart
+        }}
       />
     </>
   );
