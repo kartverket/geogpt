@@ -186,10 +186,7 @@ export function KartkatalogTab({
       console.log("[DEBUG] Entire metadata response:", data);
 
       let extractedAbstract = data.Abstract
-        || data.abstract
         || data.metadata?.abstract
-        || data.purpose
-        || "Ingen beskrivelse tilgjengelig";
       
       setDescriptionsCache(prev => {
         const newCache = new Map(prev);
@@ -331,12 +328,12 @@ export function KartkatalogTab({
                               <div className="space-y-2">
                                 <h4 className="font-medium">{result.title}</h4>
                                 {!descriptionsCache.has(result.uuid) ? (
-                                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                                  <div className="flex items-center gap-2 text-sm">
                                     <Loader2 className="h-4 w-4 animate-spin" />
                                     Laster beskrivelse...
                                   </div>
                                 ) : (
-                                  <p className="text-sm text-gray-600">
+                                  <p className="text-sm text-gray-600 line-clamp-6">
                                     {descriptionsCache.get(result.uuid)}
                                   </p>
                                 )}
@@ -399,7 +396,7 @@ export function KartkatalogTab({
                           <Checkbox
                             checked={selectedDatasets.has(result.uuid)}
                             onCheckedChange={() => handleSelectDataset(result)}
-                            className="mt-1 rounded-[2px]"
+                            className="mt-6 w-5 h-5 rounded-[2px]"
                           />
                         )}
                       </div>
