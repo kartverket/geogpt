@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "@types/react": "^19.0.10",
+    "react-markdown": "^10.0.0",
+    "remark-gfm": "^4.0.1",
+    "socket": "^0.14.43"
+  }
+}
