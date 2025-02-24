@@ -94,12 +94,20 @@ const SelectionPopover = ({
   placeholder: string;
   grouped?: boolean;
 }) => {
+  // Autofill the selected value if there is only one item in the list
+  useEffect(() => {
+    if (items.length === 1 && !selectedValue) {
+      setSelectedValue(items[0].name);
+      setOpen(false);
+    }
+  }, [items, selectedValue, setSelectedValue, setOpen]);
+
   return (
     <div>
       <div className="flex items-center gap-1 text-sm text-color-gn-secondary">
         <strong>{label}</strong>
         {label.includes(":") && (
-          <span className="text-color-gn-primary text-xl">*</span>
+          <span className="text-color-gn-primary text-sm">*</span>
         )}
         {helpLink && renderTooltip(helpLink, label)}
       </div>
@@ -205,10 +213,11 @@ const renderSelectionPopover = (
   />
 );
 
+// Update step labels to remove user group step
 const stepLabels = [
+  "Standard nedlasting",
   "1. Velg område",
-  "2. Velg brukergruppe",
-  "3. Bekreft og last ned",
+  "2. Bekreft og last ned",
 ];
 
 // FileDownloadModal component
@@ -227,7 +236,7 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
   const [selectedFmt, setSelectedFmt] = useState<string>("");
   const [selectedGroup, setSelectedGroup] = useState<string>("");
   const [selectedGoal, setSelectedGoal] = useState<string>("");
-  const [step, setStep] = useState<number>(1);
+  const [step, setStep] = useState<number>(0);
   const [manualStepChange, setManualStepChange] = useState<boolean>(false);
 
   const [openLocation, setOpenLocation] = useState<boolean>(false);
@@ -236,11 +245,33 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
   const [openGroup, setOpenGroup] = useState<boolean>(false);
   const [openGoal, setOpenGoal] = useState<boolean>(false);
 
+  // Reset modal state when new modal is opened
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedLocation("");
+      setSelectedProj("");
+      setSelectedFmt("");
+      setSelectedGroup("");
+      setSelectedGoal("");
+      setStep(0);
+      setManualStepChange(false);
+    }
+  }, [isOpen]);
+
   const uniqueGeographicalAreas = sortGeographicalAreas(
     Array.from(
       new Set(geographicalAreas.map((area) => JSON.stringify(area)))
     ).map((area) => JSON.parse(area))
   );
+
+  // AUTO-FILL: If there is only one geographical area, select it automatically.
+  useEffect(() => {
+    if (uniqueGeographicalAreas.length === 1 && !selectedLocation) {
+      setSelectedLocation(uniqueGeographicalAreas[0].name);
+      onAreaChange(uniqueGeographicalAreas[0].code);
+      setOpenLocation(false);
+    }
+  }, [uniqueGeographicalAreas, selectedLocation, onAreaChange]);
 
   const uniqueProjections = Array.from(
     new Set(projections.map((proj) => JSON.stringify(proj)))
@@ -252,32 +283,45 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
 
   const nextStep = () => {
     setManualStepChange(true);
-    setStep((prev) => Math.min(prev + 1, 3));
+    setStep((prev) => Math.min(prev + 1, 2));
   };
 
   const prevStep = () => {
     setManualStepChange(true);
-    setStep((prev) => Math.max(prev - 1, 1));
+    setStep((prev) => Math.max(prev - 1, 0));
   };
 
-  // Auto-step progression
+  // Auto-step progression to require both user group and purpose
   useEffect(() => {
     if (!manualStepChange) {
-      if (step === 1 && selectedLocation && selectedProj && selectedFmt) {
+      if (step === 0 && selectedGroup && selectedGoal) {
+        // Only proceed if both user group and purpose are selected in step 0
+        setStep(1);
+      } else if (
+        step === 1 &&
+        selectedLocation &&
+        selectedProj &&
+        selectedFmt
+      ) {
         setStep(2);
-      } else if (step === 2 && selectedGroup && selectedGoal) {
-        setStep(3);
       }
     }
   }, [
     step,
+    selectedGroup,
+    selectedGoal, // Added selectedGoal to dependencies
     selectedLocation,
     selectedProj,
     selectedFmt,
-    selectedGroup,
-    selectedGoal,
     manualStepChange,
   ]);
+
+  // Once step 2 is reached, lock auto-step progression by setting manualStepChange to true
+  useEffect(() => {
+    if (step === 2) {
+      setManualStepChange(true);
+    }
+  }, [step]);
 
   const handleConfirmSelectionWithLoading = async () => {
     try {
@@ -295,6 +339,9 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
   };
 
   if (!isOpen) return null;
+
+  // Update progress calculation for 3 steps instead of 4
+  const progressValue = (step / 2) * 100;
 
   return (
     <TooltipProvider delayDuration={100}>
@@ -320,30 +367,63 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
             <GeoNorgeLogo />
           </div>
           <h2 className="text-xl text-color-gn-secondary mb-2">
-            Filnedlastning - {step === 3 ? "nedlastning" : "bestilling"}
+            Filnedlastning - {step === 2 ? "nedlastning" : "bestilling"}
           </h2>
           <Separator />
           <Progress
-            value={(step / 3) * 100}
+            value={progressValue}
             className="my-4"
-            bgColor={
-              step % 3 === 0 ? "bg-color-kv-primary" : "bg-color-gn-primary"
-            }
+            bgColor={"bg-color-gn-primary"}
           />
           <div className="flex justify-between text-sm text-gray-600">
             {stepLabels.map((label, index) => (
               <span
                 key={index}
                 className={`${
-                  step === index + 1 ? "text-color-kv-secondary font-bold" : ""
+                  step === index ? "text-color-kv-secondary font-bold" : ""
                 } cursor-pointer`}
-                onClick={() => setStep(index + 1)} // Allow step navigation
+                onClick={() => setStep(index)}
               >
                 {label}
               </span>
             ))}
           </div>
           <div className="flex-1 overflow-y-auto">
+            {step === 0 && (
+              <div className="space-y-4 mt-4">
+                <Separator />
+                <span className="block mt-2 text-sm text-color-gn-secondary">
+                  <strong>Datasettets navn:</strong>{" "}
+                  <Badge
+                    variant="default"
+                    className="bg-color-gn-lightblue text-white"
+                  >
+                    {datasetName || "N/A"}
+                  </Badge>
+                </span>
+                {/* Moved from step 2 to step 0 */}
+                {renderSelectionPopover(
+                  "Brukergruppe:",
+                  selectedGroup,
+                  setSelectedGroup,
+                  openGroup,
+                  setOpenGroup,
+                  userGroups,
+                  "Velg brukergruppe..."
+                )}
+                {renderSelectionPopover(
+                  "Formål:",
+                  selectedGoal,
+                  setSelectedGoal,
+                  openGoal,
+                  setOpenGoal,
+                  groupedGoals,
+                  "Velg formål...",
+                  true
+                )}
+              </div>
+            )}
+
             {step === 1 && (
               <div className="space-y-4 mt-4">
                 <Separator />
@@ -438,32 +518,6 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
             )}
 
             {step === 2 && (
-              <div className="space-y-4 mt-4">
-                <Separator />
-
-                {renderSelectionPopover(
-                  "Brukergruppe:",
-                  selectedGroup,
-                  setSelectedGroup,
-                  openGroup,
-                  setOpenGroup,
-                  userGroups,
-                  "Velg brukergruppe..."
-                )}
-                {renderSelectionPopover(
-                  "Formål:",
-                  selectedGoal,
-                  setSelectedGoal,
-                  openGoal,
-                  setOpenGoal,
-                  groupedGoals,
-                  "Velg formål...",
-                  true
-                )}
-              </div>
-            )}
-
-            {step === 3 && (
               <div className="space-y-4 mt-4">
                 <Separator />
 

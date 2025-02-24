@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 
 // Icons
 import DownloadIcon from "@mui/icons-material/Download";
+import EditIcon from "@mui/icons-material/Edit";
 
 interface StepNavigationButtonsProps {
   step: number;
@@ -23,33 +24,47 @@ const StepNavigationButtons: React.FC<StepNavigationButtonsProps> = ({
 }) => {
   return (
     <div className="flex justify-between mt-6">
-      {step > 1 && (
-        <Button variant="outline" onClick={prevStep}>
-          Tilbake
-        </Button>
-      )}
-      {step === 1 ? (
+      {step === 0 ? (
         <div className="flex justify-between w-full">
+          <Button variant="outline" onClick={handleClose}>
+            Avbryt
+          </Button>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={handleClose}>
-              Avbryt
+            <Button variant="next" onClick={nextStep}>
+              <EditIcon />
+              Tilpass
+            </Button>
+            <Button
+              variant="download"
+              onClick={handleConfirmSelectionWithLoading}
+            >
+              <DownloadIcon />
+              Last ned datasett
             </Button>
           </div>
-          <Button variant="next" onClick={nextStep}>
-            Neste
-          </Button>
         </div>
-      ) : step < 3 ? (
-        <div className="flex justify-end w-full">
+      ) : step === 1 ? (
+        <div className="flex justify-between w-full">
+          <Button variant="outline" onClick={prevStep}>
+            Tilbake
+          </Button>
           <Button variant="next" onClick={nextStep}>
             Neste
           </Button>
         </div>
       ) : (
-        <Button variant="download" onClick={handleConfirmSelectionWithLoading}>
-          <DownloadIcon className="mr-2" />
-          Last ned datasett
-        </Button>
+        <div className="flex justify-between w-full">
+          <Button variant="outline" onClick={prevStep}>
+            Tilbake
+          </Button>
+          <Button
+            variant="download"
+            onClick={handleConfirmSelectionWithLoading}
+          >
+            <DownloadIcon />
+            Last ned datasett
+          </Button>
+        </div>
       )}
     </div>
   );

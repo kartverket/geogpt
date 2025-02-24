@@ -60,7 +60,7 @@ interface SearchResult {
 interface KartkatalogTabProps {
   className?: string;
   onReplaceIframe: (wmsUrl: string) => void;
-  onDatasetDownload: (downloadUrl: string) => void;
+  onDatasetDownload: (dataset: SearchResult) => void; // Modified this prop
   ws: WebSocket | null;
 }
 
@@ -82,7 +82,9 @@ export function KartkatalogTab({
     Map<string, SearchResult>
   >(new Map());
   const [showDownloadDialog, setShowDownloadDialog] = React.useState(false);
-  const [descriptionsCache, setDescriptionsCache] = React.useState<Map<string, string>>(new Map());
+  const [descriptionsCache, setDescriptionsCache] = React.useState<
+    Map<string, string>
+  >(new Map());
 
   // Create a ref for the main panel container
   const panelRef = React.useRef<HTMLDivElement>(null);
@@ -180,27 +182,30 @@ export function KartkatalogTab({
     if (descriptionsCache.has(uuid)) return;
 
     try {
-      const response = await fetch(`https://kartkatalog.geonorge.no/api/metadata/${uuid}`);
+      const response = await fetch(
+        `https://kartkatalog.geonorge.no/api/metadata/${uuid}`
+      );
       const data = await response.json();
 
       console.log("[DEBUG] Entire metadata response:", data);
 
-      let extractedAbstract = data.Abstract
-        || data.abstract
-        || data.metadata?.abstract
-        || data.purpose
-        || "Ingen beskrivelse tilgjengelig";
-      
-      setDescriptionsCache(prev => {
+      const extractedAbstract =
+        data.Abstract ||
+        data.abstract ||
+        data.metadata?.abstract ||
+        data.purpose ||
+        "Ingen beskrivelse tilgjengelig";
+
+      setDescriptionsCache((prev) => {
         const newCache = new Map(prev);
         newCache.set(uuid, extractedAbstract);
         return newCache;
       });
     } catch (error) {
-      console.error('Error fetching dataset description:', error);
-      setDescriptionsCache(prev => {
+      console.error("Error fetching dataset description:", error);
+      setDescriptionsCache((prev) => {
         const newCache = new Map(prev);
-        newCache.set(uuid, 'Kunne ikke laste beskrivelse');
+        newCache.set(uuid, "Kunne ikke laste beskrivelse");
         return newCache;
       });
     }
@@ -306,11 +311,15 @@ export function KartkatalogTab({
 
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1">
-                          <HoverCard openDelay={200} closeDelay={0} onOpenChange={(open) => {
-                            if (open && !descriptionsCache.has(result.uuid)) {
-                              fetchDatasetDescription(result.uuid);
-                            }
-                          }}>
+                          <HoverCard
+                            openDelay={200}
+                            closeDelay={0}
+                            onOpenChange={(open) => {
+                              if (open && !descriptionsCache.has(result.uuid)) {
+                                fetchDatasetDescription(result.uuid);
+                              }
+                            }}
+                          >
                             <HoverCardTrigger asChild>
                               <a
                                 href={`https://kartkatalog.geonorge.no/metadata/${encodeURIComponent(
@@ -324,10 +333,7 @@ export function KartkatalogTab({
                                 <ExternalLink className="h-4 w-4" />
                               </a>
                             </HoverCardTrigger>
-                            <HoverCardContent 
-                              side="left"
-                              className="w-80"
-                            >
+                            <HoverCardContent side="left" className="w-80">
                               <div className="space-y-2">
                                 <h4 className="font-medium">{result.title}</h4>
                                 {!descriptionsCache.has(result.uuid) ? (
@@ -343,7 +349,7 @@ export function KartkatalogTab({
                               </div>
                             </HoverCardContent>
                           </HoverCard>
-                          
+
                           <div className="flex gap-2">
                             {result.wmsUrl && result.wmsUrl !== "None" ? (
                               <button
@@ -385,9 +391,7 @@ export function KartkatalogTab({
                             )}
                             {result.downloadUrl && (
                               <button
-                                onClick={() =>
-                                  onDatasetDownload(result.downloadUrl!)
-                                }
+                                onClick={() => onDatasetDownload(result)} // Modified this line
                                 className="px-3 py-1.5 text-sm bg-[#404041] hover:bg-[#5c5c5d] text-white rounded-[2px] transition-colors flex items-center gap-1"
                               >
                                 <Download className="h-4 w-4" /> Last ned
@@ -414,14 +418,18 @@ export function KartkatalogTab({
         {/* Tab Button */}
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className={`flex items-center bg-[#FF8B65] hover:bg-[#FE642F] text-white px-2 py-6 ${
+          className={`flex items-center bg-[#FE642F] hover:bg-[#f35a30] text-white px-2 py-6 ${
             isExpanded ? "rounded-r-[2px] border-l-2" : "rounded-[2px]"
           } -ml-px`}
         >
           <div className="flex flex-col items-center gap-3">
-            <Layers className="h-5 w-5" />
-            <div className="writing-mode-vertical-lr transform rotate-180 text-sm font-medium whitespace-nowrap">
-              KARTKATALOGEN
+            <Layers className="h-7 w-7" />
+            <div className="flex flex-col">
+              {[..."KARTKATALOGEN"].map((letter, index) => (
+                <span key={index} className="text-md font-medium">
+                  {letter}
+                </span>
+              ))}
             </div>
             {isExpanded ? (
               <ChevronRight className="h-4 w-4" />

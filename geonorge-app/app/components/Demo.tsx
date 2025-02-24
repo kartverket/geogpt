@@ -26,27 +26,35 @@ type MessageType = {
 };
 
 interface ChatMessage {
+  title: string;
   type: "text" | "image" | "streaming";
   content?: string;
   imageUrl?: string;
   downloadUrl?: string | null;
   wmsUrl?: string | null;
-  datasetName?: string;
-  datasetOptions?: {
-    geographicalAreas: { type: string; name: string; code: string }[];
-    projections: { name: string; code: string }[];
-    formats: string[];
-    datasetName: string;
-  };
+  uuid?: string;
+  downloadFormats?: {
+    type: string;
+    name: string;
+    code: string;
+    projections?: { name: string; code: string }[];
+    formats?: { name: string }[];
+  }[];
 }
 
 interface SearchResult {
-  downloadFormats: any;
   uuid: string;
   title?: string;
   wmsUrl?: string;
   downloadUrl?: string | null;
   restricted?: boolean;
+  downloadFormats: {
+    type: string;
+    name: string;
+    code: string;
+    projections?: { name: string; code: string }[];
+    formats?: { name: string }[];
+  }[];
 }
 
 const INITIAL_MAP_URL =
@@ -69,6 +77,8 @@ function DemoV2() {
   const [pendingDownloadUrl, setPendingDownloadUrl] = useState<string | null>(
     null
   );
+  // State for chat streaming
+  const [isChatStreaming, setIsChatStreaming] = useState(false);
 
   // Dataset title
   const [datasetName, setDatasetName] = useState<string>("");
@@ -89,7 +99,45 @@ function DemoV2() {
   >([]);
   const [formats, setFormats] = useState<string[]>([]);
 
-  // Update the specific object when search results change
+  // Deduplication helpers
+  const dedupeFormats = (formats: string[]): string[] => {
+    const formatMap = new Map<string, string>();
+    for (const f of formats) {
+      const key = f.trim().toLowerCase();
+      if (!formatMap.has(key)) {
+        formatMap.set(key, f.trim());
+      }
+    }
+    return Array.from(formatMap.values());
+  };
+
+  const dedupeAreas = (
+    areas: { type: string; name: string; code: string }[]
+  ): typeof areas => {
+    const areaMap = new Map<string, (typeof areas)[0]>();
+    for (const area of areas) {
+      const key = area.code.trim().toLowerCase();
+      if (!areaMap.has(key)) {
+        areaMap.set(key, { ...area, name: area.name.trim() });
+      }
+    }
+    return Array.from(areaMap.values());
+  };
+
+  const dedupeProjections = (
+    projections: { name: string; code: string }[]
+  ): typeof projections => {
+    const projectionMap = new Map<string, (typeof projections)[0]>();
+    for (const proj of projections) {
+      const key = proj.code.trim().toLowerCase();
+      if (!projectionMap.has(key)) {
+        projectionMap.set(key, { ...proj, name: proj.name.trim() });
+      }
+    }
+    return Array.from(projectionMap.values());
+  };
+
+  // Update the specific object when search results change from kartkartalog
   useEffect(() => {
     if (!uuidToFind || searchResults.length === 0) return;
 
@@ -99,33 +147,37 @@ function DemoV2() {
     );
 
     if (specificObject) {
-      console.log("Found specificObject:", specificObject);
+      console.log("Found specificObject from searchResults:", specificObject);
 
-      // Extract unique geographical areas
-      const uniqueGeographicalAreas = specificObject.downloadFormats.map(
+      // Extract and dedupe geographical areas
+      const rawGeoAreas = specificObject.downloadFormats.map(
         (fmt: { type: string; name: string; code: string }) => ({
           type: fmt.type,
           name: fmt.name,
           code: fmt.code,
         })
       );
+      const uniqueGeographicalAreas = dedupeAreas(rawGeoAreas);
 
-      // Extract unique projections from downloadFormats
-      const uniqueProjections = specificObject.downloadFormats
+      // Extract and dedupe projections
+      const rawProjections = specificObject.downloadFormats
         .flatMap((fmt: { projections?: { name: string; code: string }[] }) =>
           fmt.projections ? fmt.projections : []
-        ) // Check if projections exist
+        )
         .map((proj: { name: string; code: string }) => ({
           name: proj.name,
           code: proj.code,
         }));
+      const uniqueProjections = dedupeProjections(rawProjections);
 
-      // Extract unique formats from downloadFormats
-      const uniqueFormats = specificObject.downloadFormats
-        .flatMap((fmt: { formats?: { name: string }[] }) =>
-          fmt.formats ? fmt.formats : []
-        ) // Check if formats exist
-        .map((format: { name: string }) => format.name);
+      // Extract and dedupe formats
+      const rawFormats = specificObject.downloadFormats.flatMap(
+        (fmt: { formats?: { name: string }[] }) =>
+          fmt.formats
+            ? fmt.formats.map((format: { name: string }) => format.name)
+            : []
+      );
+      const uniqueFormats = dedupeFormats(rawFormats);
 
       // Set state variables
       setGeographicalAreas(uniqueGeographicalAreas);
@@ -168,11 +220,11 @@ function DemoV2() {
 
   const handleServerMessage = (data: MessageType) => {
     const { action, payload } = data;
-    console.log("🚀 ~ handleServerMessage ~ payload", payload);
     console.log("🚀 ~ handleServerMessage ~ action", action);
 
     switch (action) {
       case "chatStream":
+        setIsChatStreaming(true);
         if (payload.isNewMessage && !payload.payload) break;
         setChatMessages((prev) => {
           const lastMsg = prev[prev.length - 1];
@@ -196,6 +248,7 @@ function DemoV2() {
         break;
 
       case "streamComplete":
+        setIsChatStreaming(false); // Re-enable send button after stream complete
         setChatMessages((prev) => {
           const lastMsg = prev[prev.length - 1];
           if (!lastMsg || lastMsg.type !== "streaming") return prev;
@@ -205,73 +258,52 @@ function DemoV2() {
         });
         break;
 
+      // First, update the "chatDatasets" case to store the data temporarily
       case "chatDatasets":
         console.log("Case: chatDatasets triggered");
-
         if (payload && Array.isArray(payload)) {
           console.log("Payload received:", payload);
-
-          /* const formattedMessage = `System: For å hjelpe deg videre, har jeg vedlagt relevante datasett:\n${payload
-            .map((area: { title: string }) => `- ${area.title}`)
-            .join("\n")}`;
-
-          setChatMessages((prev) => [
-            ...prev,
-            { type: "text", content: formattedMessage },
-          ]); */
-
-          // Set the first dataset as
           const firstUuid = payload[0].uuid;
           setUuidToFind(firstUuid);
-          console.log("🚀 ~ handleServerMessage ~ firstUuid:", firstUuid);
+          console.log("Setting uuidToFind to:", firstUuid);
 
-          const specificObject = payload.find(
+          const datasetObject = payload.find(
             (item: SearchResult) => item.uuid === firstUuid
           );
+          console.log("Setting specificObject to:", datasetObject);
 
-          // Set the specific object as the first dataset
-          setSpecificObject(specificObject || null);
-          console.log(
-            "🚀 ~ handleServerMessage ~ specificObject:",
-            specificObject
-          );
+          // Store the dataset info
+          setSpecificObject(datasetObject || null);
+          console.log("Specific object set to:", datasetObject);
 
-          if (specificObject) {
-            // Extract unique geographical areas
-            const uniqueGeographicalAreas = specificObject.downloadFormats.map(
-              (fmt: { type: string; name: string; code: string }) => ({
-                type: fmt.type,
-                name: fmt.name,
-                code: fmt.code,
-              })
-            );
-
-            // Extract unique projections from downloadFormats
-            const uniqueProjections = specificObject.downloadFormats
-              .flatMap(
-                (fmt: { projections?: { name: string; code: string }[] }) =>
-                  fmt.projections ? fmt.projections : []
-              ) // Check if projections exist
-              .map((proj: { name: string; code: string }) => ({
-                name: proj.name,
-                code: proj.code,
-              }));
-
-            // Extract unique formats from downloadFormats
-            const uniqueFormats = specificObject.downloadFormats
-              .flatMap((fmt: { formats?: { name: string }[] }) =>
-                fmt.formats ? fmt.formats : []
-              ) // Check if formats exist
-              .map((format: { name: string }) => format.name);
-
-            // Set state variables
-            setGeographicalAreas(uniqueGeographicalAreas);
-            setProjections(uniqueProjections);
-            setFormats(uniqueFormats);
-            setDatasetName(specificObject.title || "");
+          // If there's a pending image message waiting for data, update it now
+          if (datasetObject) {
+            setChatMessages((prev) => {
+              // Find the most recent image message without downloadFormats
+              const lastIndex = prev.length - 1;
+              for (let i = lastIndex; i >= 0; i--) {
+                if (
+                  prev[i].type === "image" &&
+                  (!prev[i].downloadFormats ||
+                    prev[i].downloadFormats?.length === 0)
+                ) {
+                  // Found an image message that needs data
+                  const updatedMessages = [...prev];
+                  updatedMessages[i] = {
+                    ...updatedMessages[i],
+                    downloadFormats: datasetObject.downloadFormats || [],
+                    title: datasetObject.title || "",
+                    uuid: datasetObject.uuid,
+                  };
+                  return updatedMessages;
+                }
+              }
+              // No image message needs updating
+              return prev;
+            });
+            setDatasetName(datasetObject.title || "");
           }
         }
-
         break;
 
       case "searchVdbResults":
@@ -281,6 +313,11 @@ function DemoV2() {
       case "insertImage":
         const { datasetImageUrl, datasetDownloadUrl, wmsUrl } = payload;
 
+        // First check if we already have specificObject data
+        const formatsToUse = specificObject?.downloadFormats || [];
+        const titleToUse = specificObject?.title || "";
+        const uuidToUse = specificObject?.uuid || "";
+
         setChatMessages((prev) => [
           ...prev,
           {
@@ -288,15 +325,12 @@ function DemoV2() {
             imageUrl: datasetImageUrl,
             downloadUrl: datasetDownloadUrl,
             wmsUrl: wmsUrl,
-            datasetOptions: {
-              geographicalAreas: payload.geographicalAreas || [],
-              projections: payload.projections || [],
-              formats: payload.formats || [],
-              datasetName: payload.datasetTitle || "",
-            },
+            // Use the data we have, which might be updated later by chatDatasets
+            downloadFormats: formatsToUse,
+            title: titleToUse,
+            uuid: uuidToUse,
           },
         ]);
-
         break;
 
       default:
@@ -348,17 +382,6 @@ function DemoV2() {
     setForceUpdate((prev) => prev + 1);
   };
 
-  // const onSearchSubmit = (e: FormEvent<HTMLFormElement>) => {
-  //   e.preventDefault();
-  //   if (!ws || ws.readyState !== WebSocket.OPEN) return;
-  //   ws.send(
-  //     JSON.stringify({
-  //       action: "searchFormSubmit",
-  //       payload: searchInput,
-  //     })
-  //   );
-  // };
-
   // For the non-fullscreen chat submit handler
   const onChatSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -369,6 +392,7 @@ function DemoV2() {
       { type: "text", content: `You: ${chatInput}` },
     ]);
     setChatInput("");
+    setIsChatStreaming(true);
   };
 
   // Shared function for sending a message
@@ -410,9 +434,10 @@ function DemoV2() {
           type: "image" as const,
           role: "assistant" as const,
           imageUrl: msg.imageUrl,
-          wmsUrl: msg.wmsUrl || undefined, // Convert null to undefined
-          downloadUrl: msg.downloadUrl || undefined, // Convert null to undefined
+          wmsUrl: msg.wmsUrl || undefined,
+          downloadUrl: msg.downloadUrl || undefined,
           content: "",
+          title: msg.title || "",
         };
       }
       let role: "user" | "assistant" = "assistant";
@@ -429,6 +454,7 @@ function DemoV2() {
         role,
         content,
         type: "text" as const,
+        downloadFormats: msg.downloadFormats, // include here
       };
     });
   };
@@ -445,18 +471,63 @@ function DemoV2() {
     handleSendMessage(message.content);
   };
 
+  // Handles dataset download from chat
   const handleDatasetDownload = (msg: ChatMessage) => {
-    console.log("🚀 ~ handleDatasetDownload ~ msg:", msg);
-    setPendingDownloadUrl(msg.downloadUrl);
-    if (msg.datasetOptions) {
-      setGeographicalAreas(msg.datasetOptions.geographicalAreas);
-      setProjections(msg.datasetOptions.projections);
-      setFormats(msg.datasetOptions.formats);
-      setDatasetName(msg.datasetOptions.datasetName);
+    console.log("🚀 ~ handleDatasetDownload ~ msg", msg);
+    setPendingDownloadUrl(msg.downloadUrl || null);
+
+    const formatsToUse =
+      msg.downloadFormats && msg.downloadFormats.length > 0
+        ? msg.downloadFormats
+        : specificObject?.downloadFormats || [];
+
+    if (formatsToUse.length > 0) {
+      // Extract and dedupe geographical areas
+      const rawGeoAreas = formatsToUse.map(
+        (fmt: { type: string; name: string; code: string }) => ({
+          type: fmt.type,
+          name: fmt.name,
+          code: fmt.code,
+        })
+      );
+      const uniqueGeographicalAreas = dedupeAreas(rawGeoAreas);
+
+      // Extract and dedupe projections
+      const rawProjections = formatsToUse
+        .flatMap((fmt: { projections?: { name: string; code: string }[] }) =>
+          fmt.projections ? fmt.projections : []
+        )
+        .map((proj: { name: string; code: string }) => ({
+          name: proj.name,
+          code: proj.code,
+        }));
+      const uniqueProjections = dedupeProjections(rawProjections);
+
+      // Extract and dedupe formats
+      const rawFormats = formatsToUse.flatMap(
+        (fmt: { formats?: { name: string }[] }) =>
+          fmt.formats
+            ? fmt.formats.map((format: { name: string }) => format.name)
+            : []
+      );
+      const uniqueFormats = dedupeFormats(rawFormats);
+
+      setGeographicalAreas(uniqueGeographicalAreas);
+      setProjections(uniqueProjections);
+      setFormats(uniqueFormats);
+      setDatasetName(msg.title || specificObject?.title || ""); // <-- fallback title
+    } else {
+      console.warn("No download formats available for this message");
+      setGeographicalAreas([]);
+      setProjections([]);
+      setFormats([]);
+      setDatasetName(msg.title || specificObject?.title || "");
     }
+
     setFileDownloadModalOpen(true);
   };
 
+  // Confirm download from modal
   const confirmDownload = () => {
     if (!pendingDownloadUrl) return;
     const link = document.createElement("a");
@@ -468,6 +539,68 @@ function DemoV2() {
     document.body.removeChild(link);
     setFileDownloadModalOpen(false);
     setPendingDownloadUrl(null);
+  };
+
+  // Modify the executeDatasetDownload function
+  const executeDatasetDownload = (dataset: SearchResult) => {
+    if (!dataset) {
+      console.error("No dataset provided.");
+      return;
+    }
+
+    // Extract and dedupe geographical areas
+    const rawGeoAreas = dataset.downloadFormats.map((fmt) => ({
+      type: fmt.type,
+      name: fmt.name,
+      code: fmt.code,
+    }));
+    const uniqueGeographicalAreas = dedupeAreas(rawGeoAreas);
+
+    // Extract and dedupe projections
+    const rawProjections = dataset.downloadFormats
+      .flatMap((fmt) => (fmt.projections ? fmt.projections : []))
+      .map((proj) => ({
+        name: proj.name,
+        code: proj.code,
+      }));
+    const uniqueProjections = dedupeProjections(rawProjections);
+
+    // Extract and dedupe formats
+    const rawFormats = dataset.downloadFormats.flatMap(
+      (fmt: { formats?: { name: string }[] }) =>
+        fmt.formats
+          ? fmt.formats.map((format: { name: string }) => format.name)
+          : []
+    );
+    const uniqueFormats = dedupeFormats(rawFormats);
+
+    // Set the necessary state for the modal
+    setGeographicalAreas(uniqueGeographicalAreas);
+    setProjections(uniqueProjections);
+    setFormats(uniqueFormats);
+    setDatasetName(dataset.title || "");
+    setPendingDownloadUrl(dataset.downloadUrl || null);
+    setFileDownloadModalOpen(true);
+  };
+
+  // Create an adapter function to convert from url string to ChatMessage
+  const handleFullScreenDownload = (url: string) => {
+    // Find the message that contains this download URL
+    const messageWithUrl = chatMessages.find((msg) => msg.downloadUrl === url);
+
+    if (messageWithUrl) {
+      // If found, use the original handler with the full message
+      handleDatasetDownload(messageWithUrl);
+    } else {
+      // Fallback: create a minimal message object with just the URL
+      const minimalMsg: ChatMessage = {
+        type: "image",
+        downloadUrl: url,
+        title: specificObject?.title || "", // Use the currently selected object's title as fallback
+        downloadFormats: specificObject?.downloadFormats || [],
+      };
+      handleDatasetDownload(minimalMsg);
+    }
   };
 
   // When entering full screen, close the popover
@@ -495,7 +628,7 @@ function DemoV2() {
       {/* KartkatalogTab Component */}
       <KartkatalogTab
         onReplaceIframe={replaceIframe}
-        onDatasetDownload={handleDatasetDownload}
+        onDatasetDownload={executeDatasetDownload}
         ws={ws}
       />
 
@@ -645,7 +778,11 @@ function DemoV2() {
                   placeholder="Spør GeoGPT..."
                   className="flex-1 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-                <Button type="submit" className="ml-2 text-sm">
+                <Button
+                  type="submit"
+                  className="ml-2 text-sm"
+                  disabled={isChatStreaming || !chatInput.trim()}
+                >
                   Send
                 </Button>
               </form>
@@ -674,7 +811,7 @@ function DemoV2() {
               append={handleAppend}
               suggestions={suggestions}
               onWmsClick={replaceIframe}
-              onDownloadClick={handleDatasetDownload}
+              onDownloadClick={handleFullScreenDownload}
               onExitFullScreen={exitFullScreen}
             />
           </div>
