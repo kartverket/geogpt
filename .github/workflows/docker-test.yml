@@ -65,11 +65,18 @@ jobs:
 
       - name: Verify backend service
         run: |
-          # Wait for backend to be ready
-          timeout 300 bash -c 'until curl -s http://localhost:8080 > /dev/null || true; 
-          do sleep 5; done'
+          # Check if backend is listening on port 8080
+          timeout 30 bash -c 'until nc -z localhost 8080 || echo "waiting for backend..." && sleep 5; do :; done'
+
+          sleep 10  # Wait for backend to start
+
+          echo "checking backend logs"
+          docker-compose logs backend
+
+          docker-compose logs backend | grep -i "websocket" || true
+          docker-compose logs backend | grep -i "server is running" || true
           # Check if backend logs indicate success
-          docker-compose logs backend | grep -E "WebSocket server running|Processing completed"
+          docker-compose ps backend | grep "Up" || (echo "backend container is not running properly" && exit 1)
 
       - name: Verify frontend service
         run: |

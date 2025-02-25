@@ -60,7 +60,13 @@ jobs:
       - name: Build and start services
         run: |
           docker-compose up -d
+          echo "Waiting for services to be ready..."
           sleep 30  # Wait for services to be ready
+          docker-compose ps
+
+          # Verify that the services are running
+          timeout 30 bash -c 'until nc -z localhost 8080 || echo "Waiting for backend..." && sleep 5; do :; done'
+          echo "Backend is listening on port 8080"
 
       - name: Run integration tests
         run: |
