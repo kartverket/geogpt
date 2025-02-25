@@ -33,12 +33,12 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-      
+
       - name: Install Docker Compose
         run: |
-          sudo apt-get update
-          sudo apt-get install -y docker-compose-plugin
-          docker compose version
+          sudo curl -L "https://github.com/docker/compose/releases/download/v2.24.6/docker-compose-linux-x86_64" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+          docker-compose --version
 
       - name: Create .env file
         run: |
@@ -59,7 +59,7 @@ jobs:
 
       - name: Build and start services
         run: |
-          docker compose up -d
+          docker-compose up -d
           sleep 30  # Wait for services to be ready
 
       - name: Run integration tests
@@ -69,8 +69,8 @@ jobs:
 
       - name: Show logs on failure
         if: failure()
-        run: docker compose logs
+        run: docker-compose logs
 
       - name: Clean up
         if: always()
-        run: docker compose down
+        run: docker-compose down
