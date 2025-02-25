@@ -1,5 +1,5 @@
 ---
-name: Docker Application Test
+name: Integration Tests
 
 on:
   push:
@@ -12,7 +12,7 @@ on:
       - main
 
 jobs:
-  test:
+  integration-tests:
     runs-on: ubuntu-latest
     env:
       DB_HOST: database
@@ -29,8 +29,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
 
       - name: Create .env file
         run: |
@@ -44,32 +46,20 @@ jobs:
           echo "AZURE_EMBEDDING_API_KEY=${{ secrets.AZURE_EMBEDDING_API_KEY }}" >> .env
           echo "AZURE_EMBEDDING_ENDPOINT=${{ secrets.AZURE_EMBEDDING_ENDPOINT }}" >> .env
 
-      - name: Build and start containers
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest requests psycopg2-binary
+
+      - name: Build and start services
         run: |
           docker-compose up -d
-          # Wait for services to be ready
-          sleep 30
+          sleep 30  # Wait for services to be ready
 
-      - name: Check running containers
-        run: docker-compose ps
-
-      - name: Check database connection
+      - name: Run integration tests
         run: |
-          docker-compose exec -T database pg_isready -U asd
-
-      - name: Verify backend service
-        run: |
-          # Wait for backend to be ready
-          timeout 300 bash -c 'until curl -s http://localhost:8080 > /dev/null || true; 
-          do sleep 5; done'
-          # Check if backend logs indicate success
-          docker-compose logs backend | grep -E "WebSocket server running|Processing completed"
-
-      - name: Verify frontend service
-        run: |
-          # Check if frontend is responding
-          timeout 300 bash -c 'until curl -s http://localhost:3000 > /dev/null || true; 
-          do sleep 5; done'
+          # Add your test commands here
+          python -m pytest tests/test_services.py -v
 
       - name: Show logs on failure
         if: failure()
