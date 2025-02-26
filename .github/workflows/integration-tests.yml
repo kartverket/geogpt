@@ -82,6 +82,15 @@ jobs:
           echo "Checking for vector extension..."
           docker-compose exec -T database psql -U asd -d asd -c "SELECT extname FROM pg_extension WHERE extname = 'vector';"
 
+      - name: Run vector creation scripts
+        run: |
+          # Make sure the vectors are created and inserted
+          docker-compose exec -T backend python /app/scripts/create_vector.py
+          docker-compose exec -T backend python /app/scripts/insert_csv.py
+    
+          # Verify table was created
+          docker-compose exec -T database psql -U asd -d asd -c "SELECT COUNT(*) FROM text_embedding_3_large;"
+
       - name: Run integration tests
         run: |
           # Add your test commands here
