@@ -83,6 +83,7 @@ export function KartkatalogTab({
   >(new Map());
   const [showDownloadDialog, setShowDownloadDialog] = React.useState(false);
   const [descriptionsCache, setDescriptionsCache] = React.useState<Map<string, string>>(new Map());
+  const [openHoverCardId, setOpenHoverCardId] = React.useState<string | null>(null);
 
   // Create a ref for the main panel container
   const panelRef = React.useRef<HTMLDivElement>(null);
@@ -203,6 +204,13 @@ export function KartkatalogTab({
     }
   };
 
+  // Add scroll handler to close HoverCard
+  const handleScroll = React.useCallback(() => {
+    if (openHoverCardId) {
+      setOpenHoverCardId(null);
+    }
+  }, [openHoverCardId]);
+
   // Loading skeleton component
   const SearchSkeleton = () => (
     <div className="px-4 py-3 border-b border-gray-200">
@@ -264,7 +272,7 @@ export function KartkatalogTab({
               </div>
             </div>
 
-            <ScrollArea className="h-[400px]">
+            <ScrollArea className="h-[400px]" onScrollCapture={handleScroll}>
               {selectedDatasets.size > 0 && (
                 <div className="sticky top-0 z-10 bg-white border-b border-gray-200 p-2 flex justify-between items-center">
                   <span className="ml-1 text-sm text-gray-800">
@@ -303,11 +311,17 @@ export function KartkatalogTab({
 
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1">
-                          <HoverCard openDelay={200} closeDelay={0} onOpenChange={(open) => {
-                            if (open && !descriptionsCache.has(result.uuid)) {
-                              fetchDatasetDescription(result.uuid);
-                            }
-                          }}>
+                          <HoverCard 
+                            openDelay={100} 
+                            closeDelay={0} 
+                            open={openHoverCardId === result.uuid}
+                            onOpenChange={(open) => {
+                              setOpenHoverCardId(open ? result.uuid : null);
+                              if (open && !descriptionsCache.has(result.uuid)) {
+                                fetchDatasetDescription(result.uuid);
+                              }
+                            }}
+                          >
                             <HoverCardTrigger asChild>
                               <a
                                 href={`https://kartkatalog.geonorge.no/metadata/${encodeURIComponent(
