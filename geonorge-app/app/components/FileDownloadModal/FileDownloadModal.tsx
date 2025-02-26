@@ -338,7 +338,7 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
   return (
     <TooltipProvider delayDuration={100}>
       <div
-        className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50"
+        className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-[50]"
         onClick={handleCloseOnClickOutside}
       >
         <div
@@ -346,7 +346,7 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
   relative min-h-[300px] sm:min-h-[400px] md:min-h-[450px] lg:min-h-[500px] xl:min-h-[550px]
   sm:h-auto md:h-auto lg:h-auto xl:h-auto 
   sm:w-[70%] md:w-[60%] lg:w-[50%] xl:w-[40%] 
-  flex flex-col justify-between z-[50]"
+  flex flex-col justify-between"
         >
           {" "}
           <button
