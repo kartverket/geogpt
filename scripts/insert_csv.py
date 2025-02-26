@@ -15,7 +15,7 @@ connection = psycopg2.connect(
 )
 
 table_name = "text_embedding_3_large"  # Juster tabellnavnet etter behov
-file_path = "all_columns_vectorized.csv"  # Angi riktig filsti
+file_path = "/app/all_columns_vectorized.csv"  # Angi riktig filsti
 
 def create_table_from_csv(file_path, table_name):
     """
