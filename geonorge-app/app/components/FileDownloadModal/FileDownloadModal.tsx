@@ -294,15 +294,7 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
   // Auto-step progression to require both user group and purpose
   useEffect(() => {
     if (!manualStepChange) {
-      if (step === 0 && selectedGroup && selectedGoal) {
-        // Only proceed if both user group and purpose are selected in step 0
-        setStep(1);
-      } else if (
-        step === 1 &&
-        selectedLocation &&
-        selectedProj &&
-        selectedFmt
-      ) {
+      if (step === 1 && selectedLocation && selectedProj && selectedFmt) {
         setStep(2);
       }
     }
