@@ -24,13 +24,9 @@ sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 from config import CONFIG
 
 from helpers.retrieval_augmented_generation import (
-    get_rag_context,
     get_rag_response
 )
 from helpers.download import (
-    get_standard_or_first_format,
-    dataset_has_download,
-    get_download_url,
     get_dataset_download_formats, 
     get_dataset_download_and_wms_status
 )
