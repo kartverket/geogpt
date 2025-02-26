@@ -9,6 +9,10 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { KartkatalogTab } from "@/components/kartkatalog-tab";
 import FileDownloadModal from "@/app/components/FileDownloadModal/FileDownloadModal";
 
+// Leaflet
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+
 // UI Components
 import { Button } from "@/components/ui/button";
 import { Chat as FullScreenChat } from "@/components/ui/chat";
@@ -53,28 +57,29 @@ interface Address {
 
 // Update the ChatMessage interface to include title and downloadFormats
 interface ChatMessage {
+  title: string;
   type: "text" | "image" | "streaming";
   content?: string;
   imageUrl?: string;
   downloadUrl?: string | null;
   wmsUrl?: string | null;
-  title?: string; // <-- Added property
+  uuid?: string;
   downloadFormats?: {
     type: string;
     name: string;
     code: string;
     projections?: { name: string; code: string }[];
     formats?: { name: string }[];
-  }[]; // <-- Added property
+  }[];
 }
 
-interface SearchResult {
-  uuid: string;
+export interface SearchResult {
   title?: string;
   wmsUrl?: string;
   downloadUrl?: string | null;
   restricted?: boolean;
-  downloadFormats: {
+  uuid?: string;
+  downloadFormats?: {
     type: string;
     name: string;
     code: string;
@@ -107,12 +112,13 @@ const DemoV3 = () => {
     null
   );
 
-  // Add download modal state
   const [isFileDownloadModalOpen, setFileDownloadModalOpen] =
     useState<boolean>(false);
   const [pendingDownloadUrl, setPendingDownloadUrl] = useState<string | null>(
     null
   );
+
+  // Downloadformats
   const [geographicalAreas, setGeographicalAreas] = useState<
     { type: string; name: string; code: string }[]
   >([]);
@@ -120,12 +126,16 @@ const DemoV3 = () => {
     { name: string; code: string }[]
   >([]);
   const [formats, setFormats] = useState<string[]>([]);
+
+  // Dataset name
   const [datasetName, setDatasetName] = useState<string>("");
+
+  // Specific search object
   const [specificObject, setSpecificObject] = useState<SearchResult | null>(
     null
   );
 
-  // Add state for uuidToFind
+  // UUid to find
   const [uuidToFind, setUuidToFind] = useState<string>("");
 
   // Add this near the top of the file, after the imports
@@ -429,23 +439,19 @@ const DemoV3 = () => {
             imageUrl: datasetImageUrl,
             downloadUrl: datasetDownloadUrl,
             wmsUrl: wmsUrl,
+            title: datasetName,
           },
         ]);
         break;
 
-      // First, update the "chatDatasets" case to store the data temporarily
       case "chatDatasets":
-        console.log("Case: chatDatasets triggered");
         if (payload && Array.isArray(payload)) {
-          console.log("Payload received:", payload);
           const firstUuid = payload[0].uuid;
           setUuidToFind(firstUuid);
-          console.log("Setting uuidToFind to:", firstUuid);
 
           const datasetObject = payload.find(
             (item: SearchResult) => item.uuid === firstUuid
           );
-          console.log("Setting specificObject to:", datasetObject);
 
           // Store the dataset info
           setSpecificObject(datasetObject || null);
@@ -459,7 +465,7 @@ const DemoV3 = () => {
                 if (
                   prev[i].type === "image" &&
                   (!prev[i].downloadFormats ||
-                    prev[i].downloadFormats.length === 0)
+                    prev[i].downloadFormats?.length === 0)
                 ) {
                   const updatedMessages = [...prev];
                   updatedMessages[i] = {
@@ -475,7 +481,6 @@ const DemoV3 = () => {
             });
             setDatasetName(datasetObject.title || "");
 
-            // NEW: Update modal fields from the dataset's downloadFormats
             const rawGeoAreas = datasetObject.downloadFormats.map((fmt) => ({
               type: fmt.type,
               name: fmt.name,
@@ -626,7 +631,6 @@ const DemoV3 = () => {
   };
 
   // Transform chatMessages to the shape expected by the FullScreenChat component.
-  // If the message is an image, include extra properties and set type to "image"
   const transformMessagesForChatKit = () => {
     return chatMessages.map((msg, idx) => {
       if (msg.type === "image" && msg.imageUrl) {
@@ -635,8 +639,8 @@ const DemoV3 = () => {
           type: "image" as const,
           role: "assistant" as const,
           imageUrl: msg.imageUrl,
-          wmsUrl: msg.wmsUrl || undefined, // Convert null to undefined
-          downloadUrl: msg.downloadUrl || undefined, // Convert null to undefined
+          wmsUrl: msg.wmsUrl || undefined,
+          downloadUrl: msg.downloadUrl || undefined,
           content: "",
         };
       }
@@ -723,7 +727,7 @@ const DemoV3 = () => {
     }
   };
 
-  // NEW: Adapter to handle full screen download, similar to Demo logic
+  // Adapter to handle full screen download, similar to Demo logic
   const handleFullScreenDownload = (url: string) => {
     const messageWithUrl = chatMessages.find((msg) => msg.downloadUrl === url);
     if (messageWithUrl) {
@@ -1148,7 +1152,7 @@ const DemoV3 = () => {
                 append={handleAppend}
                 suggestions={suggestions}
                 onWmsClick={replaceIframe}
-                onDownloadClick={handleFullScreenDownload} // <-- updated prop for full screen
+                onDownloadClick={handleFullScreenDownload}
                 onExitFullScreen={exitFullScreen}
               />
             </div>
@@ -1165,7 +1169,6 @@ const DemoV3 = () => {
           }}
         />
 
-        {/* Add FileDownloadModal */}
         <FileDownloadModal
           isOpen={isFileDownloadModalOpen}
           handleClose={() => setFileDownloadModalOpen(false)}
