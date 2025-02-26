@@ -5,8 +5,16 @@ import { Maximize } from "lucide-react";
 import Image from "next/image";
 
 // Custom components
-import FileDownloadModal from "./FileDownloadModal/FileDownloadModal";
+import FileDownloadModal from "@/app/components/FileDownloadModal/FileDownloadModal";
 import { KartkatalogTab } from "@/components/kartkatalog-tab";
+
+// Utils
+import {
+  dedupeFormats,
+  dedupeAreas,
+  dedupeProjections,
+  getAreaFormatsAndProjections,
+} from "@/utils/datasetUtils";
 
 // ShadCN UI components
 import {
@@ -98,44 +106,6 @@ function DemoV2() {
     { name: string; code: string }[]
   >([]);
   const [formats, setFormats] = useState<string[]>([]);
-
-  // Deduplication helpers
-  const dedupeFormats = (formats: string[]): string[] => {
-    const formatMap = new Map<string, string>();
-    for (const f of formats) {
-      const key = f.trim().toLowerCase();
-      if (!formatMap.has(key)) {
-        formatMap.set(key, f.trim());
-      }
-    }
-    return Array.from(formatMap.values());
-  };
-
-  const dedupeAreas = (
-    areas: { type: string; name: string; code: string }[]
-  ): typeof areas => {
-    const areaMap = new Map<string, (typeof areas)[0]>();
-    for (const area of areas) {
-      const key = area.code.trim().toLowerCase();
-      if (!areaMap.has(key)) {
-        areaMap.set(key, { ...area, name: area.name.trim() });
-      }
-    }
-    return Array.from(areaMap.values());
-  };
-
-  const dedupeProjections = (
-    projections: { name: string; code: string }[]
-  ): typeof projections => {
-    const projectionMap = new Map<string, (typeof projections)[0]>();
-    for (const proj of projections) {
-      const key = proj.code.trim().toLowerCase();
-      if (!projectionMap.has(key)) {
-        projectionMap.set(key, { ...proj, name: proj.name.trim() });
-      }
-    }
-    return Array.from(projectionMap.values());
-  };
 
   // Update the specific object when search results change from kartkartalog
   useEffect(() => {
@@ -342,35 +312,14 @@ function DemoV2() {
   const handleAreaChange = (selectedAreaCode: string) => {
     if (!specificObject) return;
 
-    const selectedArea = specificObject.downloadFormats.find(
-      (fmt: {
-        type: string;
-        name: string;
-        code: string;
-        projections?: { name: string; code: string }[];
-        formats?: { name: string }[];
-      }) => fmt.code === selectedAreaCode
-    );
+    const { projections: updatedProjections, formats: updatedFormats } =
+      getAreaFormatsAndProjections(
+        selectedAreaCode,
+        specificObject.downloadFormats
+      );
 
-    if (selectedArea) {
-      const updatedProjections = selectedArea.projections
-        ? selectedArea.projections.map(
-            (proj: { name: string; code: string }) => ({
-              name: proj.name,
-              code: proj.code,
-            })
-          )
-        : [];
-      setProjections(updatedProjections);
-
-      const updatedFormats = selectedArea.formats
-        ? selectedArea.formats.map((format: { name: string }) => format.name)
-        : [];
-      setFormats(updatedFormats);
-    } else {
-      setProjections([]);
-      setFormats([]);
-    }
+    setProjections(updatedProjections);
+    setFormats(updatedFormats);
   };
 
   const replaceIframe = (wmsUrl: string) => {
@@ -425,7 +374,6 @@ function DemoV2() {
   };
 
   // Transform chatMessages to the shape expected by the FullScreenChat component.
-  // If the message is an image, include extra properties and set type to "image"
   const transformMessagesForChatKit = () => {
     return chatMessages.map((msg, idx) => {
       if (msg.type === "image" && msg.imageUrl) {
