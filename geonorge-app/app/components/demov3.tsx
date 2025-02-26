@@ -11,9 +11,11 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Chat as FullScreenChat } from "@/components/ui/chat";
-import { MapPin, Maximize, MessageSquare } from "lucide-react";
+import { Maximize, MessageSquare, Send } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
+import Image from "next/image";
+import Icon from "../../public/logo.png";
 
 interface WMSLayer {
   name: string;
@@ -725,29 +727,32 @@ const DemoV3 = () => {
             <PopoverContent
               side="top"
               align="end"
-              className="w-96 h-[28rem] p-0 overflow-hidden shadow-lg rounded-lg"
+              className="w-[450px] h-[30rem] p-0 overflow-hidden shadow-lg rounded-lg"
             >
               <div className="flex flex-col h-full bg-white">
-                <div className="bg-gray-200 px-4 py-2 flex justify-between items-center">
-                  <span className="font-semibold">GeoGPT Chat</span>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={enterFullScreen}
-                    >
-                      <Maximize />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="px-4"
-                      onClick={() => setIsPopoverOpen(false)}
-                    >
-                      X
-                    </Button>
+                <div className="px-4 py-2 flex justify-between items-center border-b">
+                  <div className="flex items-center">
+                    <Image src={Icon} alt="Dataset" className="w-8 h-auto"/>
+                    <span className="font-bold text-lg ml-2">GeoGPT</span>
                   </div>
-                </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={enterFullScreen}
+                      >
+                        <Maximize />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="px-4"
+                        onClick={() => setIsPopoverOpen(false)}
+                      >
+                        X
+                      </Button>
+                    </div>
+                  </div>
 
                 <div
                   id="chatMessages"
@@ -763,11 +768,6 @@ const DemoV3 = () => {
                           key={idx}
                           className="flex flex-col space-y-2 my-2"
                         >
-                          <img
-                            src={msg.imageUrl || "/placeholder.svg"}
-                            alt="Dataset"
-                            className="max-w-full h-auto rounded"
-                          />
                           <div className="flex gap-2">
                             <Button
                               onClick={() => {
@@ -818,7 +818,7 @@ const DemoV3 = () => {
                           }`}
                         >
                           <div
-                            className={`max-w-[80%] p-2 rounded shadow text-sm whitespace-pre-wrap ${
+                            className={`max-w-[80%] p-2 rounded text-sm whitespace-pre-wrap ${
                               isUser ? "bg-blue-100" : "bg-gray-100"
                             }`}
                           >
@@ -841,21 +841,21 @@ const DemoV3 = () => {
 
                 <form
                   onSubmit={onChatSubmit}
-                  className="flex items-center border-t border-gray-300 p-2"
+                  className="flex items-center border-t border-gray-300 p-2 pb-3"
                 >
                   <input
                     type="text"
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
                     placeholder="Spør GeoGPT..."
-                    className="flex-1 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="flex-1 rounded px-2 py-2 pb-5 text-sm focus:outline-none"
                   />
                   <Button
                     type="submit"
-                    className="ml-2 text-sm"
                     disabled={isChatStreaming || !chatInput.trim()}
+                    className="w-10"
                   >
-                    Send
+                    <Send />
                   </Button>
                 </form>
               </div>
@@ -866,14 +866,17 @@ const DemoV3 = () => {
 
       {/* Full Screen Chat UI */}
       {isFullScreen && (
-        <div className="fixed inset-0 z-[1001] bg-white">
-          <div className="flex justify-between items-center p-4 border-b container mx-auto">
-            <h2 className="text-xl font-semibold">GeoGPT Chat</h2>
+        <div className="fixed inset-0 z-[1001] bg-white flex flex-col">
+          <div className="flex justify-between items-center p-4 border-b">
+            <div className="flex items-center">
+              <Image src={Icon} alt="Dataset" className="w-8 h-auto"/>
+              <h2 className="text-xl font-bold ml-2">GeoGPT</h2>
+            </div>
             <Button variant="outline" onClick={exitFullScreen}>
-              Exit Full Screen
+              Gå ut fra fullskjerm
             </Button>
           </div>
-          <div className="p-4 h-full">
+          <div className="flex-1 flex flex-col overflow-hidden">
             <FullScreenChat
               messages={transformMessagesForChatKit()}
               handleSubmit={fullScreenHandleSubmit}
@@ -886,6 +889,7 @@ const DemoV3 = () => {
               onWmsClick={replaceIframe}
               onDownloadClick={handleDatasetDownload}
               onExitFullScreen={exitFullScreen}
+              className="max-w-4xl mx-auto w-full flex-1 flex flex-col justify-end"
             />
           </div>
         </div>

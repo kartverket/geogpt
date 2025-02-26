@@ -216,7 +216,7 @@ const ChatUI: React.FC<ChatUIProps> = ({ webSocketUrl }) => {
           <div className="flex items-center justify-between px-2 pt-2">
             <div className="flex items-center">
               <Image
-                src="/geonorge-logo.png"
+                src="../public/geonorge-logo.png"
                 alt="GeoGPT"
                 width={78}
                 height={78}

@@ -18,7 +18,7 @@ import { NavProjects } from "@/components/nav-projects";
 import { NavSecondary } from "@/components/nav-secondary";
 import { NavUser } from "@/components/nav-user";
 import Image from "next/image";
-import Icon from "../public/geonorge-logo.png";
+import Icon from "../public/logo.png";
 import {
   Sidebar,
   SidebarContent,

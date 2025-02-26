@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowUp, Paperclip, Square, X } from "lucide-react";
+import { Send, Paperclip, Square, X } from "lucide-react";
 import { omit } from "remeda";
 
 import { cn } from "@/lib/utils";
@@ -243,7 +243,7 @@ export function MessageInput({
             aria-label="Send message"
             disabled={props.value === "" || isGenerating}
           >
-            <ArrowUp className="h-5 w-5" />
+            <Send className="h-5 w-5" />
           </Button>
         )}
       </div>

@@ -184,8 +184,6 @@ export function KartkatalogTab({
       const response = await fetch(`https://kartkatalog.geonorge.no/api/metadata/${uuid}`);
       const data = await response.json();
 
-      console.log("[DEBUG] Entire metadata response:", data);
-
       let extractedAbstract = data.Abstract
         || data.metadata?.abstract
       
