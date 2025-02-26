@@ -82,8 +82,12 @@ export function KartkatalogTab({
     Map<string, SearchResult>
   >(new Map());
   const [showDownloadDialog, setShowDownloadDialog] = React.useState(false);
-  const [descriptionsCache, setDescriptionsCache] = React.useState<Map<string, string>>(new Map());
-  const [openHoverCardId, setOpenHoverCardId] = React.useState<string | null>(null);
+  const [descriptionsCache, setDescriptionsCache] = React.useState<
+    Map<string, string>
+  >(new Map());
+  const [openHoverCardId, setOpenHoverCardId] = React.useState<string | null>(
+    null
+  );
 
   // Create a ref for the main panel container
   const panelRef = React.useRef<HTMLDivElement>(null);
@@ -188,10 +192,14 @@ export function KartkatalogTab({
 
       console.log("[DEBUG] Entire metadata response:", data);
 
-      let extractedAbstract = data.Abstract
-        || data.metadata?.abstract
-      
-      setDescriptionsCache(prev => {
+      const extractedAbstract =
+        data.Abstract ||
+        data.abstract ||
+        data.metadata?.abstract ||
+        data.purpose ||
+        "Ingen beskrivelse tilgjengelig";
+
+      setDescriptionsCache((prev) => {
         const newCache = new Map(prev);
         newCache.set(uuid, extractedAbstract);
         return newCache;
@@ -313,9 +321,9 @@ export function KartkatalogTab({
 
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1">
-                          <HoverCard 
-                            openDelay={100} 
-                            closeDelay={0} 
+                          <HoverCard
+                            openDelay={100}
+                            closeDelay={0}
                             open={openHoverCardId === result.uuid}
                             onOpenChange={(open) => {
                               setOpenHoverCardId(open ? result.uuid : null);
@@ -426,23 +434,21 @@ export function KartkatalogTab({
             isExpanded ? "rounded-r-[2px] border-l-2" : "rounded-[2px]"
           } -ml-px`}
         >
-    <div className="flex flex-col items-center gap-3">
-      <Layers className="h-7 w-7" />
-      <div className="flex flex-col">
-        {[..."KARTKATALOGEN"].map((letter, index) => (
-          <span key={index} className="text-md font-medium">
-            {letter}
-          </span>
-        ))}
-      </div>
-      {isExpanded ? (
-        <ChevronRight className="h-4 w-4" />
-      ) : (
-        <ChevronLeft className="h-4 w-4" />
-      )}
-    </div>
-
-
+          <div className="flex flex-col items-center gap-3">
+            <Layers className="h-7 w-7" />
+            <div className="flex flex-col">
+              {[..."KARTKATALOGEN"].map((letter, index) => (
+                <span key={index} className="text-md font-medium">
+                  {letter}
+                </span>
+              ))}
+            </div>
+            {isExpanded ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronLeft className="h-4 w-4" />
+            )}
+          </div>
         </button>
 
         <style jsx>{`
