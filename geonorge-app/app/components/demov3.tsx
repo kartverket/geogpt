@@ -4,10 +4,6 @@ import { useEffect, useState, useRef, FormEvent } from "react";
 import { MapPin, Maximize, MessageSquare } from "lucide-react";
 import Image from "next/image";
 
-// Leaflet
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
-
 // Components
 import { AppSidebar } from "@/components/app-sidebar";
 import { KartkatalogTab } from "@/components/kartkatalog-tab";
@@ -22,6 +18,7 @@ import {
   PopoverTrigger,
   PopoverContent,
 } from "@/components/ui/popover";
+
 // Utils
 import {
   dedupeFormats,
@@ -29,6 +26,10 @@ import {
   dedupeProjections,
   getAreaFormatsAndProjections,
 } from "@/utils/datasetUtils";
+
+// Leaflet
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
 interface WMSLayer {
   name: string;
