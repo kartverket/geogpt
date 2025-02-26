@@ -68,6 +68,11 @@ jobs:
           timeout 30 bash -c 'until nc -z localhost 8080 || echo "Waiting for backend..." && sleep 5; do :; done'
           echo "Backend is listening on port 8080"
 
+      - name: Verify database setup with pgvector
+        run: |
+          # Check that pgvector extension is created
+          docker-compose exec -T database psql -U asd -d asd -c "SELECT * FROM pg_extension WHERE extname = 'vector';" | grep vector
+
       - name: Run integration tests
         run: |
           # Add your test commands here

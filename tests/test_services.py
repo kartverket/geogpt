@@ -42,7 +42,37 @@ def test_frontend_health():
         pytest.fail("Frontend service is not responding")
 
 def test_vector_creation():
-    """Test if vectors are being created"""
-    # This is passing based on the logs, but we could enhance it
-    # to actually check for the vector data in the database
-    pass
+    """Test if vectors are being created and stored in the database"""
+    try:
+        # Connect to the database
+        conn = psycopg2.connect(
+            host="localhost",
+            database="asd",
+            user="asd",
+            password="asd",
+            port="5432"
+        )
+        cursor = conn.cursor()
+        
+        # Check if the table exists
+        cursor.execute("SELECT EXISTS(SELECT * FROM information_schema.tables WHERE table_name = 'text_embedding_3_large')")
+        table_exists = cursor.fetchone()[0]
+        assert table_exists, "Vector table does not exist"
+        
+        # Query the database to check if vectors exist
+        cursor.execute("SELECT COUNT(*) FROM text_embedding_3_large")
+        count = cursor.fetchone()[0]
+        
+        # Assert that we have data in the table
+        assert count > 0, "No vector data found in the database"
+        
+        # Check that vector columns exist and have data
+        cursor.execute("SELECT title_vector, combined_text_vector FROM text_embedding_3_large LIMIT 1")
+        row = cursor.fetchone()
+        assert row[0] is not None, "title_vector is null"
+        assert row[1] is not None, "combined_text_vector is null"
+        
+        conn.close()
+        print(f"Vector test passed: found {count} records with vector data")
+    except Exception as e:
+        pytest.fail(f"Vector creation test failed: {str(e)}")

@@ -63,6 +63,11 @@ jobs:
         run: |
           docker-compose exec -T database pg_isready -U asd
 
+      - name: Verify database setup with pgvector
+        run: |
+          # Check that pgvector extension is created
+          docker-compose exec -T database psql -U asd -d asd -c "SELECT * FROM pg_extension WHERE extname = 'vector';" | grep vector
+
       - name: Verify backend service
         run: |
           # Check if backend is listening on port 8080
