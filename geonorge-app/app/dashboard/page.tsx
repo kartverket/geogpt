@@ -1,5 +1,5 @@
 import { SidebarProvider } from "@/components/ui/sidebar";
-import DemoV3 from "../components/demov3";
+import DemoV3 from "../components/DemoV3";
 
 export default function Page() {
   return (
