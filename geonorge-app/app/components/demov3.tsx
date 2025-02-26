@@ -50,12 +50,21 @@ interface Address {
   };
 }
 
+// Update the ChatMessage interface to include title and downloadFormats
 interface ChatMessage {
   type: "text" | "image" | "streaming";
   content?: string;
   imageUrl?: string;
   downloadUrl?: string | null;
   wmsUrl?: string | null;
+  title?: string; // <-- Added property
+  downloadFormats?: {
+    type: string;
+    name: string;
+    code: string;
+    projections?: { name: string; code: string }[];
+    formats?: { name: string }[];
+  }[]; // <-- Added property
 }
 
 interface SearchResult {
@@ -64,6 +73,13 @@ interface SearchResult {
   wmsUrl?: string;
   downloadUrl?: string | null;
   restricted?: boolean;
+  downloadFormats: {
+    type: string;
+    name: string;
+    code: string;
+    projections?: { name: string; code: string }[];
+    formats?: { name: string }[];
+  }[];
 }
 
 const INITIAL_MAP_URL =
@@ -107,6 +123,9 @@ const DemoV3 = () => {
   const [specificObject, setSpecificObject] = useState<SearchResult | null>(
     null
   );
+
+  // Add state for uuidToFind
+  const [uuidToFind, setUuidToFind] = useState<string>("");
 
   // Add this near the top of the file, after the imports
   useEffect(() => {
@@ -413,40 +432,71 @@ const DemoV3 = () => {
         ]);
         break;
 
+      // First, update the "chatDatasets" case to store the data temporarily
       case "chatDatasets":
+        console.log("Case: chatDatasets triggered");
         if (payload && Array.isArray(payload)) {
-          const datasetObject = payload[0];
+          console.log("Payload received:", payload);
+          const firstUuid = payload[0].uuid;
+          setUuidToFind(firstUuid);
+          console.log("Setting uuidToFind to:", firstUuid);
+
+          const datasetObject = payload.find(
+            (item: SearchResult) => item.uuid === firstUuid
+          );
+          console.log("Setting specificObject to:", datasetObject);
+
+          // Store the dataset info
+          setSpecificObject(datasetObject || null);
+          console.log("Specific object set to:", datasetObject);
+
           if (datasetObject) {
-            setSpecificObject(datasetObject);
+            // Update any pending image message with dataset details
+            setChatMessages((prev) => {
+              const lastIndex = prev.length - 1;
+              for (let i = lastIndex; i >= 0; i--) {
+                if (
+                  prev[i].type === "image" &&
+                  (!prev[i].downloadFormats ||
+                    prev[i].downloadFormats.length === 0)
+                ) {
+                  const updatedMessages = [...prev];
+                  updatedMessages[i] = {
+                    ...updatedMessages[i],
+                    downloadFormats: datasetObject.downloadFormats || [],
+                    title: datasetObject.title || "",
+                    uuid: datasetObject.uuid,
+                  };
+                  return updatedMessages;
+                }
+              }
+              return prev;
+            });
+            setDatasetName(datasetObject.title || "");
 
-            // Store dataset information
-            const downloadFormats = datasetObject.downloadFormats || [];
+            // NEW: Update modal fields from the dataset's downloadFormats
+            const rawGeoAreas = datasetObject.downloadFormats.map((fmt) => ({
+              type: fmt.type,
+              name: fmt.name,
+              code: fmt.code,
+            }));
+            setGeographicalAreas(dedupeAreas(rawGeoAreas));
 
-            // Extract and dedupe geographical areas
-            if (downloadFormats.length > 0) {
-              const rawGeoAreas = downloadFormats.map((fmt) => ({
-                type: fmt.type,
-                name: fmt.name,
-                code: fmt.code,
-              }));
-              setGeographicalAreas(dedupeAreas(rawGeoAreas));
+            const rawProjections = datasetObject.downloadFormats.flatMap(
+              (fmt) =>
+                fmt.projections
+                  ? fmt.projections.map((proj) => ({
+                      name: proj.name,
+                      code: proj.code,
+                    }))
+                  : []
+            );
+            setProjections(dedupeProjections(rawProjections));
 
-              // Extract projections and formats
-              const rawProjections = downloadFormats
-                .flatMap((fmt) => fmt.projections || [])
-                .map((proj) => ({
-                  name: proj.name,
-                  code: proj.code,
-                }));
-              setProjections(dedupeProjections(rawProjections));
-
-              const rawFormats = downloadFormats
-                .flatMap((fmt) => fmt.formats || [])
-                .map((format) => format.name);
-              setFormats(dedupeFormats(rawFormats));
-
-              setDatasetName(datasetObject.title || "");
-            }
+            const rawFormats = datasetObject.downloadFormats.flatMap((fmt) =>
+              fmt.formats ? fmt.formats.map((format) => format.name) : []
+            );
+            setFormats(dedupeFormats(rawFormats));
           }
         }
         break;
@@ -619,18 +669,72 @@ const DemoV3 = () => {
     handleSendMessage(message.content);
   };
 
-  const handleDatasetDownload = (url: string) => {
-    if (!url) {
-      console.error("No download URL provided.");
-      return;
-    }
+  // Replace the old handleDatasetDownload function with this new implementation
+  const handleDatasetDownload = (msg: ChatMessage) => {
+    console.log("Handling dataset download with message:", msg);
+    setPendingDownloadUrl(msg.downloadUrl || null);
+    const formatsToUse =
+      msg.downloadFormats && msg.downloadFormats.length > 0
+        ? msg.downloadFormats
+        : specificObject?.downloadFormats || [];
 
-    if (specificObject) {
-      setPendingDownloadUrl(url);
+    if (formatsToUse.length > 0) {
+      // Extract and dedupe geographical areas
+      const rawGeoAreas = formatsToUse.map((fmt) => ({
+        type: fmt.type,
+        name: fmt.name,
+        code: fmt.code,
+      }));
+      const uniqueGeographicalAreas = dedupeAreas(rawGeoAreas);
+
+      // Extract and dedupe projections
+      const rawProjections = formatsToUse
+        .flatMap((fmt) => (fmt.projections ? fmt.projections : []))
+        .map((proj) => ({
+          name: proj.name,
+          code: proj.code,
+        }));
+      const uniqueProjections = dedupeProjections(rawProjections);
+
+      // Extract and dedupe formats
+      const rawFormats = formatsToUse.flatMap((fmt) =>
+        fmt.formats ? fmt.formats.map((format) => format.name) : []
+      );
+      const uniqueFormats = dedupeFormats(rawFormats);
+
+      setGeographicalAreas(uniqueGeographicalAreas);
+      setProjections(uniqueProjections);
+      setFormats(uniqueFormats);
+      setDatasetName(msg.title || specificObject?.title || "");
       setFileDownloadModalOpen(true);
     } else {
-      // If no specific object info, just download directly
-      handleDirectDownload(url);
+      console.warn("No download formats available for this message");
+      // Fallback: download directly
+      if (msg.downloadUrl) {
+        const link = document.createElement("a");
+        link.href = msg.downloadUrl;
+        link.target = "_blank";
+        link.download = "";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    }
+  };
+
+  // NEW: Adapter to handle full screen download, similar to Demo logic
+  const handleFullScreenDownload = (url: string) => {
+    const messageWithUrl = chatMessages.find((msg) => msg.downloadUrl === url);
+    if (messageWithUrl) {
+      handleDatasetDownload(messageWithUrl);
+    } else {
+      const minimalMsg: ChatMessage = {
+        type: "image",
+        downloadUrl: url,
+        title: specificObject?.title || "",
+        downloadFormats: specificObject?.downloadFormats || [],
+      };
+      handleDatasetDownload(minimalMsg);
     }
   };
 
@@ -947,9 +1051,7 @@ const DemoV3 = () => {
                               </Button>
                               {msg.downloadUrl && (
                                 <Button
-                                  onClick={() =>
-                                    handleDatasetDownload(msg.downloadUrl!)
-                                  }
+                                  onClick={() => handleDatasetDownload(msg)}
                                   className="bg-green-500 text-white text-xs"
                                 >
                                   Last ned datasett
@@ -1045,7 +1147,7 @@ const DemoV3 = () => {
                 append={handleAppend}
                 suggestions={suggestions}
                 onWmsClick={replaceIframe}
-                onDownloadClick={handleDatasetDownload}
+                onDownloadClick={handleFullScreenDownload} // <-- updated prop for full screen
                 onExitFullScreen={exitFullScreen}
               />
             </div>

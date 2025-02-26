@@ -343,9 +343,10 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
       >
         <div
           className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl 
-    relative min-h-[300px] sm:min-h-[400px] md:min-h-[450px] lg:min-h-[500px] 
-    sm:h-[75%] sm:w-[70%] md:w-[60%] lg:w-[50%] xl:w-[40%] 
-    flex flex-col justify-between"
+  relative min-h-[300px] sm:min-h-[400px] md:min-h-[450px] lg:min-h-[500px] xl:min-h-[550px]
+  sm:h-auto md:h-auto lg:h-auto xl:h-auto 
+  sm:w-[70%] md:w-[60%] lg:w-[50%] xl:w-[40%] 
+  flex flex-col justify-between z-[50]"
         >
           {" "}
           <button
