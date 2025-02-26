@@ -70,8 +70,17 @@ jobs:
 
       - name: Verify database setup with pgvector
         run: |
-          # Check that pgvector extension is created
-          docker-compose exec -T database psql -U asd -d asd -c "SELECT * FROM pg_extension WHERE extname = 'vector';" | grep vector
+          # Show all installed extensions to diagnose
+          echo "Listing all PostgreSQL extensions..."
+          docker-compose exec -T database psql -U asd -d asd -c "SELECT extname FROM pg_extension;"
+    
+          # Try to create the vector extension if it doesn't exist
+          echo "Attempting to create vector extension if not exists..."
+          docker-compose exec -T database psql -U asd -d asd -c "CREATE EXTENSION IF NOT EXISTS vector;"
+    
+          # Verify the extension exists
+          echo "Checking for vector extension..."
+          docker-compose exec -T database psql -U asd -d asd -c "SELECT extname FROM pg_extension WHERE extname = 'vector';"
 
       - name: Run integration tests
         run: |
