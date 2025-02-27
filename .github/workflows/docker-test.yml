@@ -20,6 +20,7 @@ jobs:
       DB_NAME: asd
       DB_USER: asd
       DB_PASSWORD: asd
+      OPENAI_API_KEY: ${{ secrets.AZURE_GPT_API_KEY }}
       AZURE_GPT_API_KEY: ${{ secrets.AZURE_GPT_API_KEY }}
       AZURE_GPT_ENDPOINT: ${{ secrets.AZURE_GPT_ENDPOINT }}
       AZURE_EMBEDDING_API_KEY: ${{ secrets.AZURE_EMBEDDING_API_KEY }}
