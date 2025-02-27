@@ -1,0 +1,68 @@
+services:
+  database:
+    image: pgvector/pgvector:pg16
+    container_name: pgvector_container
+    environment:
+      POSTGRES_USER: asd
+      POSTGRES_PASSWORD: asd
+      POSTGRES_DB: asd
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-U", "asd" ]
+      interval: 5s
+      retries: 5
+      timeout: 3s
+
+  backend:
+    build:
+      context: .
+      dockerfile: geonorge-server/Dockerfile
+    volumes:
+      - .:/app
+    working_dir: /app/geonorge-server
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    extra_hosts:
+    - "kartai-openai.openai.azure.com:51.12.73.214"
+    - "swedencentral.api.cognitive.microsoft.com:51.12.73.214"
+    - "kartai-openai.azure.com:51.12.73.214"   
+    command: >
+      sh -c "
+        echo 'Testing network...' &&
+        echo '51.12.73.214 kartai-openai.openai.azure.com' >> /etc/hosts &&
+        echo '51.12.73.214 kartai-openai.azure.com' >> /etc/hosts &&
+        cat /etc/hosts &&
+        cd /app &&
+        python scripts/create_vector.py &&
+        python scripts/insert_csv.py &&
+        python geonorge-server/src/server.py
+      "
+    environment:
+      - DB_HOST=database  # Use the service name
+      - DB_PORT=5432
+      - DB_NAME=asd
+      - DB_USER=asd
+      - DB_PASSWORD=asd
+      # Add your other environment variables here
+      - AZURE_GPT_API_KEY=${AZURE_GPT_API_KEY}
+      - AZURE_GPT_ENDPOINT=${AZURE_GPT_ENDPOINT}
+      - AZURE_EMBEDDING_API_KEY=${AZURE_EMBEDDING_API_KEY}
+      - AZURE_EMBEDDING_ENDPOINT=https://kartai-openai.openai.azure.com/openai/deployments/text-embedding-3-large/embeddings?api-version=2023-05-15
+    depends_on:
+      database:
+        condition: service_healthy
+    ports:
+      - "5001:5000"
+      - "8080:8080"
+
+  frontend:
+    build:
+      context: ./geonorge-app
+      dockerfile: Dockerfile
+    container_name: geogpt_frontend
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"

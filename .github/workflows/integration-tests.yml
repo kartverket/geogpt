@@ -1,0 +1,105 @@
+---
+name: Integration Tests
+
+on:
+  push:
+    branches:
+      - 'test-actions'
+      - main
+  pull_request:
+    branches:
+      - 'test-actions'
+      - main
+
+jobs:
+  integration-tests:
+    runs-on: ubuntu-latest
+    env:
+      DB_HOST: database
+      DB_PORT: 5432
+      DB_NAME: asd
+      DB_USER: asd
+      DB_PASSWORD: asd
+      AZURE_GPT_API_KEY: ${{ secrets.AZURE_GPT_API_KEY }}
+      AZURE_GPT_ENDPOINT: ${{ secrets.AZURE_GPT_ENDPOINT }}
+      AZURE_EMBEDDING_API_KEY: ${{ secrets.AZURE_EMBEDDING_API_KEY }}
+      AZURE_EMBEDDING_ENDPOINT: ${{ secrets.AZURE_EMBEDDING_ENDPOINT }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install Docker Compose
+        run: |
+          sudo curl -L "https://github.com/docker/compose/releases/download/v2.24.6/docker-compose-linux-x86_64" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+          docker-compose --version
+
+      - name: Create .env file
+        run: |
+          echo "DB_HOST=database" >> .env
+          echo "DB_PORT=5432" >> .env
+          echo "DB_NAME=asd" >> .env
+          echo "DB_USER=asd" >> .env
+          echo "DB_PASSWORD=asd" >> .env
+          echo "AZURE_GPT_API_KEY=${{ secrets.AZURE_GPT_API_KEY }}" >> .env
+          echo "AZURE_GPT_ENDPOINT=${{ secrets.AZURE_GPT_ENDPOINT }}" >> .env
+          echo "AZURE_EMBEDDING_API_KEY=${{ secrets.AZURE_EMBEDDING_API_KEY }}" >> .env
+          echo "AZURE_EMBEDDING_ENDPOINT=${{ secrets.AZURE_EMBEDDING_ENDPOINT }}" >> .env
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest requests psycopg2-binary
+
+      - name: Build and start services
+        run: |
+          docker-compose up -d
+          echo "Waiting for services to be ready..."
+          sleep 30  # Wait for services to be ready
+          docker-compose ps
+
+          # Verify that the services are running
+          timeout 30 bash -c 'until nc -z localhost 8080 || echo "Waiting for backend..." && sleep 5; do :; done'
+          echo "Backend is listening on port 8080"
+
+      - name: Verify database setup with pgvector
+        run: |
+          # Show all installed extensions to diagnose
+          echo "Listing all PostgreSQL extensions..."
+          docker-compose exec -T database psql -U asd -d asd -c "SELECT extname FROM pg_extension;"
+    
+          # Try to create the vector extension if it doesn't exist
+          echo "Attempting to create vector extension if not exists..."
+          docker-compose exec -T database psql -U asd -d asd -c "CREATE EXTENSION IF NOT EXISTS vector;"
+    
+          # Verify the extension exists
+          echo "Checking for vector extension..."
+          docker-compose exec -T database psql -U asd -d asd -c "SELECT extname FROM pg_extension WHERE extname = 'vector';"
+
+      - name: Run vector creation scripts
+        run: |
+          # Make sure the vectors are created and inserted
+          docker-compose exec -T backend python /app/scripts/create_vector.py
+          docker-compose exec -T backend python /app/scripts/insert_csv.py
+    
+          # Verify table was created
+          docker-compose exec -T database psql -U asd -d asd -c "SELECT COUNT(*) FROM text_embedding_3_large;"
+
+      - name: Run integration tests
+        run: |
+          # Add your test commands here
+          python -m pytest tests/test_services.py -v
+
+      - name: Show logs on failure
+        if: failure()
+        run: docker-compose logs
+
+      - name: Clean up
+        if: always()
+        run: docker-compose down

@@ -226,17 +226,36 @@ const DemoV3 = () => {
 
   const fetchWMSInfo = async () => {
     try {
-      const apiUrl = `http://127.0.0.1:5000/wms-info?url=${encodeURIComponent(
+      const apiUrl = `http://127.0.0.1:5001/wms-info?url=${encodeURIComponent(
         wmsUrl
       )}`;
-      const response = await fetch(apiUrl);
+      console.log("Attempting to fetch from:", apiUrl);
+      
+      const response = await fetch(apiUrl, {
+        // Add CORS headers if needed
+        mode: 'cors',
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error: ${response.status} ${response.statusText}`);
+      }
+      
       const data = await response.json();
-      setAvailableLayers(data.available_layers);
-      if (data.available_layers.length > 0) {
+      console.log("WMS data received:", data);
+      setAvailableLayers(data.available_layers || []);
+      if (data.available_layers && data.available_layers.length > 0) {
         setSelectedLayers([data.available_layers[0].name]);
       }
     } catch (error) {
       console.error("Error fetching WMS info:", error);
+      // Provide user feedback
+      alert(`Failed to load WMS information: ${error.message}`);
+      // Initialize with empty layers to avoid undefined errors
+      setAvailableLayers([]);
+      setSelectedLayers([]);
     }
   };
 

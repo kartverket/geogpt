@@ -4,13 +4,7 @@ from psycopg2.extras import execute_batch
 import config
 
 # Databasekonfigurasjon
-db_config = {
-    "host": config.DB_HOST,
-    "port": config.DB_PORT,
-    "name": config.DB_NAME,
-    "user": config.DB_USER,
-    "password": config.DB_PASSWORD
-}
+db_config = config.CONFIG["db"]
 
 connection = psycopg2.connect(
     host=db_config["host"],
@@ -21,7 +15,7 @@ connection = psycopg2.connect(
 )
 
 table_name = "text_embedding_3_large"  # Juster tabellnavnet etter behov
-file_path = "all_columns_vectorized.csv"  # Angi riktig filsti
+file_path = "/app/all_columns_vectorized.csv"  # Angi riktig filsti
 
 def create_table_from_csv(file_path, table_name):
     """
