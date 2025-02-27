@@ -46,6 +46,7 @@ services:
       - DB_USER=asd
       - DB_PASSWORD=asd
       # Add your other environment variables here
+      - OPENAI_API_KEY: ${{ secrets.AZURE_GPT_API_KEY }}  
       - AZURE_GPT_API_KEY=${AZURE_GPT_API_KEY}
       - AZURE_GPT_ENDPOINT=${AZURE_GPT_ENDPOINT}
       - AZURE_EMBEDDING_API_KEY=${AZURE_EMBEDDING_API_KEY}
