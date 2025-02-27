@@ -4,11 +4,11 @@ name: Integration Tests
 on:
   push:
     branches:
-      - 'test-actions'
+      - 'test-actions2'
       - main
   pull_request:
     branches:
-      - 'test-actions'
+      - 'test-actions2'
       - main
 
 jobs:
