@@ -1,6 +1,6 @@
 "use client";
 
-import DemoV2 from "./components/Demo";
+import DemoV2 from "./dashboard/page";
 
 export default function Home() {
   return (

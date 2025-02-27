@@ -1,19 +1,35 @@
 "use client";
 
 import { useEffect, useState, useRef, FormEvent } from "react";
+import { MapPin, Maximize, MessageSquare } from "lucide-react";
+import Image from "next/image";
+
+// Components
+import { AppSidebar } from "@/components/app-sidebar";
+import { KartkatalogTab } from "@/components/kartkatalog-tab";
+import FileDownloadModal from "@/app/components/FileDownloadModal/FileDownloadModal";
+
+// Leaflet
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { KartkatalogTab } from "@/components/kartkatalog-tab";
+
+// UI Components
+import { Button } from "@/components/ui/button";
+import { Chat as FullScreenChat } from "@/components/ui/chat";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
   Popover,
   PopoverTrigger,
   PopoverContent,
 } from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
-import { Chat as FullScreenChat } from "@/components/ui/chat";
-import { MapPin, Maximize, MessageSquare } from "lucide-react";
-import { SidebarTrigger } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/app-sidebar";
+
+// Utils
+import {
+  dedupeFormats,
+  dedupeAreas,
+  dedupeProjections,
+  getAreaFormatsAndProjections,
+} from "@/utils/datasetUtils";
 
 interface WMSLayer {
   name: string;
@@ -35,20 +51,37 @@ interface Address {
   };
 }
 
+// Update the ChatMessage interface to include title and downloadFormats
 interface ChatMessage {
+  title: string;
   type: "text" | "image" | "streaming";
   content?: string;
   imageUrl?: string;
   downloadUrl?: string | null;
   wmsUrl?: string | null;
+  uuid?: string;
+  downloadFormats?: {
+    type: string;
+    name: string;
+    code: string;
+    projections?: { name: string; code: string }[];
+    formats?: { name: string }[];
+  }[];
 }
 
-interface SearchResult {
-  uuid: string;
+export interface SearchResult {
   title?: string;
   wmsUrl?: string;
   downloadUrl?: string | null;
   restricted?: boolean;
+  uuid?: string;
+  downloadFormats?: {
+    type: string;
+    name: string;
+    code: string;
+    projections?: { name: string; code: string }[];
+    formats?: { name: string }[];
+  }[];
 }
 
 const INITIAL_MAP_URL =
@@ -71,7 +104,35 @@ const DemoV3 = () => {
   );
   const [availableLayers, setAvailableLayers] = useState<WMSLayer[]>([]);
   const [selectedLayers, setSelectedLayers] = useState<string[]>([]);
-  const [currentBaseLayer, setCurrentBaseLayer] = useState<L.TileLayer | null>(null);
+  const [currentBaseLayer, setCurrentBaseLayer] = useState<L.TileLayer | null>(
+    null
+  );
+
+  const [isFileDownloadModalOpen, setFileDownloadModalOpen] =
+    useState<boolean>(false);
+  const [pendingDownloadUrl, setPendingDownloadUrl] = useState<string | null>(
+    null
+  );
+
+  // Downloadformats
+  const [geographicalAreas, setGeographicalAreas] = useState<
+    { type: string; name: string; code: string }[]
+  >([]);
+  const [projections, setProjections] = useState<
+    { name: string; code: string }[]
+  >([]);
+  const [formats, setFormats] = useState<string[]>([]);
+
+  // Dataset name
+  const [datasetName, setDatasetName] = useState<string>("");
+
+  // Specific search object
+  const [specificObject, setSpecificObject] = useState<SearchResult | null>(
+    null
+  );
+
+  // UUid to find
+  const [uuidToFind, setUuidToFind] = useState<string>("");
 
   // Add this near the top of the file, after the imports
   useEffect(() => {
@@ -192,7 +253,7 @@ const DemoV3 = () => {
     });
 
     // Add or update selected layers
-    selectedLayers.forEach(layerName => {
+    selectedLayers.forEach((layerName) => {
       if (!wmsLayer[layerName]) {
         const baseWmsUrl = wmsUrl.split("?")[0];
         const newWmsLayer = L.tileLayer.wms(baseWmsUrl, {
@@ -200,14 +261,14 @@ const DemoV3 = () => {
           format: "image/png",
           transparent: true,
           version: "1.3.0",
-          zIndex: 10  // Ensure WMS layers stay on top
+          zIndex: 10, // Ensure WMS layers stay on top
         });
         newWmsLayer.addTo(map);
         wmsLayer[layerName] = newWmsLayer;
       }
     });
 
-    setWmsLayer({...wmsLayer});
+    setWmsLayer({ ...wmsLayer });
   };
 
   const searchAddress = async (query: string) => {
@@ -293,6 +354,25 @@ const DemoV3 = () => {
 
   const chatEndRef = useRef<HTMLDivElement>(null);
 
+  // Add these state variables to track modal and popover state
+  const [modalOpen, setModalOpen] = useState(false);
+  const [blockPopoverClose, setBlockPopoverClose] = useState(false);
+
+  // Add this effect to manage interactions between modal and popover
+  useEffect(() => {
+    if (isFileDownloadModalOpen) {
+      setModalOpen(true);
+      setBlockPopoverClose(true);
+    } else {
+      // When modal closes, allow a small delay before popover can close
+      const timer = setTimeout(() => {
+        setModalOpen(false);
+        setBlockPopoverClose(false);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isFileDownloadModalOpen]);
+
   // Set up WebSocket and message handling
   useEffect(() => {
     const socket = new WebSocket("ws://localhost:8080");
@@ -374,8 +454,72 @@ const DemoV3 = () => {
             imageUrl: datasetImageUrl,
             downloadUrl: datasetDownloadUrl,
             wmsUrl: wmsUrl,
+            title: datasetName,
           },
         ]);
+        break;
+
+      case "chatDatasets":
+        if (payload && Array.isArray(payload)) {
+          const firstUuid = payload[0].uuid;
+          setUuidToFind(firstUuid);
+
+          const datasetObject = payload.find(
+            (item: SearchResult) => item.uuid === firstUuid
+          );
+
+          // Store the dataset info
+          setSpecificObject(datasetObject || null);
+          console.log("Specific object set to:", datasetObject);
+
+          if (datasetObject) {
+            // Update any pending image message with dataset details
+            setChatMessages((prev) => {
+              const lastIndex = prev.length - 1;
+              for (let i = lastIndex; i >= 0; i--) {
+                if (
+                  prev[i].type === "image" &&
+                  (!prev[i].downloadFormats ||
+                    prev[i].downloadFormats?.length === 0)
+                ) {
+                  const updatedMessages = [...prev];
+                  updatedMessages[i] = {
+                    ...updatedMessages[i],
+                    downloadFormats: datasetObject.downloadFormats || [],
+                    title: datasetObject.title || "",
+                    uuid: datasetObject.uuid,
+                  };
+                  return updatedMessages;
+                }
+              }
+              return prev;
+            });
+            setDatasetName(datasetObject.title || "");
+
+            const rawGeoAreas = datasetObject.downloadFormats.map((fmt) => ({
+              type: fmt.type,
+              name: fmt.name,
+              code: fmt.code,
+            }));
+            setGeographicalAreas(dedupeAreas(rawGeoAreas));
+
+            const rawProjections = datasetObject.downloadFormats.flatMap(
+              (fmt) =>
+                fmt.projections
+                  ? fmt.projections.map((proj) => ({
+                      name: proj.name,
+                      code: proj.code,
+                    }))
+                  : []
+            );
+            setProjections(dedupeProjections(rawProjections));
+
+            const rawFormats = datasetObject.downloadFormats.flatMap((fmt) =>
+              fmt.formats ? fmt.formats.map((format) => format.name) : []
+            );
+            setFormats(dedupeFormats(rawFormats));
+          }
+        }
         break;
 
       default:
@@ -502,7 +646,6 @@ const DemoV3 = () => {
   };
 
   // Transform chatMessages to the shape expected by the FullScreenChat component.
-  // If the message is an image, include extra properties and set type to "image"
   const transformMessagesForChatKit = () => {
     return chatMessages.map((msg, idx) => {
       if (msg.type === "image" && msg.imageUrl) {
@@ -511,8 +654,8 @@ const DemoV3 = () => {
           type: "image" as const,
           role: "assistant" as const,
           imageUrl: msg.imageUrl,
-          wmsUrl: msg.wmsUrl || undefined, // Convert null to undefined
-          downloadUrl: msg.downloadUrl || undefined, // Convert null to undefined
+          wmsUrl: msg.wmsUrl || undefined,
+          downloadUrl: msg.downloadUrl || undefined,
           content: "",
         };
       }
@@ -546,18 +689,73 @@ const DemoV3 = () => {
     handleSendMessage(message.content);
   };
 
-  const handleDatasetDownload = (downloadUrl: string) => {
-    if (!downloadUrl) {
-      console.error("No download URL provided.");
-      return;
+  // Replace the old handleDatasetDownload function with this new implementation
+  const handleDatasetDownload = (msg: ChatMessage) => {
+    console.log("Handling dataset download with message:", msg);
+    setPendingDownloadUrl(msg.downloadUrl || null);
+    const formatsToUse =
+      msg.downloadFormats && msg.downloadFormats.length > 0
+        ? msg.downloadFormats
+        : specificObject?.downloadFormats || [];
+
+    if (formatsToUse.length > 0) {
+      // Extract and dedupe geographical areas
+      const rawGeoAreas = formatsToUse.map((fmt) => ({
+        type: fmt.type,
+        name: fmt.name,
+        code: fmt.code,
+      }));
+      const uniqueGeographicalAreas = dedupeAreas(rawGeoAreas);
+
+      // Extract and dedupe projections
+      const rawProjections = formatsToUse
+        .flatMap((fmt) => (fmt.projections ? fmt.projections : []))
+        .map((proj) => ({
+          name: proj.name,
+          code: proj.code,
+        }));
+      const uniqueProjections = dedupeProjections(rawProjections);
+
+      // Extract and dedupe formats
+      const rawFormats = formatsToUse.flatMap((fmt) =>
+        fmt.formats ? fmt.formats.map((format) => format.name) : []
+      );
+      const uniqueFormats = dedupeFormats(rawFormats);
+
+      setGeographicalAreas(uniqueGeographicalAreas);
+      setProjections(uniqueProjections);
+      setFormats(uniqueFormats);
+      setDatasetName(msg.title || specificObject?.title || "");
+      setFileDownloadModalOpen(true);
+    } else {
+      console.warn("No download formats available for this message");
+      // Fallback: download directly
+      if (msg.downloadUrl) {
+        const link = document.createElement("a");
+        link.href = msg.downloadUrl;
+        link.target = "_blank";
+        link.download = "";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
     }
-    const link = document.createElement("a");
-    link.href = downloadUrl;
-    link.target = "_blank";
-    link.download = "";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  };
+
+  // Adapter to handle full screen download, similar to Demo logic
+  const handleFullScreenDownload = (url: string) => {
+    const messageWithUrl = chatMessages.find((msg) => msg.downloadUrl === url);
+    if (messageWithUrl) {
+      handleDatasetDownload(messageWithUrl);
+    } else {
+      const minimalMsg: ChatMessage = {
+        type: "image",
+        downloadUrl: url,
+        title: specificObject?.title || "",
+        downloadFormats: specificObject?.downloadFormats || [],
+      };
+      handleDatasetDownload(minimalMsg);
+    }
   };
 
   // When entering full screen, close the popover
@@ -572,14 +770,14 @@ const DemoV3 = () => {
     setIsPopoverOpen(true);
   };
 
-  // Handles layer selection 
+  // Handles layer selection
   const handleLayerChange = (layerName: string, isChecked: boolean) => {
-    setSelectedLayers(prev => {
+    setSelectedLayers((prev) => {
       if (isChecked && !prev.includes(layerName)) {
         return [...prev, layerName];
       }
       if (!isChecked && prev.includes(layerName)) {
-        return prev.filter(name => name !== layerName);
+        return prev.filter((name) => name !== layerName);
       }
       return prev;
     });
@@ -588,41 +786,131 @@ const DemoV3 = () => {
   // Handles map layer changes, keep track of WMS layer order
   function setBaseLayer(url: string, options?: L.TileLayerOptions) {
     if (!map) return;
-    
+
     // Remove current WMS layer when changing map layer
     if (currentBaseLayer) {
       map.removeLayer(currentBaseLayer);
     }
-  
+
     // Sets a new map layer with low z-index
     const newLayer = L.tileLayer(url, {
       zIndex: 0, // Ensure map layer stays at bottom
-      ...options, 
+      ...options,
     });
-  
+
     // Add map layer first
     newLayer.addTo(map);
     setCurrentBaseLayer(newLayer);
-  
+
     // Re-add all WMS layers to ensure they stay on top
-    Object.values(wmsLayer).forEach(layer => {
+    Object.values(wmsLayer).forEach((layer) => {
       map.removeLayer(layer);
       layer.setZIndex(10); // Set higher z-index for WMS layers
       layer.addTo(map);
     });
   }
-  
+
   function revertToBaseMap() {
-    setBaseLayer("https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png");
+    setBaseLayer(
+      "https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png"
+    );
   }
 
   function changeToGraattKart() {
-    setBaseLayer("https://cache.kartverket.no/v1/wmts/1.0.0/topograatone/default/webmercator/{z}/{y}/{x}.png");
+    setBaseLayer(
+      "https://cache.kartverket.no/v1/wmts/1.0.0/topograatone/default/webmercator/{z}/{y}/{x}.png"
+    );
   }
 
   function changeToRasterKart() {
-    setBaseLayer("https://cache.kartverket.no/v1/wmts/1.0.0/toporaster/default/webmercator/{z}/{y}/{x}.png");
+    setBaseLayer(
+      "https://cache.kartverket.no/v1/wmts/1.0.0/toporaster/default/webmercator/{z}/{y}/{x}.png"
+    );
   }
+
+  // Handle area change for download modal
+  const handleAreaChange = (selectedAreaCode: string) => {
+    if (!specificObject) return;
+
+    const { projections: updatedProjections, formats: updatedFormats } =
+      getAreaFormatsAndProjections(
+        selectedAreaCode,
+        specificObject.downloadFormats || []
+      );
+
+    setProjections(updatedProjections);
+    setFormats(updatedFormats);
+  };
+
+  // Execute dataset download from KartkatalogTab
+  const executeDatasetDownload = (dataset: SearchResult) => {
+    if (!dataset) {
+      console.error("No dataset provided.");
+      return;
+    }
+
+    setSpecificObject(dataset);
+
+    const downloadFormats = dataset.downloadFormats || [];
+    if (downloadFormats.length > 0) {
+      // Extract and dedupe geographical areas
+      const rawGeoAreas = downloadFormats.map((fmt) => ({
+        type: fmt.type,
+        name: fmt.name,
+        code: fmt.code,
+      }));
+      setGeographicalAreas(dedupeAreas(rawGeoAreas));
+
+      // Extract projections and formats
+      const rawProjections = downloadFormats
+        .flatMap((fmt) => fmt.projections || [])
+        .map((proj) => ({
+          name: proj.name,
+          code: proj.code,
+        }));
+      setProjections(dedupeProjections(rawProjections));
+
+      const rawFormats = downloadFormats
+        .flatMap((fmt) => fmt.formats || [])
+        .map((format) => format.name);
+      setFormats(dedupeFormats(rawFormats));
+
+      setDatasetName(dataset.title || "");
+      setPendingDownloadUrl(dataset.downloadUrl || null);
+      setFileDownloadModalOpen(true);
+    } else {
+      console.warn("No download formats available for this dataset");
+      if (dataset.downloadUrl) {
+        // If no formats but URL exists, just download directly
+        handleDirectDownload(dataset.downloadUrl);
+      }
+    }
+  };
+
+  // Handle direct download without modal
+  const handleDirectDownload = (url: string) => {
+    if (!url) return;
+    const link = document.createElement("a");
+    link.href = url;
+    link.target = "_blank";
+    link.download = "";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Confirm download from modal
+  const confirmDownload = () => {
+    if (!pendingDownloadUrl) return;
+    handleDirectDownload(pendingDownloadUrl);
+    setFileDownloadModalOpen(false);
+    setPendingDownloadUrl(null);
+  };
+
+  // Update the modal close handler
+  const handleModalClose = () => {
+    setFileDownloadModalOpen(false);
+  };
 
   return (
     <>
@@ -698,209 +986,233 @@ const DemoV3 = () => {
                     </div>
                   ))}
                 </div>
-            )}
-          </div>
-        </div>
-
-        {/* Map container */}
-        <div ref={mapRef} className="absolute inset-0 z-0" id="map">
-          {/* KartkatalogTab */}
-          <div className="fixed top-1/3 right-0 -translate-y-1/2 z-[401] rounded-lg shadow-lg">
-            <KartkatalogTab
-              onReplaceIframe={replaceIframe}
-              onDatasetDownload={handleDatasetDownload}
-              ws={ws}
-            />
+              )}
+            </div>
           </div>
 
-          <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                className="fixed bottom-6 right-10 bg-[#FE642F] hover:bg-[#f35a30] rounded-full p-0 h-16 w-16 flex items-center justify-center shadow-lg z-[1000]"
-                variant="default"
-              >
-                <MessageSquare className="h-auto w-auto" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent
-              side="top"
-              align="end"
-              className="w-96 h-[28rem] p-0 overflow-hidden shadow-lg rounded-lg"
+          {/* Map container */}
+          <div ref={mapRef} className="absolute inset-0 z-0" id="map">
+            {/* KartkatalogTab */}
+            <div className="fixed top-1/3 right-0 -translate-y-1/2 z-[401] rounded-lg shadow-lg">
+              <KartkatalogTab
+                onReplaceIframe={replaceIframe}
+                onDatasetDownload={executeDatasetDownload}
+                ws={ws}
+              />
+            </div>
+
+            <Popover
+              open={isPopoverOpen}
+              onOpenChange={(open) => {
+                // Only allow closing if modal is closed
+                if (!open && !blockPopoverClose) {
+                  setIsPopoverOpen(false);
+                } else if (open) {
+                  setIsPopoverOpen(true);
+                }
+              }}
+              modal={false}
             >
-              <div className="flex flex-col h-full bg-white">
-                <div className="bg-gray-200 px-4 py-2 flex justify-between items-center">
-                  <span className="font-semibold">GeoGPT Chat</span>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={enterFullScreen}
-                    >
-                      <Maximize />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="px-4"
-                      onClick={() => setIsPopoverOpen(false)}
-                    >
-                      X
-                    </Button>
-                  </div>
-                </div>
-
-                <div
-                  id="chatMessages"
-                  className="flex-1 p-4 overflow-y-auto space-y-2"
+              <PopoverTrigger asChild>
+                <Button
+                  className="fixed bottom-6 right-10 bg-[#FE642F] hover:bg-[#f35a30] rounded-full p-0 h-16 w-16 flex items-center justify-center shadow-lg z-[1000]"
+                  variant="default"
                 >
-                  <div className="text-sm text-gray-600">
-                    Hei! Jeg er GeoGPT. Spør meg om geodata!
+                  <MessageSquare className="h-auto w-auto" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                side="top"
+                align="end"
+                className="w-96 h-[28rem] p-0 overflow-hidden shadow-lg rounded-lg"
+              >
+                <div className="flex flex-col h-full bg-white">
+                  <div className="bg-gray-200 px-4 py-2 flex justify-between items-center">
+                    <span className="font-semibold">GeoGPT Chat</span>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={enterFullScreen}
+                      >
+                        <Maximize />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="px-4"
+                        onClick={() => setIsPopoverOpen(false)}
+                      >
+                        X
+                      </Button>
+                    </div>
                   </div>
-                  {chatMessages.map((msg, idx) => {
-                    if (msg.type === "image" && msg.imageUrl) {
-                      return (
-                        <div
-                          key={idx}
-                          className="flex flex-col space-y-2 my-2"
-                        >
-                          <img
-                            src={msg.imageUrl || "/placeholder.svg"}
-                            alt="Dataset"
-                            className="max-w-full h-auto rounded"
-                          />
-                          <div className="flex gap-2">
-                            <Button
-                              onClick={() => {
-                                if (msg.wmsUrl && msg.wmsUrl !== "None") {
-                                  replaceIframe(msg.wmsUrl);
-                                }
-                              }}
-                              className={`text-xs ${
-                                msg.wmsUrl && msg.wmsUrl !== "None"
-                                  ? "bg-green-500 text-white"
-                                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                              }`}
-                              disabled={!msg.wmsUrl || msg.wmsUrl === "None"}
-                            >
-                              Vis
-                            </Button>
-                            {msg.downloadUrl && (
-                              <Button
-                                onClick={() =>
-                                  handleDatasetDownload(msg.downloadUrl!)
-                                }
-                                className="bg-green-500 text-white text-xs"
-                              >
-                                Last ned datasett
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    } else {
-                      let content = msg.content || "";
-                      let isUser = false;
-                      if (content.startsWith("You: ")) {
-                        isUser = true;
-                        content = content.slice("You: ".length);
-                      } else if (content.startsWith("System: ")) {
-                        content = content.slice("System: ".length);
-                      }
-                      content = content.replace(
-                        /\*\*(.*?)\*\*/g,
-                        "<strong>$1</strong>"
-                      );
-                      return (
-                        <div
-                          key={idx}
-                          className={`flex ${
-                            isUser ? "justify-end" : "justify-start"
-                          }`}
-                        >
+
+                  <div
+                    id="chatMessages"
+                    className="flex-1 p-4 overflow-y-auto space-y-2"
+                  >
+                    <div className="text-sm text-gray-600">
+                      Hei! Jeg er GeoGPT. Spør meg om geodata!
+                    </div>
+                    {chatMessages.map((msg, idx) => {
+                      if (msg.type === "image" && msg.imageUrl) {
+                        return (
                           <div
-                            className={`max-w-[80%] p-2 rounded shadow text-sm whitespace-pre-wrap ${
-                              isUser ? "bg-blue-100" : "bg-gray-100"
+                            key={idx}
+                            className="flex flex-col space-y-2 my-2"
+                          >
+                            <Image
+                              src={msg.imageUrl || "/placeholder.svg"}
+                              alt="Dataset"
+                              className="max-w-full h-auto rounded"
+                              width={400}
+                              height={300}
+                            />
+                            <div className="flex gap-2">
+                              <Button
+                                onClick={() => {
+                                  if (msg.wmsUrl && msg.wmsUrl !== "None") {
+                                    replaceIframe(msg.wmsUrl);
+                                  }
+                                }}
+                                className={`text-xs ${
+                                  msg.wmsUrl && msg.wmsUrl !== "None"
+                                    ? "bg-green-500 text-white"
+                                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                }`}
+                                disabled={!msg.wmsUrl || msg.wmsUrl === "None"}
+                              >
+                                Vis
+                              </Button>
+                              {msg.downloadUrl && (
+                                <Button
+                                  onClick={() => handleDatasetDownload(msg)}
+                                  className="bg-green-500 text-white text-xs"
+                                >
+                                  Last ned datasett
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      } else {
+                        let content = msg.content || "";
+                        let isUser = false;
+                        if (content.startsWith("You: ")) {
+                          isUser = true;
+                          content = content.slice("You: ".length);
+                        } else if (content.startsWith("System: ")) {
+                          content = content.slice("System: ".length);
+                        }
+                        content = content.replace(
+                          /\*\*(.*?)\*\*/g,
+                          "<strong>$1</strong>"
+                        );
+                        return (
+                          <div
+                            key={idx}
+                            className={`flex ${
+                              isUser ? "justify-end" : "justify-start"
                             }`}
                           >
-                            {isUser ? (
-                              <strong>You:</strong>
-                            ) : (
-                              <strong>System:</strong>
-                            )}
-                            <span
-                              className="ml-1"
-                              dangerouslySetInnerHTML={{ __html: content }}
-                            />
+                            <div
+                              className={`max-w-[80%] p-2 rounded shadow text-sm whitespace-pre-wrap ${
+                                isUser ? "bg-blue-100" : "bg-gray-100"
+                              }`}
+                            >
+                              {isUser ? (
+                                <strong>You:</strong>
+                              ) : (
+                                <strong>System:</strong>
+                              )}
+                              <span
+                                className="ml-1"
+                                dangerouslySetInnerHTML={{ __html: content }}
+                              />
+                            </div>
                           </div>
-                        </div>
-                      );
-                    }
-                  })}
-                  <div ref={chatEndRef} />
-                </div>
+                        );
+                      }
+                    })}
+                    <div ref={chatEndRef} />
+                  </div>
 
-                <form
-                  onSubmit={onChatSubmit}
-                  className="flex items-center border-t border-gray-300 p-2"
-                >
-                  <input
-                    type="text"
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    placeholder="Spør GeoGPT..."
-                    className="flex-1 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <Button
-                    type="submit"
-                    className="ml-2 text-sm"
-                    disabled={isChatStreaming || !chatInput.trim()}
+                  <form
+                    onSubmit={onChatSubmit}
+                    className="flex items-center border-t border-gray-300 p-2"
                   >
-                    Send
-                  </Button>
-                </form>
-              </div>
-            </PopoverContent>
-          </Popover>
+                    <input
+                      type="text"
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      placeholder="Spør GeoGPT..."
+                      className="flex-1 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <Button
+                      type="submit"
+                      className="ml-2 text-sm"
+                      disabled={isChatStreaming || !chatInput.trim()}
+                    >
+                      Send
+                    </Button>
+                  </form>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
-      </div>
 
-      {/* Full Screen Chat UI */}
-      {isFullScreen && (
-        <div className="fixed inset-0 z-[1001] bg-white">
-          <div className="flex justify-between items-center p-4 border-b container mx-auto">
-            <h2 className="text-xl font-semibold">GeoGPT Chat</h2>
-            <Button variant="outline" onClick={exitFullScreen}>
-              Exit Full Screen
-            </Button>
+        {/* Full Screen Chat UI */}
+        {isFullScreen && (
+          <div className="fixed inset-0 z-[50] bg-white">
+            <div className="flex justify-between items-center p-4 border-b container mx-auto">
+              <h2 className="text-xl font-semibold">GeoGPT Chat</h2>
+              <Button variant="outline" onClick={exitFullScreen}>
+                Exit Full Screen
+              </Button>
+            </div>
+            <div className="p-4 h-full">
+              <FullScreenChat
+                messages={transformMessagesForChatKit()}
+                handleSubmit={fullScreenHandleSubmit}
+                input={chatInput}
+                handleInputChange={fullScreenHandleInputChange}
+                isGenerating={false}
+                stop={() => {}}
+                append={handleAppend}
+                suggestions={suggestions}
+                onWmsClick={replaceIframe}
+                onDownloadClick={handleFullScreenDownload}
+                onExitFullScreen={exitFullScreen}
+              />
+            </div>
           </div>
-          <div className="p-4 h-full">
-            <FullScreenChat
-              messages={transformMessagesForChatKit()}
-              handleSubmit={fullScreenHandleSubmit}
-              input={chatInput}
-              handleInputChange={fullScreenHandleInputChange}
-              isGenerating={false}
-              stop={() => {}}
-              append={handleAppend}
-              suggestions={suggestions}
-              onWmsClick={replaceIframe}
-              onDownloadClick={handleDatasetDownload}
-              onExitFullScreen={exitFullScreen}
-            />
-          </div>
+        )}
+        <div className="z-40">
+          <AppSidebar
+            selectedLayers={selectedLayers}
+            onLayerChange={handleLayerChange}
+            availableLayers={availableLayers ?? []}
+            onChangeBaseLayer={{
+              revertToBaseMap,
+              changeToGraattKart,
+              changeToRasterKart,
+            }}
+          />
         </div>
-      )}
-      <AppSidebar
-        selectedLayers={selectedLayers}
-        onLayerChange={handleLayerChange}
-        availableLayers={availableLayers ?? []}
-        onChangeBaseLayer={{
-          revertToBaseMap,
-          changeToGraattKart,
-          changeToRasterKart
-        }}
-      />
-    </div>
+
+        <FileDownloadModal
+          isOpen={isFileDownloadModalOpen}
+          handleClose={handleModalClose}
+          handleConfirmSelection={confirmDownload}
+          geographicalAreas={geographicalAreas}
+          projections={projections}
+          formats={formats}
+          datasetName={datasetName}
+          onAreaChange={handleAreaChange}
+        />
+      </div>
     </>
   );
 };
