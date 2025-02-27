@@ -198,7 +198,7 @@ export const ChatContainer = forwardRef<
         "flex flex-col max-h-[85vh] min-h-[65vh] w-full grid-rows-[1fr_auto] relative",
         className
       )}
-      {...props} // Removed scrollbar styling
+      {...props}
     />
   );
 });

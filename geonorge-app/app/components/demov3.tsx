@@ -737,8 +737,8 @@ const DemoV3 = () => {
                   </div>
                     <div className="flex gap-2">
                       <Button
-                        variant="outline"
                         size="sm"
+                        variant="outline"
                         onClick={enterFullScreen}
                       >
                         <Maximize />
@@ -758,7 +758,7 @@ const DemoV3 = () => {
                   id="chatMessages"
                   className="flex-1 p-4 overflow-y-auto space-y-2"
                 >
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm text-gray-500">
                     Hei! Jeg er GeoGPT. Spør meg om geodata!
                   </div>
                   {chatMessages.map((msg, idx) => {
@@ -775,9 +775,9 @@ const DemoV3 = () => {
                                   replaceIframe(msg.wmsUrl);
                                 }
                               }}
-                              className={`text-xs ${
+                              className={`text-xs rounded-[2px] ${
                                 msg.wmsUrl && msg.wmsUrl !== "None"
-                                  ? "bg-green-500 text-white"
+                                  ? "bg-[#FF8B65] hover:bg-[#FE642F] text-white"
                                   : "bg-gray-300 text-gray-500 cursor-not-allowed"
                               }`}
                               disabled={!msg.wmsUrl || msg.wmsUrl === "None"}
@@ -789,7 +789,7 @@ const DemoV3 = () => {
                                 onClick={() =>
                                   handleDatasetDownload(msg.downloadUrl!)
                                 }
-                                className="bg-green-500 text-white text-xs"
+                                className="rounded-[2px] bg-[#404041] hover:bg-[#5c5c5d] text-white text-xs"
                               >
                                 Last ned datasett
                               </Button>
@@ -819,7 +819,7 @@ const DemoV3 = () => {
                         >
                           <div
                             className={`max-w-[80%] p-2 rounded text-sm whitespace-pre-wrap ${
-                              isUser ? "bg-blue-100" : "bg-gray-100"
+                              isUser ? "bg-orange-100" : "bg-gray-100"
                             }`}
                           >
                             {isUser ? (

@@ -60,7 +60,7 @@ export function MessageList({
                   variant="secondary"
                   className={`transition-colors relative ${
                     isValidWmsUrl(message.wmsUrl)
-                      ? "hover:bg-green-600 bg-green-500 text-white hover:text-white"
+                      ? "bg-[#FF8B65] hover:bg-[#FE642F] text-white hover:text-white"
                       : "bg-gray-300 text-gray-500 cursor-not-allowed"
                   }`}
                   disabled={!isValidWmsUrl(message.wmsUrl)}
@@ -71,7 +71,7 @@ export function MessageList({
                   <Button
                     onClick={() => onDownloadClick?.(message.downloadUrl!)}
                     variant="secondary"
-                    className="hover:bg-green-600 bg-green-500 text-white hover:text-white transition-colors relative"
+                    className="bg-[#404041] hover:bg-[#5c5c5d] text-white hover:text-white transition-colors relative"
                   >
                     Last ned datasett
                   </Button>
