@@ -20,6 +20,7 @@ jobs:
       DB_NAME: asd
       DB_USER: asd
       DB_PASSWORD: asd
+      OPENAI_API_KEY: ${{ secrets.AZURE_GPT_API_KEY }}  
       AZURE_GPT_API_KEY: ${{ secrets.AZURE_GPT_API_KEY }}
       AZURE_GPT_ENDPOINT: ${{ secrets.AZURE_GPT_ENDPOINT }}
       AZURE_EMBEDDING_API_KEY: ${{ secrets.AZURE_EMBEDDING_API_KEY }}
@@ -87,6 +88,8 @@ jobs:
           # Make sure the vectors are created and inserted
           docker-compose exec -T backend python /app/scripts/create_vector.py
           docker-compose exec -T backend python /app/scripts/insert_csv.py
+          docker-compose exec -T database psql -U asd -d asd -c "SELECT COUNT(*) FROM text_embedding_3_large;"
+
     
           # Verify table was created
           docker-compose exec -T database psql -U asd -d asd -c "SELECT COUNT(*) FROM text_embedding_3_large;"
