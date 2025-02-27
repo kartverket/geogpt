@@ -60,7 +60,7 @@ interface SearchResult {
 interface KartkatalogTabProps {
   className?: string;
   onReplaceIframe: (wmsUrl: string) => void;
-  onDatasetDownload: (downloadUrl: string) => void;
+  onDatasetDownload: (dataset: SearchResult) => void; // Modified this prop
   ws: WebSocket | null;
 }
 
@@ -82,8 +82,12 @@ export function KartkatalogTab({
     Map<string, SearchResult>
   >(new Map());
   const [showDownloadDialog, setShowDownloadDialog] = React.useState(false);
-  const [descriptionsCache, setDescriptionsCache] = React.useState<Map<string, string>>(new Map());
-  const [openHoverCardId, setOpenHoverCardId] = React.useState<string | null>(null);
+  const [descriptionsCache, setDescriptionsCache] = React.useState<
+    Map<string, string>
+  >(new Map());
+  const [openHoverCardId, setOpenHoverCardId] = React.useState<string | null>(
+    null
+  );
 
   // Create a ref for the main panel container
   const panelRef = React.useRef<HTMLDivElement>(null);
@@ -181,24 +185,30 @@ export function KartkatalogTab({
     if (descriptionsCache.has(uuid)) return;
 
     try {
-      const response = await fetch(`https://kartkatalog.geonorge.no/api/metadata/${uuid}`);
+      const response = await fetch(
+        `https://kartkatalog.geonorge.no/api/metadata/${uuid}`
+      );
       const data = await response.json();
 
       console.log("[DEBUG] Entire metadata response:", data);
 
-      let extractedAbstract = data.Abstract
-        || data.metadata?.abstract
-      
-      setDescriptionsCache(prev => {
+      const extractedAbstract =
+        data.Abstract ||
+        data.abstract ||
+        data.metadata?.abstract ||
+        data.purpose ||
+        "Ingen beskrivelse tilgjengelig";
+
+      setDescriptionsCache((prev) => {
         const newCache = new Map(prev);
         newCache.set(uuid, extractedAbstract);
         return newCache;
       });
     } catch (error) {
-      console.error('Error fetching dataset description:', error);
-      setDescriptionsCache(prev => {
+      console.error("Error fetching dataset description:", error);
+      setDescriptionsCache((prev) => {
         const newCache = new Map(prev);
-        newCache.set(uuid, 'Kunne ikke laste beskrivelse');
+        newCache.set(uuid, "Kunne ikke laste beskrivelse");
         return newCache;
       });
     }
@@ -311,9 +321,9 @@ export function KartkatalogTab({
 
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1">
-                          <HoverCard 
-                            openDelay={100} 
-                            closeDelay={0} 
+                          <HoverCard
+                            openDelay={100}
+                            closeDelay={0}
                             open={openHoverCardId === result.uuid}
                             onOpenChange={(open) => {
                               setOpenHoverCardId(open ? result.uuid : null);
@@ -335,10 +345,7 @@ export function KartkatalogTab({
                                 <ExternalLink className="h-4 w-4" />
                               </a>
                             </HoverCardTrigger>
-                            <HoverCardContent 
-                              side="left"
-                              className="w-80"
-                            >
+                            <HoverCardContent side="left" className="w-80">
                               <div className="space-y-2">
                                 <h4 className="font-medium">{result.title}</h4>
                                 {!descriptionsCache.has(result.uuid) ? (
@@ -354,7 +361,7 @@ export function KartkatalogTab({
                               </div>
                             </HoverCardContent>
                           </HoverCard>
-                          
+
                           <div className="flex gap-2">
                             {result.wmsUrl && result.wmsUrl !== "None" ? (
                               <button
@@ -396,9 +403,7 @@ export function KartkatalogTab({
                             )}
                             {result.downloadUrl && (
                               <button
-                                onClick={() =>
-                                  onDatasetDownload(result.downloadUrl!)
-                                }
+                                onClick={() => onDatasetDownload(result)} // Modified this line
                                 className="px-3 py-1.5 text-sm bg-[#404041] hover:bg-[#5c5c5d] text-white rounded-[2px] transition-colors flex items-center gap-1"
                               >
                                 <Download className="h-4 w-4" /> Last ned
@@ -429,23 +434,21 @@ export function KartkatalogTab({
             isExpanded ? "rounded-r-[2px] border-l-2" : "rounded-[2px]"
           } -ml-px`}
         >
-    <div className="flex flex-col items-center gap-3">
-      <Layers className="h-7 w-7" />
-      <div className="flex flex-col">
-        {[..."KARTKATALOGEN"].map((letter, index) => (
-          <span key={index} className="text-md font-medium">
-            {letter}
-          </span>
-        ))}
-      </div>
-      {isExpanded ? (
-        <ChevronRight className="h-4 w-4" />
-      ) : (
-        <ChevronLeft className="h-4 w-4" />
-      )}
-    </div>
-
-
+          <div className="flex flex-col items-center gap-3">
+            <Layers className="h-7 w-7" />
+            <div className="flex flex-col">
+              {[..."KARTKATALOGEN"].map((letter, index) => (
+                <span key={index} className="text-md font-medium">
+                  {letter}
+                </span>
+              ))}
+            </div>
+            {isExpanded ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronLeft className="h-4 w-4" />
+            )}
+          </div>
         </button>
 
         <style jsx>{`
