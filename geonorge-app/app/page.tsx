@@ -1,11 +1,11 @@
 "use client";
 
-import DemoV2 from "./components/Demo";
+import Page from "../app/dashboard/page";
 
 export default function Home() {
   return (
     <div className="relative h-screen w-full">
-      <DemoV2 />
+      <Page />
     </div>
   );
 }

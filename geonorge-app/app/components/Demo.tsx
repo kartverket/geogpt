@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 // Import the full screen Chat component from the kit
 import { Chat as FullScreenChat } from "@/components/ui/chat";
 import { Maximize } from "lucide-react";
+import { useWebSocket } from './chat/useWebSocket';
 
 type MessageType = {
   action: string;
@@ -43,7 +44,6 @@ function DemoV2() {
   const [iframeSrc, setIframeSrc] = useState(INITIAL_MAP_URL);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searchInput, setSearchInput] = useState("");
-  const [ws, setWs] = useState<WebSocket | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [forceUpdate, setForceUpdate] = useState(0);
@@ -57,29 +57,18 @@ function DemoV2() {
 
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Set up WebSocket and message handling
-  useEffect(() => {
-    const socket = new WebSocket("ws://localhost:8080");
-    setWs(socket);
+  // Replace the WebSocket useEffect with the custom hook
+  const { ws, isConnected } = useWebSocket();
 
-    socket.onmessage = (event) => {
+  // Move the message handler to a separate effect
+  useEffect(() => {
+    if (!ws) return;
+
+    ws.onmessage = (event) => {
       const data: MessageType = JSON.parse(event.data);
       handleServerMessage(data);
     };
-
-    socket.onopen = () => {
-      // Trigger an initial search on connection
-      const initialSearchMessage = {
-        action: "searchFormSubmit",
-        payload: "",
-      };
-      socket.send(JSON.stringify(initialSearchMessage));
-    };
-
-    return () => {
-      socket.close();
-    };
-  }, []);
+  }, [ws]);
 
   // Scroll to bottom when new chat messages arrive
   useEffect(() => {

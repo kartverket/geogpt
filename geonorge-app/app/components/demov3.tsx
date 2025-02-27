@@ -4,73 +4,44 @@ import { useEffect, useState, useRef, FormEvent } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { KartkatalogTab } from "@/components/kartkatalog-tab";
-import {
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-} from "@/components/ui/popover";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Chat as FullScreenChat } from "@/components/ui/chat";
 import { MapPin, Maximize, MessageSquare } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
+import { ChatWindow } from "./chat";
+import { useWebSocket } from "./chat/useWebSocket";
+import { ChatMessage, WMSLayer, MessageType, Address } from "./chat/types";
 
-interface WMSLayer {
-  name: string;
-  title: string;
-}
-
-type MessageType = {
-  action: string;
-  payload?: any;
-  isNewMessage?: boolean;
-};
-
-interface Address {
-  adressetekst: string;
-  poststed?: string;
-  representasjonspunkt: {
-    lat: number;
-    lon: number;
-  };
-}
-
-interface ChatMessage {
-  type: "text" | "image" | "streaming";
-  content?: string;
-  imageUrl?: string;
-  downloadUrl?: string | null;
-  wmsUrl?: string | null;
-}
-
-interface SearchResult {
-  uuid: string;
-  title?: string;
-  wmsUrl?: string;
-  downloadUrl?: string | null;
-  restricted?: boolean;
-}
-
-const INITIAL_MAP_URL =
-  "https://norgeskart.no/geoportal/#!?zoom=4.6366666666666685&lon=168670.22&lat=6789452.95&wms=https:%2F%2Fnve.geodataonline.no%2Farcgis%2Fservices%2FSkredKvikkleire2%2FMapServer%2FWMSServer&project=geonorge&layers=1002";
+const INITIAL_MAP_URL = "https://norgeskart.no/geoportal/#!?zoom=4.6366666666666685&lon=168670.22&lat=6789452.95&wms=https:%2F%2Fnve.geodataonline.no%2Farcgis%2Fservices%2FSkredKvikkleire2%2FMapServer%2FWMSServer&project=geonorge&layers=1002";
 
 const DemoV3 = () => {
+  // Map related state
   const [map, setMap] = useState<L.Map | null>(null);
   const [wmsLayer, setWmsLayer] = useState<L.TileLayer.WMS | null>(null);
   const [searchResults2, setSearchResults2] = useState<Address[]>([]);
-  const [searchResults, setSearchResults] = useState<Address[]>([]);
-
   const [userMarker, setUserMarker] = useState<L.Marker | null>(null);
   const [searchMarker, setSearchMarker] = useState<L.Marker | null>(null);
-  // Add this with other state declarations
   const [addressInput, setAddressInput] = useState("");
   const mapRef = useRef<HTMLDivElement>(null);
 
+  // WMS related state
   const [wmsUrl, setWmsUrl] = useState(
     "https://nve.geodataonline.no/arcgis/services/SkredKvikkleire2/MapServer/WMSServer?request=GetCapabilities&service=WMS"
   );
   const [availableLayers, setAvailableLayers] = useState<WMSLayer[]>([]);
   const [selectedLayer, setSelectedLayer] = useState<string>("");
+
+  // Chat related state
+  const [isFullScreen, setIsFullScreen] = useState(false);
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const [chatInput, setChatInput] = useState("");
+  const [iframeSrc, setIframeSrc] = useState(INITIAL_MAP_URL);
+  const [searchInput, setSearchInput] = useState("");
+
+  // Use the WebSocket hook
+  const { messages, isStreaming, sendMessage, ws } = useWebSocket();
 
   // Add this near the top of the file, after the imports
   useEffect(() => {
@@ -261,112 +232,7 @@ const DemoV3 = () => {
   }, [selectedLayer]);
 
   // Basic state
-  const [iframeSrc, setIframeSrc] = useState(INITIAL_MAP_URL);
-  //   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-  const [searchInput, setSearchInput] = useState("");
-  const [ws, setWs] = useState<WebSocket | null>(null);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const [chatInput, setChatInput] = useState("");
-  const [forceUpdate, setForceUpdate] = useState(0);
-
-  // State for chat streaming
-  const [isChatStreaming, setIsChatStreaming] = useState(false);
-
-  // State for full screen mode and popover open state
-  const [isFullScreen, setIsFullScreen] = useState(false);
-  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-
-  const chatEndRef = useRef<HTMLDivElement>(null);
-
-  // Set up WebSocket and message handling
-  useEffect(() => {
-    const socket = new WebSocket("ws://localhost:8080");
-    setWs(socket);
-
-    socket.onmessage = (event) => {
-      const data: MessageType = JSON.parse(event.data);
-      handleServerMessage(data);
-    };
-
-    socket.onopen = () => {
-      // Trigger an initial search on connection
-      const initialSearchMessage = {
-        action: "searchFormSubmit",
-        payload: "",
-      };
-      socket.send(JSON.stringify(initialSearchMessage));
-    };
-
-    return () => {
-      socket.close();
-    };
-  }, []);
-
-  // Scroll to bottom when new chat messages arrive
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chatMessages]);
-
-  const handleServerMessage = (data: MessageType) => {
-    const { action, payload } = data;
-    console.log("Incoming action:", action, "payload:", payload);
-    switch (action) {
-      case "chatStream":
-        setIsChatStreaming(true);
-        if (payload.isNewMessage && !payload.payload) break;
-        setChatMessages((prev) => {
-          const lastMsg = prev[prev.length - 1];
-          if (
-            !lastMsg ||
-            lastMsg.type !== "streaming" ||
-            payload.isNewMessage
-          ) {
-            return [
-              ...prev,
-              { type: "streaming", content: payload.payload || "" },
-            ];
-          } else {
-            const updated: ChatMessage = {
-              ...lastMsg,
-              content: lastMsg.content + (payload.payload || ""),
-            };
-            return [...prev.slice(0, -1), updated];
-          }
-        });
-        break;
-
-      case "streamComplete":
-        setIsChatStreaming(false); // Re-enable send button after stream complete
-        setChatMessages((prev) => {
-          const lastMsg = prev[prev.length - 1];
-          if (!lastMsg || lastMsg.type !== "streaming") return prev;
-          const systemMsg = `System: ${lastMsg.content}`;
-          const converted: ChatMessage = { type: "text", content: systemMsg };
-          return [...prev.slice(0, -1), converted];
-        });
-        break;
-
-      case "searchVdbResults":
-        setSearchResults(payload);
-        break;
-
-      case "insertImage":
-        const { datasetImageUrl, datasetDownloadUrl, wmsUrl } = payload;
-        setChatMessages((prev) => [
-          ...prev,
-          {
-            type: "image",
-            imageUrl: datasetImageUrl,
-            downloadUrl: datasetDownloadUrl,
-            wmsUrl: wmsUrl,
-          },
-        ]);
-        break;
-
-      default:
-        console.log("Unknown action:", data);
-    }
-  };
+  const [searchResults, setSearchResults] = useState<any[]>([]);
 
   // Update the interface for WMS data
   interface WMSData {
@@ -424,59 +290,31 @@ const DemoV3 = () => {
     }
   };
 
-  // const onSearchSubmit = (e: FormEvent<HTMLFormElement>) => {
-  //   e.preventDefault();
-  //   if (!ws || ws.readyState !== WebSocket.OPEN) return;
-  //   ws.send(
-  //     JSON.stringify({
-  //       action: "searchFormSubmit",
-  //       payload: searchInput,
-  //     })
-  //   );
-  // };
-
   // For the non-fullscreen chat submit handler
   const onChatSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const trimmedInput = chatInput.trim();
-    if (
-      !ws ||
-      ws.readyState !== WebSocket.OPEN ||
-      !trimmedInput ||
-      isChatStreaming
-    )
+    if (!trimmedInput || isStreaming) {
+      console.log('⚠️ Chat submission prevented:', { isEmpty: !trimmedInput, isStreaming });
       return;
-    ws.send(
-      JSON.stringify({ action: "chatFormSubmit", payload: trimmedInput })
-    );
-    setChatMessages((prev) => [
-      ...prev,
-      { type: "text", content: `You: ${trimmedInput}` },
-    ]);
+    }
+    console.log('💬 Submitting chat message:', trimmedInput);
+    sendMessage(trimmedInput);
     setChatInput("");
-    setIsChatStreaming(true);
   };
 
-  // Shared function for sending a message
   const handleSendMessage = (message: string) => {
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    ws.send(JSON.stringify({ action: "chatFormSubmit", payload: message }));
-    setChatMessages((prev) => [
-      ...prev,
-      { type: "text", content: `You: ${message}` },
-    ]);
+    console.log('📨 Handling message send:', message);
+    sendMessage(message);
   };
 
   // Full screen chat handlers
   const fullScreenHandleSubmit = (
-    e?: { preventDefault?: () => void },
-    options?: { experimental_attachments?: FileList }
+    e?: { preventDefault?: () => void }
   ) => {
-    if (e && e.preventDefault) {
-      e.preventDefault();
-    }
-    if (!chatInput.trim() || isChatStreaming) return;
-    handleSendMessage(chatInput);
+    if (e?.preventDefault) e.preventDefault();
+    if (!chatInput.trim() || isStreaming) return;
+    sendMessage(chatInput);
     setChatInput("");
   };
 
@@ -489,7 +327,7 @@ const DemoV3 = () => {
   // Transform chatMessages to the shape expected by the FullScreenChat component.
   // If the message is an image, include extra properties and set type to "image"
   const transformMessagesForChatKit = () => {
-    return chatMessages.map((msg, idx) => {
+    return messages.map((msg, idx) => {
       if (msg.type === "image" && msg.imageUrl) {
         return {
           id: `msg-${idx}`,
@@ -665,138 +503,17 @@ const DemoV3 = () => {
                 align="end"
                 className="w-96 h-[28rem] p-0 overflow-hidden shadow-lg rounded-lg"
               >
-                <div className="flex flex-col h-full bg-white">
-                  <div className="bg-gray-200 px-4 py-2 flex justify-between items-center">
-                    <span className="font-semibold">GeoGPT Chat</span>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={enterFullScreen}
-                      >
-                        <Maximize />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="px-4"
-                        onClick={() => setIsPopoverOpen(false)}
-                      >
-                        X
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div
-                    id="chatMessages"
-                    className="flex-1 p-4 overflow-y-auto space-y-2"
-                  >
-                    <div className="text-sm text-gray-600">
-                      Hei! Jeg er GeoGPT. Spør meg om geodata!
-                    </div>
-                    {chatMessages.map((msg, idx) => {
-                      if (msg.type === "image" && msg.imageUrl) {
-                        return (
-                          <div
-                            key={idx}
-                            className="flex flex-col space-y-2 my-2"
-                          >
-                            <img
-                              src={msg.imageUrl || "/placeholder.svg"}
-                              alt="Dataset"
-                              className="max-w-full h-auto rounded"
-                            />
-                            <div className="flex gap-2">
-                              <Button
-                                onClick={() => {
-                                  if (msg.wmsUrl && msg.wmsUrl !== "None") {
-                                    replaceIframe(msg.wmsUrl);
-                                  }
-                                }}
-                                className={`text-xs ${
-                                  msg.wmsUrl && msg.wmsUrl !== "None"
-                                    ? "bg-green-500 text-white"
-                                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                                }`}
-                                disabled={!msg.wmsUrl || msg.wmsUrl === "None"}
-                              >
-                                Vis
-                              </Button>
-                              {msg.downloadUrl && (
-                                <Button
-                                  onClick={() =>
-                                    handleDatasetDownload(msg.downloadUrl!)
-                                  }
-                                  className="bg-green-500 text-white text-xs"
-                                >
-                                  Last ned datasett
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      } else {
-                        let content = msg.content || "";
-                        let isUser = false;
-                        if (content.startsWith("You: ")) {
-                          isUser = true;
-                          content = content.slice("You: ".length);
-                        } else if (content.startsWith("System: ")) {
-                          content = content.slice("System: ".length);
-                        }
-                        content = content.replace(
-                          /\*\*(.*?)\*\*/g,
-                          "<strong>$1</strong>"
-                        );
-                        return (
-                          <div
-                            key={idx}
-                            className={`flex ${
-                              isUser ? "justify-end" : "justify-start"
-                            }`}
-                          >
-                            <div
-                              className={`max-w-[80%] p-2 rounded shadow text-sm whitespace-pre-wrap ${
-                                isUser ? "bg-blue-100" : "bg-gray-100"
-                              }`}
-                            >
-                              {isUser ? (
-                                <strong>You:</strong>
-                              ) : (
-                                <strong>System:</strong>
-                              )}
-                              <span
-                                className="ml-1"
-                                dangerouslySetInnerHTML={{ __html: content }}
-                              />
-                            </div>
-                          </div>
-                        );
-                      }
-                    })}
-                    <div ref={chatEndRef} />
-                  </div>
-
-                  <form
-                    onSubmit={onChatSubmit}
-                    className="flex items-center border-t border-gray-300 p-2"
-                  >
-                    <input
-                      type="text"
-                      value={chatInput}
-                      onChange={(e) => setChatInput(e.target.value)}
-                      placeholder="Spør GeoGPT..."
-                      className="flex-1 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <Button
-                      type="submit"
-                      className="ml-2 text-sm"
-                      disabled={isChatStreaming || !chatInput.trim()}
-                    >
-                      Send
-                    </Button>
-                  </form>
-                </div>
+                <ChatWindow
+                  messages={messages}
+                  input={chatInput}
+                  onInputChange={(value) => setChatInput(value)}
+                  onSubmit={onChatSubmit}
+                  isStreaming={isStreaming}
+                  onWmsClick={replaceIframe}
+                  onDownloadClick={handleDatasetDownload}
+                  onEnterFullScreen={enterFullScreen}
+                  onClose={() => setIsPopoverOpen(false)}
+                />
               </PopoverContent>
             </Popover>
           </div>
@@ -815,10 +532,15 @@ const DemoV3 = () => {
           <div className="p-4 h-full">
             <FullScreenChat
               messages={transformMessagesForChatKit()}
-              handleSubmit={fullScreenHandleSubmit}
+              handleSubmit={(e) => {
+                e?.preventDefault?.();
+                if (!chatInput.trim() || isStreaming) return;
+                handleSendMessage(chatInput);
+                setChatInput("");
+              }}
               input={chatInput}
-              handleInputChange={fullScreenHandleInputChange}
-              isGenerating={false}
+              handleInputChange={(e) => setChatInput(e.target.value)}
+              isGenerating={isStreaming}
               stop={() => {}}
               append={handleAppend}
               suggestions={suggestions}
