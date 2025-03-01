@@ -39,6 +39,7 @@ const StepNavigationButtons: React.FC<StepNavigationButtonsProps> = ({
               onClick={handleConfirmSelectionWithLoading}
             >
               <DownloadIcon />
+              {/* Standard download button */}
               Last ned datasett
             </Button>
           </div>
@@ -62,6 +63,7 @@ const StepNavigationButtons: React.FC<StepNavigationButtonsProps> = ({
             onClick={handleConfirmSelectionWithLoading}
           >
             <DownloadIcon />
+            {/* User input download button */}
             Last ned datasett
           </Button>
         </div>

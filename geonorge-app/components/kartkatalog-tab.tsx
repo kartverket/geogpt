@@ -60,7 +60,7 @@ interface SearchResult {
 interface KartkatalogTabProps {
   className?: string;
   onReplaceIframe: (wmsUrl: string) => void;
-  onDatasetDownload: (dataset: SearchResult) => void; // Modified this prop
+  onDatasetDownload: (dataset: SearchResult) => void;
   ws: WebSocket | null;
 }
 
@@ -161,9 +161,11 @@ export function KartkatalogTab({
     setShowDownloadDialog(true);
   };
 
-  const initiateDownloads = () => {
-    // Use the stored dataset information for downloads
+  const initiateDownloads = async () => {
+    const downloadLinks: HTMLAnchorElement[] = [];
+
     selectedDatasetsInfo.forEach((dataset) => {
+      console.log("Processing dataset for download:", dataset);
       if (dataset.downloadUrl) {
         const link = document.createElement("a");
         link.href = dataset.downloadUrl;
@@ -171,13 +173,23 @@ export function KartkatalogTab({
         link.setAttribute("target", "_blank");
         link.style.display = "none";
         document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        downloadLinks.push(link);
       }
     });
 
+    for (const link of downloadLinks) {
+      link.click();
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+
+    setTimeout(() => {
+      downloadLinks.forEach((link) => {
+        document.body.removeChild(link);
+      });
+    }, 1000);
+
     setShowDownloadDialog(false);
-    setSelectedDatasets(new Set()); // Clear selection after download
+    setSelectedDatasets(new Set());
     setSelectedDatasetsInfo(new Map());
   };
 

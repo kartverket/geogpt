@@ -44,11 +44,13 @@ interface FileDownloadModalProps {
   isOpen: boolean;
   handleClose: () => void;
   handleConfirmSelection: () => void;
+  handleStandardDownload: () => void;
   geographicalAreas: { type: string; name: string; code: string }[];
   projections: { name: string; code: string }[];
   formats: string[];
   datasetName: string;
   onAreaChange: (selectedAreaCode: string) => void;
+  metadataUuid: string;
 }
 
 // Render a tooltip with a help icon
@@ -198,7 +200,7 @@ const renderSelectionPopover = (
   items: { name: string; category?: string }[],
   placeholder: string,
   grouped = false,
-  helpLink?: string // Make helpLink optional
+  helpLink?: string
 ) => (
   <SelectionPopover
     label={label}
@@ -225,11 +227,13 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
   isOpen,
   handleClose,
   handleConfirmSelection,
+  handleStandardDownload,
   geographicalAreas,
   projections,
-  datasetName,
   formats,
+  datasetName,
   onAreaChange,
+  metadataUuid,
 }) => {
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const [selectedProj, setSelectedProj] = useState<string>("");
@@ -315,12 +319,77 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
     }
   }, [step]);
 
-  const handleConfirmSelectionWithLoading = async () => {
+  const handleDownload = async () => {
     try {
-      await handleConfirmSelection();
-    } catch (error: unknown) {
-      console.error("Failed to confirm selection:", error);
+      // Check if any selections have been made, if not use standard download
+      // CHANGE LOGIC LATER -> USE USER INPUT VALUES AND FILL IN MISSING VALUES WITH DEFAULT VALUES
+      if (!selectedLocation || !selectedProj || !selectedFmt) {
+        handleStandardDownload();
+        handleClose();
+        return;
+      }
+
+      const selectedArea = uniqueGeographicalAreas.find(
+        (area) => area.name === selectedLocation
+      );
+      const selectedProjection = uniqueProjections.find(
+        (proj) => proj.name === selectedProj
+      );
+
+      const orderRequest = {
+        metadataUuid: metadataUuid,
+        area: {
+          code: selectedArea?.code || "",
+          name: selectedArea?.name || "",
+          type: selectedArea?.type || "",
+        },
+        projection: {
+          code: selectedProjection?.code || "",
+          name: selectedProjection?.name || "",
+          codespace: selectedProjection?.codespace || "",
+        },
+        format: {
+          name: selectedFmt,
+        },
+        userGroup: selectedGroup,
+        purpose: selectedGoal,
+      };
+
+      const response = await fetch("/api/download/order", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(orderRequest),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(
+          errorData.error || `HTTP error! status: ${response.status}`
+        );
+      }
+
+      const data = await response.json();
+
+      if (data.files?.[0]?.downloadUrl) {
+        window.location.href = data.files[0].downloadUrl;
+        handleClose();
+      } else {
+        throw new Error("No download URL received from the server");
+      }
+    } catch (error) {
+      console.error("Download failed:", error);
+      alert(
+        `Download failed: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
+  };
+
+  const handleConfirmSelectionWithLoading = async () => {
+    await handleDownload();
   };
 
   if (!isOpen) return null;
