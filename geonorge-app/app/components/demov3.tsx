@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, FormEvent } from "react";
-import { MapPin, Maximize, MessageSquare } from "lucide-react";
+import { Maximize, MessageSquare } from "lucide-react";
 import Image from "next/image";
 
 // Components
@@ -84,9 +84,6 @@ export interface SearchResult {
   }[];
 }
 
-const INITIAL_MAP_URL =
-  "https://norgeskart.no/geoportal/#!?zoom=4.6366666666666685&lon=168670.22&lat=6789452.95&wms=https:%2F%2Fnve.geodataonline.no%2Farcgis%2Fservices%2FSkredKvikkleire2%2FMapServer%2FWMSServer&project=geonorge&layers=1002";
-
 const DemoV3 = () => {
   const [map, setMap] = useState<L.Map | null>(null);
   const [wmsLayer, setWmsLayer] = useState<Record<string, L.TileLayer.WMS>>({});
@@ -95,8 +92,6 @@ const DemoV3 = () => {
 
   const [userMarker, setUserMarker] = useState<L.Marker | null>(null);
   const [searchMarker, setSearchMarker] = useState<L.Marker | null>(null);
-  // Add this with other state declarations
-  const [addressInput, setAddressInput] = useState("");
   const mapRef = useRef<HTMLDivElement>(null);
 
   const [wmsUrl, setWmsUrl] = useState(
@@ -336,14 +331,9 @@ const DemoV3 = () => {
     updateLayers();
   }, [selectedLayers]);
 
-  // Basic state
-  const [iframeSrc, setIframeSrc] = useState(INITIAL_MAP_URL);
-  //   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-  const [searchInput, setSearchInput] = useState("");
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
-  const [forceUpdate, setForceUpdate] = useState(0);
 
   // State for chat streaming
   const [isChatStreaming, setIsChatStreaming] = useState(false);
@@ -692,7 +682,8 @@ const DemoV3 = () => {
   // Replace the old handleDatasetDownload function with this new implementation
   const handleDatasetDownload = (msg: ChatMessage) => {
     console.log("Handling dataset download with message:", msg);
-    setPendingDownloadUrl(msg.downloadUrl || null);
+    console.log("msg.downloadUrl", msg.downloadUrl);
+
     const formatsToUse =
       msg.downloadFormats && msg.downloadFormats.length > 0
         ? msg.downloadFormats
@@ -726,19 +717,13 @@ const DemoV3 = () => {
       setProjections(uniqueProjections);
       setFormats(uniqueFormats);
       setDatasetName(msg.title || specificObject?.title || "");
+      setPendingDownloadUrl(msg.downloadUrl || null); // Store the standard download URL
       setFileDownloadModalOpen(true);
+    } else if (msg.downloadUrl) {
+      // If no formats but URL exists, use standard download
+      handleDirectDownload(msg.downloadUrl);
     } else {
-      console.warn("No download formats available for this message");
-      // Fallback: download directly
-      if (msg.downloadUrl) {
-        const link = document.createElement("a");
-        link.href = msg.downloadUrl;
-        link.target = "_blank";
-        link.download = "";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }
+      console.warn("No download URL or formats available");
     }
   };
 
@@ -876,14 +861,13 @@ const DemoV3 = () => {
       setFormats(dedupeFormats(rawFormats));
 
       setDatasetName(dataset.title || "");
-      setPendingDownloadUrl(dataset.downloadUrl || null);
+      setPendingDownloadUrl(dataset.downloadUrl || null); // Store the standard download URL
       setFileDownloadModalOpen(true);
+    } else if (dataset.downloadUrl) {
+      // If no formats but URL exists, use standard download
+      handleDirectDownload(dataset.downloadUrl);
     } else {
-      console.warn("No download formats available for this dataset");
-      if (dataset.downloadUrl) {
-        // If no formats but URL exists, just download directly
-        handleDirectDownload(dataset.downloadUrl);
-      }
+      console.warn("No download URL or formats available for this dataset");
     }
   };
 
@@ -905,6 +889,13 @@ const DemoV3 = () => {
     handleDirectDownload(pendingDownloadUrl);
     setFileDownloadModalOpen(false);
     setPendingDownloadUrl(null);
+  };
+
+  // Handle standard download when no selections are made
+  const handleStandardDownload = () => {
+    if (pendingDownloadUrl) {
+      handleDirectDownload(pendingDownloadUrl);
+    }
   };
 
   // Update the modal close handler
@@ -1206,11 +1197,13 @@ const DemoV3 = () => {
           isOpen={isFileDownloadModalOpen}
           handleClose={handleModalClose}
           handleConfirmSelection={confirmDownload}
+          handleStandardDownload={handleStandardDownload}
           geographicalAreas={geographicalAreas}
           projections={projections}
           formats={formats}
-          datasetName={datasetName}
+          datasetName={specificObject?.title || ""}
           onAreaChange={handleAreaChange}
+          metadataUuid={specificObject?.uuid || ""}
         />
       </div>
     </>
