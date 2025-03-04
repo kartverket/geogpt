@@ -12,7 +12,7 @@ from langchain_core.documents import Document
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import START, END, StateGraph
 from langchain_openai import AzureChatOpenAI, ChatOpenAI
-from instructions.prompt_instructions import SYSTEM_PROMPT, QUERY_REWRITE_PROMPT
+from instructions.prompt_instructions import QUERY_REWRITE_PROMPT
 
 # Initialize LLMs
 llm = ChatOpenAI(
