@@ -2,6 +2,7 @@ import asyncio
 import aiohttp
 import logging
 from typing import Any, Dict, List, Optional
+import re
 
 from helpers.fetch_valid_download_api_data import get_wms
 
@@ -18,9 +19,7 @@ async def fetch_area_data(uuid: str) -> List[Dict[str, Any]]:
     Returns a list (parsed JSON). If not valid, returns an empty list.
     """
     url = f"https://nedlasting.geonorge.no/api/codelists/area/{uuid}"
-    # logger.info("Fetching area data for UUID: %s from URL: %s", uuid, url)
 
-    # Optional: Define a timeout for the request.
     timeout = aiohttp.ClientTimeout(total=10)
     
     try:
@@ -236,10 +235,36 @@ async def get_dataset_download_and_wms_status(vdb_search_response: List[tuple]) 
       - The WMS URL
       - A direct downloadUrl if the dataset supports it (using a default/first area/format).
     Returns a list of enriched dataset dictionaries.
+    
+    Deduplicates results by keeping only one entry per base document title.
     """
     # Convert tuples to dictionaries.
     field_names = ['uuid', 'title', 'abstract', 'image', 'distance']
     dict_response = [dict(zip(field_names, row)) for row in vdb_search_response]
+    
+    # REMOVE PART INDICATORS
+    title_groups = {}
+    
+    for dataset in dict_response:
+        title = dataset.get("title", "")
+        
+        # Extract base title by removing part indicators like "(Del 2)" or "(Part 2)" brazy regex
+        # This regex looks for patterns like " (Del X)" or " (Part X)" at the end of titles
+        base_title = re.sub(r'\s+\([Dd]el\s+\d+\)$|\s+\([Pp]art\s+\d+\)$', '', title)
+        
+        if base_title not in title_groups:
+            title_groups[base_title] = []
+            
+        title_groups[base_title].append(dataset)
+    
+    deduplicated_response = []
+    
+    for base_title, datasets in title_groups.items():
+        # DISTANCE SORT, LOWER IS GOOD
+        datasets.sort(key=lambda x: float(x.get('distance', float('inf'))))
+        
+        # KEEP THE BEST MATCH
+        deduplicated_response.append(datasets[0])
 
     async def enrich_dataset(dataset: Dict[str, Any]) -> Dict[str, Any]:
         try:
@@ -287,7 +312,8 @@ async def get_dataset_download_and_wms_status(vdb_search_response: List[tuple]) 
                 "error": str(e)
             }
 
-    tasks = [enrich_dataset(ds) for ds in dict_response]
+    # Use the deduplicated list for processing
+    tasks = [enrich_dataset(ds) for ds in deduplicated_response]
     
     # Allow individual tasks to fail without affecting others
     results = await asyncio.gather(*tasks, return_exceptions=True)

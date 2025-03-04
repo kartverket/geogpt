@@ -3,19 +3,12 @@ import psycopg2
 from psycopg2.extras import execute_batch
 import config
 
-# Databasekonfigurasjon
-db_config = {
-    "host": config.DB_HOST,
-    "port": config.DB_PORT,
-    "name": config.DB_NAME,
-    "user": config.DB_USER,
-    "password": config.DB_PASSWORD
-}
+db_config = config.DB_CONFIG
 
 connection = psycopg2.connect(
     host=db_config["host"],
     port=db_config["port"],
-    database=db_config["name"],
+    database=db_config["database"],
     user=db_config["user"],
     password=db_config["password"],
 )
