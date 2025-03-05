@@ -27,6 +27,11 @@ const nextConfig = {
         hostname: "editor.geonorge.no",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "norgeskart.no",
+        pathname: "/**",
+      },
     ],
   },
 };
