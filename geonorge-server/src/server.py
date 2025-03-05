@@ -240,7 +240,7 @@ async def main() -> None:
     Initialize and run both the WebSocket server and Flask app
     """
     server = ChatServer()
-    host = CONFIG.get("host", "localhost")
+    host = CONFIG.get("host", "0.0.0.0")
     ws_port = CONFIG.get("port", 8080)
 
     # Start WebSocket server
