@@ -1,4 +1,8 @@
-const GeoNorgeLogo = () => {
+interface GeoNorgeLogoProps {
+  className?: string;
+}
+
+const GeoNorgeLogo = ({ className = "w-32-h-8" }: GeoNorgeLogoProps) => {
   return (
     <svg
       id="Layer_1"
@@ -7,7 +11,7 @@ const GeoNorgeLogo = () => {
       viewBox="0 0 350 55"
       role="img"
       aria-labelledby="GeonorgeLogoTitle"
-      className="w-32 h-8"
+      className={className}
     >
       <title id="GeonorgeLogoTitle">Geonorge logo</title>
       <defs>
