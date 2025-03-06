@@ -25,8 +25,9 @@ llm = ChatOpenAI(
 
 rewrite_llm = AzureChatOpenAI(
     api_key=CONFIG["api"]["azure_gpt_api_key"],
-    api_version="2024-02-15-preview",
+    api_version="2024-08-01-preview",
     azure_endpoint=CONFIG["api"]["azure_gpt_endpoint"],
+    deployment_name="gpt-4o-mini",
     streaming=True,
     temperature=0.3,
 )
@@ -89,34 +90,97 @@ class GeoNorgeVectorRetriever:
             
         vdb_response = await get_vdb_response(transformed_query)
         
-        documents = []
+        # Group chunks from the same document by extracting base title
+        document_groups = {}
         for row in vdb_response:
-            metadata = {
-                "uuid": row[0],
-                "title": row[1],
-                "image": row[3] if len(row) > 3 else None,
-                "metadatacreationdate": row[4] if len(row) > 4 else None
-            }
-            url_formatted_title = row[1].replace(' ', '-')
-            source_url = f"https://kartkatalog.geonorge.no/metadata/{url_formatted_title}/{row[0]}"
+            title = row[1]
+            # Check if this is a chunked document (contains "Del X" in the title)
+            base_title = title
+            chunk_indicator = None
+            if " (Del " in title:
+                base_title = title.split(" (Del ")[0]
+                chunk_indicator = title.split(" (Del ")[1].rstrip(")")
             
-            content = f"Datasett: {row[1]}\n"
-            if len(row) > 2 and row[2]:
-                content += f"Beskrivelse: {row[2]}\n"
-            if metadata["metadatacreationdate"]:
-                try:
-                    date_parts = metadata["metadatacreationdate"].split('-')
-                    if len(date_parts) == 3:
-                        norwegian_date = f"{date_parts[2]}.{date_parts[1]}.{date_parts[0]}"
-                        content += f"Sist oppdatert: {norwegian_date}\n"
-                except:
-                    content += f"Sist oppdatert: {metadata['metadatacreationdate']}\n"
-            content += f"Mer informasjon: {source_url}"
+            # Create or append to document group
+            if base_title not in document_groups:
+                document_groups[base_title] = []
+            document_groups[base_title].append((row, chunk_indicator))
+        
+        documents = []
+        for base_title, chunks in document_groups.items():
+            # Sort chunks by their indicator if they have one
+            chunks.sort(key=lambda x: int(x[1]) if x[1] and x[1].isdigit() else 0)
             
-            documents.append(Document(
-                page_content=content,
-                metadata=metadata
-            ))
+            # If there's only one chunk or no chunk indicators, process normally (BASICALLY THE CSV from VDB)
+            if len(chunks) == 1 or all(c[1] is None for c in chunks):
+                for row, _ in chunks:
+                    metadata = {
+                        "uuid": row[0],
+                        "title": row[1],
+                        "image": row[3] if len(row) > 3 else None,
+                        "metadatacreationdate": row[4] if len(row) > 4 else None
+                    }
+                    url_formatted_title = row[1].replace(' ', '-')
+                    source_url = f"https://kartkatalog.geonorge.no/metadata/{url_formatted_title}/{row[0]}"
+                    
+                    content = f"Datasett: {row[1]}\n"
+                    if len(row) > 2 and row[2]:
+                        content += f"Beskrivelse: {row[2]}\n"
+                    if metadata["metadatacreationdate"]:
+                        try:
+                            date_parts = metadata["metadatacreationdate"].split('-')
+                            if len(date_parts) == 3:
+                                norwegian_date = f"{date_parts[2]}.{date_parts[1]}.{date_parts[0]}"
+                                content += f"Sist oppdatert: {norwegian_date}\n"
+                        except:
+                            content += f"Sist oppdatert: {metadata['metadatacreationdate']}\n"
+                    content += f"Mer informasjon: {source_url}"
+                    
+                    documents.append(Document(
+                        page_content=content,
+                        metadata=metadata
+                    ))
+            else:
+                # Combine chunks from the same document
+                combined_row = chunks[0][0]  # Use first chunk as base
+                combined_abstract = ""
+                
+                # Combine abstracts from all chunks
+                for row, _ in chunks:
+                    if len(row) > 2 and row[2]:
+                        if combined_abstract:
+                            combined_abstract += " "
+                        combined_abstract += row[2]
+                
+                metadata = {
+                    "uuid": combined_row[0],
+                    "title": base_title, # NO DEL X, REMOVED FROM TITLE
+                    "image": combined_row[3] if len(combined_row) > 3 else None,
+                    "metadatacreationdate": combined_row[4] if len(combined_row) > 4 else None,
+                    "is_combined": True,
+                    "chunk_count": len(chunks)
+                }
+                
+                url_formatted_title = base_title.replace(' ', '-')
+                source_url = f"https://kartkatalog.geonorge.no/metadata/{url_formatted_title}/{combined_row[0]}"
+                
+                content = f"Datasett: {base_title}\n"
+                content += f"Beskrivelse: {combined_abstract}\n"
+                
+                if metadata["metadatacreationdate"]:
+                    try:
+                        date_parts = metadata["metadatacreationdate"].split('-')
+                        if len(date_parts) == 3:
+                            norwegian_date = f"{date_parts[2]}.{date_parts[1]}.{date_parts[0]}"
+                            content += f"Sist oppdatert: {norwegian_date}\n"
+                    except:
+                        content += f"Sist oppdatert: {metadata['metadatacreationdate']}\n"
+                content += f"Mer informasjon: {source_url}"
+                
+                documents.append(Document(
+                    page_content=content,
+                    metadata=metadata
+                ))
         
         if not documents:
             documents.append(Document(
@@ -274,19 +338,24 @@ class EnhancedGeoNorgeRAGChain:
             response_templates = {
                 "initial_search": """
                 System: Du er en hjelpsom assistent som hjelper brukere å finne geodata og datasett i Geonorge. 
-                Bruk konteksten til å foreslå MAKS 5 relevante datasett.
-                Fremhev datasettenes navn med ** for å trigge bildevisning.
-                VIKTIG: Ikke foreslå generiske datasett som ikke finnes i konteksten.
-                Hvis du ikke finner relevante datasett i konteksten, ikke forsøk å foreslå fiktive datasett.
-                I stedet, informer brukeren om at du ikke fant noe som matcher direkte, og be om mer spesifikk informasjon.
+                Du kan også svare på spørsmål om GeoGPT og systemrelaterte spørsmål.
+                
+                For datasettrelaterte spørsmål:
+                - Bruk konteksten til å foreslå MAKS 5 relevante datasett
+                - Fremhev datasettenes navn med ** for å trigge bildevisning
+                - Ikke foreslå generiske datasett som ikke finnes i konteksten
+                - Hvis du ikke finner relevante datasett, ikke forsøk å foreslå fiktive datasett
+                
+                For GeoGPT-relaterte spørsmål:
+                - Svar direkte og informativt om GeoGPT og systemets funksjonalitet
+                - Forklar hvordan GeoGPT kan hjelpe med å finne og forstå geografiske data
+                - Beskriv tilgjengelige funksjoner og hvordan de kan brukes
                 
                 VIKTIG: Hvis spørsmålet er vagt eller generelt:
-                1. List opp relevante datasett du har funnet (maks 5)
-                2. Still ETT eller TO korte, konverserende oppfølgingsspørsmål som hjelper brukeren å spesifisere søket sitt videre.
-                   For eksempel: "Kan du spesifisere hvilket geografisk område du er interessert i?" eller "Hvilken type naturområder er du mest interessert i?"
+                1. List opp relevante datasett du har funnet (maks 5) eller gi relevant systeminformasjon
+                2. Still ETT eller TO korte, konverserende oppfølgingsspørsmål som hjelper brukeren videre
                 
                 IKKE bruk punktlister for oppfølgingsspørsmål. Hold oppfølgingsdelen kort, konverserende, og integrert i svaret.
-                Oppfølgingsspørsmålene skal være relevante for datasettene du nettopp har foreslått.
                 """,
                 "dataset_details": """
                 System: Du er en hjelpsom assistent som hjelper brukere å finne geodata og datasett i Geonorge.
