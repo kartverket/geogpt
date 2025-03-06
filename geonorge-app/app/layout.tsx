@@ -1,12 +1,13 @@
 "use client";
 import "./globals.css";
 import { Inter } from "next/font/google";
+import { LanguageProvider } from "@/i18n/LanguageContext";
 
 // Load Inter font with specific weights
 const inter = Inter({
   subsets: ["latin"],
   weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
-  variable: "--font-inter", // Add a CSS variable for the font
+  variable: "--font-inter",
 });
 
 export default function RootLayout({
@@ -29,7 +30,9 @@ export default function RootLayout({
         />
         <link rel="icon" href="https://kartkatalog.geonorge.no/favicon.ico" />
       </head>
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        <LanguageProvider>{children}</LanguageProvider>
+      </body>
     </html>
   );
 }
