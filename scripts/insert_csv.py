@@ -94,7 +94,7 @@ def main():
         insert_csv_data_modified(file_path, table_name)
     finally:
         connection.close()
-        print("Forbindelsen til databasen ble lukket.")
+        print("Forbindelsen til databasen ble lukket, alt gikk bra!")
 
 if __name__ == "__main__":
     main()
