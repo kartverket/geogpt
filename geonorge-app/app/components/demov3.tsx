@@ -4,6 +4,11 @@ import { useEffect, useState, useRef, FormEvent } from "react";
 import { Maximize, MessageSquare } from "lucide-react";
 import Image from "next/image";
 
+// Chat components
+import { ChatWindow } from "./chat/ChatWindow";
+import { useWebSocket } from "./chat/useWebSocket";
+import { ChatMessage, WMSLayer, MessageType, Address, SearchResult } from "./chat/types";
+
 // Components
 import { AppSidebar } from "@/components/app-sidebar";
 import { KartkatalogTab } from "@/components/kartkatalog-tab";
@@ -17,11 +22,7 @@ import "leaflet/dist/leaflet.css";
 import { Button } from "@/components/ui/button";
 import { Chat as FullScreenChat } from "@/components/ui/chat";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import {
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-} from "@/components/ui/popover";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 
 // Utils
 import {
@@ -31,64 +32,13 @@ import {
   getAreaFormatsAndProjections,
 } from "@/utils/datasetUtils";
 
-interface WMSLayer {
-  name: string;
-  title: string;
-}
 
-type MessageType = {
-  action: string;
-  payload?: any;
-  isNewMessage?: boolean;
-};
-
-interface Address {
-  adressetekst: string;
-  poststed?: string;
-  representasjonspunkt: {
-    lat: number;
-    lon: number;
-  };
-}
-
-// Update the ChatMessage interface to include title and downloadFormats
-interface ChatMessage {
-  title: string;
-  type: "text" | "image" | "streaming";
-  content?: string;
-  imageUrl?: string;
-  downloadUrl?: string | null;
-  wmsUrl?: string | null;
-  uuid?: string;
-  downloadFormats?: {
-    type: string;
-    name: string;
-    code: string;
-    projections?: { name: string; code: string }[];
-    formats?: { name: string }[];
-  }[];
-}
-
-export interface SearchResult {
-  title?: string;
-  wmsUrl?: string;
-  downloadUrl?: string | null;
-  restricted?: boolean;
-  uuid?: string;
-  downloadFormats?: {
-    type: string;
-    name: string;
-    code: string;
-    projections?: { name: string; code: string }[];
-    formats?: { name: string }[];
-  }[];
-}
+const INITIAL_MAP_URL = "https://norgeskart.no/geoportal/#!?zoom=4.6366666666666685&lon=168670.22&lat=6789452.95&wms=https:%2F%2Fnve.geodataonline.no%2Farcgis%2Fservices%2FSkredKvikkleire2%2FMapServer%2FWMSServer&project=geonorge&layers=1002";
 
 const DemoV3 = () => {
   const [map, setMap] = useState<L.Map | null>(null);
   const [wmsLayer, setWmsLayer] = useState<Record<string, L.TileLayer.WMS>>({});
   const [searchResults2, setSearchResults2] = useState<Address[]>([]);
-  const [searchResults, setSearchResults] = useState<Address[]>([]);
 
   const [userMarker, setUserMarker] = useState<L.Marker | null>(null);
   const [searchMarker, setSearchMarker] = useState<L.Marker | null>(null);
@@ -129,6 +79,15 @@ const DemoV3 = () => {
   // UUid to find
   const [uuidToFind, setUuidToFind] = useState<string>("");
 
+  //chat related state
+  const [isFullScreen, setIsFullScreen] = useState(false);
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const [chatInput, setChatInput] = useState("");
+  const [iframeSrc, setIframeSrc] = useState(INITIAL_MAP_URL);
+  const [searchInput, setSearchInput] = useState("");
+
+  const { ws, messages, isStreaming, sendMessage } = useWebSocket();
+
   // Add this near the top of the file, after the imports
   useEffect(() => {
     // Fix Leaflet's default icon path issues
@@ -161,7 +120,6 @@ const DemoV3 = () => {
         button.title = "Find my location";
         button.innerHTML =
           '<div class="flex items-center justify-center w-full h-full"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-locate"><line x1="2" x2="5" y1="12" y2="12"/><line x1="19" x2="22" y1="12" y2="12"/><line x1="12" x2="12" y1="2" y2="5"/><line x1="12" x2="12" y1="19" y2="22"/><circle cx="12" cy="12" r="7"/></svg></div>';
-
         L.DomEvent.disableClickPropagation(button)
           .disableScrollPropagation(button)
           .on(button, "click", function (e) {
@@ -331,16 +289,13 @@ const DemoV3 = () => {
     updateLayers();
   }, [selectedLayers]);
 
-  const [ws, setWs] = useState<WebSocket | null>(null);
+  // vet ikke helt hva denne gjør men hvis den er fjernet så vil det ikke fungere, "_" skal egentlig være "ws"
+  const [_, setWs] = useState<WebSocket | null>(null); 
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const [chatInput, setChatInput] = useState("");
 
   // State for chat streaming
   const [isChatStreaming, setIsChatStreaming] = useState(false);
 
-  // State for full screen mode and popover open state
-  const [isFullScreen, setIsFullScreen] = useState(false);
-  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -395,6 +350,7 @@ const DemoV3 = () => {
   const handleServerMessage = (data: MessageType) => {
     const { action, payload } = data;
     console.log("Incoming action:", action, "payload:", payload);
+  
     switch (action) {
       case "chatStream":
         setIsChatStreaming(true);
@@ -406,9 +362,14 @@ const DemoV3 = () => {
             lastMsg.type !== "streaming" ||
             payload.isNewMessage
           ) {
+            // Add title here to satisfy the ChatMessage type
             return [
               ...prev,
-              { type: "streaming", content: payload.payload || "" },
+              {
+                title: "Streaming message",  // Added title here
+                type: "streaming",
+                content: payload.payload || "",
+              },
             ];
           } else {
             const updated: ChatMessage = {
@@ -426,7 +387,10 @@ const DemoV3 = () => {
           const lastMsg = prev[prev.length - 1];
           if (!lastMsg || lastMsg.type !== "streaming") return prev;
           const systemMsg = `System: ${lastMsg.content}`;
-          const converted: ChatMessage = { type: "text", content: systemMsg };
+          const converted: ChatMessage = {
+            type: "text", content: systemMsg,
+            title: ""
+          };
           return [...prev.slice(0, -1), converted];
         });
         break;
@@ -516,7 +480,8 @@ const DemoV3 = () => {
         console.log("Unknown action:", data);
     }
   };
-
+  
+  const [searchResults, setSearchResults] = useState<any[]>([]);
   // Update the interface for WMS data
   interface WMSData {
     wms_url: string;
@@ -527,6 +492,7 @@ const DemoV3 = () => {
   // Update the replaceIframe function
   const replaceIframe = (wmsUrl: any) => {
     // Handle object type WMS URL
+    console.log('🔗 WMS URL:', wmsUrl);
     if (typeof wmsUrl === "object" && wmsUrl.wms_url) {
       setWmsUrl(wmsUrl.wms_url);
       if (wmsUrl.available_layers) {
@@ -572,7 +538,6 @@ const DemoV3 = () => {
       fetchWMSInfo();
     }
   };
-
   // const onSearchSubmit = (e: FormEvent<HTMLFormElement>) => {
   //   e.preventDefault();
   //   if (!ws || ws.readyState !== WebSocket.OPEN) return;
@@ -588,32 +553,19 @@ const DemoV3 = () => {
   const onChatSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const trimmedInput = chatInput.trim();
-    if (
-      !ws ||
-      ws.readyState !== WebSocket.OPEN ||
-      !trimmedInput ||
-      isChatStreaming
-    )
+    if (!trimmedInput || isStreaming) {
+      console.log('⚠️ Chat submission prevented:', { isEmpty: !trimmedInput, isStreaming });
       return;
-    ws.send(
-      JSON.stringify({ action: "chatFormSubmit", payload: trimmedInput })
-    );
-    setChatMessages((prev) => [
-      ...prev,
-      { type: "text", content: `You: ${trimmedInput}` },
-    ]);
+    }
+    console.log('💬 Submitting chat message:', trimmedInput);
+    sendMessage(trimmedInput);
     setChatInput("");
-    setIsChatStreaming(true);
   };
 
   // Shared function for sending a message
   const handleSendMessage = (message: string) => {
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    ws.send(JSON.stringify({ action: "chatFormSubmit", payload: message }));
-    setChatMessages((prev) => [
-      ...prev,
-      { type: "text", content: `You: ${message}` },
-    ]);
+    console.log('📨 Handling message send:', message);
+    sendMessage(message);
   };
 
   // Full screen chat handlers
@@ -637,7 +589,7 @@ const DemoV3 = () => {
 
   // Transform chatMessages to the shape expected by the FullScreenChat component.
   const transformMessagesForChatKit = () => {
-    return chatMessages.map((msg, idx) => {
+    return messages.map((msg, idx) => {
       if (msg.type === "image" && msg.imageUrl) {
         return {
           id: `msg-${idx}`,
@@ -724,6 +676,16 @@ const DemoV3 = () => {
       handleDirectDownload(msg.downloadUrl);
     } else {
       console.warn("No download URL or formats available");
+    }
+  };
+
+  const handleDownloadClickWrapper = (url: string) => {
+    // Find the corresponding message with the URL (or handle the case if the URL is not found)
+    const msg = messages.find((message) => message.downloadUrl === url);
+    if (msg) {
+      handleDatasetDownload(msg);
+    } else {
+      console.warn("Message with the specified download URL not found.");
     }
   };
 
@@ -1017,138 +979,17 @@ const DemoV3 = () => {
                 align="end"
                 className="w-96 h-[28rem] p-0 overflow-hidden shadow-lg rounded-lg"
               >
-                <div className="flex flex-col h-full bg-white">
-                  <div className="bg-gray-200 px-4 py-2 flex justify-between items-center">
-                    <span className="font-semibold">GeoGPT Chat</span>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={enterFullScreen}
-                      >
-                        <Maximize />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="px-4"
-                        onClick={() => setIsPopoverOpen(false)}
-                      >
-                        X
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div
-                    id="chatMessages"
-                    className="flex-1 p-4 overflow-y-auto space-y-2"
-                  >
-                    <div className="text-sm text-gray-600">
-                      Hei! Jeg er GeoGPT. Spør meg om geodata!
-                    </div>
-                    {chatMessages.map((msg, idx) => {
-                      if (msg.type === "image" && msg.imageUrl) {
-                        return (
-                          <div
-                            key={idx}
-                            className="flex flex-col space-y-2 my-2"
-                          >
-                            <Image
-                              src={msg.imageUrl || "/placeholder.svg"}
-                              alt="Dataset"
-                              className="max-w-full h-auto rounded"
-                              width={400}
-                              height={300}
-                            />
-                            <div className="flex gap-2">
-                              <Button
-                                onClick={() => {
-                                  if (msg.wmsUrl && msg.wmsUrl !== "None") {
-                                    replaceIframe(msg.wmsUrl);
-                                  }
-                                }}
-                                className={`text-xs ${
-                                  msg.wmsUrl && msg.wmsUrl !== "None"
-                                    ? "bg-green-500 text-white"
-                                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                                }`}
-                                disabled={!msg.wmsUrl || msg.wmsUrl === "None"}
-                              >
-                                Vis
-                              </Button>
-                              {msg.downloadUrl && (
-                                <Button
-                                  onClick={() => handleDatasetDownload(msg)}
-                                  className="bg-green-500 text-white text-xs"
-                                >
-                                  Last ned datasett
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      } else {
-                        let content = msg.content || "";
-                        let isUser = false;
-                        if (content.startsWith("You: ")) {
-                          isUser = true;
-                          content = content.slice("You: ".length);
-                        } else if (content.startsWith("System: ")) {
-                          content = content.slice("System: ".length);
-                        }
-                        content = content.replace(
-                          /\*\*(.*?)\*\*/g,
-                          "<strong>$1</strong>"
-                        );
-                        return (
-                          <div
-                            key={idx}
-                            className={`flex ${
-                              isUser ? "justify-end" : "justify-start"
-                            }`}
-                          >
-                            <div
-                              className={`max-w-[80%] p-2 rounded shadow text-sm whitespace-pre-wrap ${
-                                isUser ? "bg-blue-100" : "bg-gray-100"
-                              }`}
-                            >
-                              {isUser ? (
-                                <strong>You:</strong>
-                              ) : (
-                                <strong>System:</strong>
-                              )}
-                              <span
-                                className="ml-1"
-                                dangerouslySetInnerHTML={{ __html: content }}
-                              />
-                            </div>
-                          </div>
-                        );
-                      }
-                    })}
-                    <div ref={chatEndRef} />
-                  </div>
-
-                  <form
-                    onSubmit={onChatSubmit}
-                    className="flex items-center border-t border-gray-300 p-2"
-                  >
-                    <input
-                      type="text"
-                      value={chatInput}
-                      onChange={(e) => setChatInput(e.target.value)}
-                      placeholder="Spør GeoGPT..."
-                      className="flex-1 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <Button
-                      type="submit"
-                      className="ml-2 text-sm"
-                      disabled={isChatStreaming || !chatInput.trim()}
-                    >
-                      Send
-                    </Button>
-                  </form>
-                </div>
+                 <ChatWindow
+                  messages={messages}
+                  input={chatInput}
+                  onInputChange={(value) => setChatInput(value)}
+                  onSubmit={onChatSubmit}
+                  isStreaming={isStreaming}
+                  onWmsClick={replaceIframe}
+                  onDownloadClick={handleDownloadClickWrapper}
+                  onEnterFullScreen={enterFullScreen}
+                  onClose={() => setIsPopoverOpen(false)}
+                />
               </PopoverContent>
             </Popover>
           </div>
@@ -1166,10 +1007,15 @@ const DemoV3 = () => {
             <div className="p-4 h-full">
               <FullScreenChat
                 messages={transformMessagesForChatKit()}
-                handleSubmit={fullScreenHandleSubmit}
+                handleSubmit={(e) => {
+                  e?.preventDefault?.();
+                  if (!chatInput.trim() || isStreaming) return;
+                  handleSendMessage(chatInput);
+                  setChatInput("");
+                }}
                 input={chatInput}
-                handleInputChange={fullScreenHandleInputChange}
-                isGenerating={false}
+                handleInputChange={(e) => setChatInput(e.target.value)}
+                isGenerating={isStreaming}
                 stop={() => {}}
                 append={handleAppend}
                 suggestions={suggestions}
@@ -1211,3 +1057,7 @@ const DemoV3 = () => {
 };
 
 export default DemoV3;
+function sleep(arg0: number) {
+  throw new Error("Function not implemented.");
+}
+
