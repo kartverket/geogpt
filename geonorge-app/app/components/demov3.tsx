@@ -1,8 +1,3 @@
-// Iframe blir erstatet riktig i console.log men den blir ikke erstatet i koden. altså ingenting skje selv om at noe skal skje
-// se på denne funksjonen for å prøve å fikse problemet "replaceIframe"
-// chatbotten har kraftig demenst og hjerneskade don't know why, muligens noe feil med websocket
-
-
 "use client";
 
 import { useEffect, useState, useRef, FormEvent } from "react";
