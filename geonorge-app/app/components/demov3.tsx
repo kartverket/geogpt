@@ -543,6 +543,7 @@ const DemoV3 = () => {
     wms_url: string;
     available_layers: WMSLayer[];
     available_formats: string[];
+    title?: string; // Add title to the interface
   }
 
   const replaceIframe = async (wmsUrl: any, datasetTitle?: string) => {
@@ -557,10 +558,14 @@ const DemoV3 = () => {
 
     let processedWmsUrl: string;
     let extractedLayers: WMSLayer[] = [];
+    let extractedTitle: string | undefined = datasetTitle;
+
 
     if (typeof wmsUrl === "object" && wmsUrl.wms_url) {
       processedWmsUrl = wmsUrl.wms_url;
       extractedLayers = wmsUrl.available_layers || [];
+      extractedTitle = wmsUrl.title || datasetTitle;
+
     } else {
       try {
         const wmsData =
@@ -587,13 +592,13 @@ const DemoV3 = () => {
     });
 
     if (isDuplicate) {
-      setDuplicateDatasetTitle(datasetTitle || "Dette datasettet");
+      setDuplicateDatasetTitle(extractedTitle || "Dette datasettet");
       setIsDuplicateAlertOpen(true);
       return;
     }
 
     const datasetId = `dataset-${Date.now()}`;
-    const title = datasetTitle || `Dataset ${trackedDatasets.length + 1}`;
+    const title = extractedTitle || `Dataset ${trackedDatasets.length + 1}`;
 
     if (extractedLayers.length === 0) {
       const layerData = await fetchWMSInfo(processedWmsUrl);

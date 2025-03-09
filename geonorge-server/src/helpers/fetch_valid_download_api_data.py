@@ -27,6 +27,8 @@ async def get_wms(uuid: str) -> dict:
         if not capabilities_url:
             return {'error': 'No WMS capabilities URL found'}
 
+        dataset_title = raw.get('Title', '')
+
         async with aiohttp.ClientSession() as session:
             async with session.get(capabilities_url) as response:
                 if not response.ok:
@@ -56,7 +58,8 @@ async def get_wms(uuid: str) -> dict:
                 return {
                     "wms_url": capabilities_url,
                     "available_layers": layers,
-                    "available_formats": formats
+                    "available_formats": formats,
+                    "title": dataset_title
                 }
 
     except ElementTree.ParseError:
