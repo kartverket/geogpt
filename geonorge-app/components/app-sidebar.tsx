@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useState } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import Image from "next/image";
 
 // Logo
@@ -19,6 +19,9 @@ import {
   Shield,
   Search,
   ChevronDown,
+  ChevronUp,
+  Trash2,
+  X,
   Wrench,
 } from "lucide-react";
 
@@ -46,16 +49,26 @@ interface LayerChangeFunctions {
   changeToRasterKart: () => void;
 }
 
+interface TrackedDataset {
+  id: string;
+  title: string;
+  wmsUrl: string;
+  availableLayers: WMSLayer[];
+  selectedLayers: string[];
+}
+
 export function AppSidebar({
-  selectedLayers,
-  onLayerChange,
   availableLayers = [],
+  trackedDatasets = [],
+  onLayerChangeWithDataset,
+  onRemoveDataset,
   onChangeBaseLayer,
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
-  selectedLayers: string[];
-  onLayerChange: (layerName: string, isChecked: boolean) => void;
   availableLayers?: WMSLayer[];
+  trackedDatasets?: TrackedDataset[];
+  onLayerChangeWithDataset?: (datasetId: string, layerName: string, isChecked: boolean) => void;
+  onRemoveDataset?: (datasetId: string) => void;
   onChangeBaseLayer?: LayerChangeFunctions;
 }) {
   const { language, setLanguage, t } = useLanguage();
@@ -66,9 +79,60 @@ export function AppSidebar({
   const [selectedBaseMap, setSelectedBaseMap] = useState<string>("landskart");
   const [isBaseMapSectionVisible, setIsBaseMapSectionVisible] = useState(true);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
+  const [expandedDatasets, setExpandedDatasets] = React.useState<Record<string, boolean>>({});
 
-  const filteredLayers = availableLayers.filter((layer) =>
-    layer.title.toLowerCase().includes(layerSearch.toLowerCase())
+  // Add refs to track scroll positions
+  const datasetScrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const datasetScrollPositionRef = useRef<Record<string, number>>({});
+  const mainScrollPositionRef = useRef<number>(0); // New ref for main container scroll
+
+  // Save scroll position before toggling dataset expansion
+  const handleToggleDatasetExpansion = (datasetId: string) => {
+    // Save the main container scroll position
+    if (datasetScrollContainerRef.current) {
+      mainScrollPositionRef.current = datasetScrollContainerRef.current.scrollTop;
+    }
+
+    // If dataset is expanded, save its scroll position before collapsing
+    if (expandedDatasets[datasetId] && datasetScrollContainerRef.current) {
+      const datasetElement = datasetScrollContainerRef.current.querySelector(
+        `[data-dataset-id="${datasetId}"]`
+      );
+      
+      if (datasetElement) {
+        const scrollContainer = datasetElement.querySelector('.dataset-layer-container') as HTMLElement;
+        if (scrollContainer) {
+          datasetScrollPositionRef.current[datasetId] = scrollContainer.scrollTop;
+        }
+      }
+    }
+    
+    // Toggle the dataset expansion
+    setExpandedDatasets(prev => ({
+      ...prev,
+      [datasetId]: !prev[datasetId]
+    }));
+  };
+
+  // Filter layers based on search
+  const filteredLayers = useMemo(() => 
+    availableLayers.filter((layer) =>
+      layer.title.toLowerCase().includes(layerSearch.toLowerCase())
+    ),
+    [availableLayers, layerSearch]
+  );
+  
+  // Filter datasets based on search
+  const filteredDatasets = useMemo(() => 
+    trackedDatasets
+      .map(dataset => ({
+        ...dataset,
+        availableLayers: dataset.availableLayers.filter(layer =>
+          layer.title.toLowerCase().includes(layerSearch.toLowerCase())
+        ),
+      }))
+      .filter(dataset => dataset.availableLayers.length > 0),
+    [trackedDatasets, layerSearch]
   );
 
   const cn = (...classes: string[]) => {
@@ -208,7 +272,6 @@ export function AppSidebar({
     e.preventDefault();
     e.stopPropagation();
     setLayerSearch(e.target.value);
-    // Make sure input keeps focus
     if (searchInputRef.current) {
       searchInputRef.current.focus();
     }
@@ -219,6 +282,83 @@ export function AppSidebar({
       searchInputRef.current.focus();
     }
   }, [layerSearch]);
+
+  // Deselect all layers across all datasets
+  const deselectAllLayersGlobally = () => {
+    if (!onLayerChangeWithDataset) return;
+    trackedDatasets.forEach(dataset => {
+      dataset.selectedLayers.forEach(layerName => {
+        onLayerChangeWithDataset(dataset.id, layerName, false);
+      });
+    });
+  };
+  
+  // Check if any layers are selected in any dataset
+  const hasSelectedLayers = trackedDatasets.some(dataset => dataset.selectedLayers.length > 0);
+
+  // Handle checkbox change with scroll position preservation
+  const handleLayerChange = (datasetId: string, layerName: string, checked: boolean) => {
+    if (datasetScrollContainerRef.current) {
+      mainScrollPositionRef.current = datasetScrollContainerRef.current.scrollTop;
+    }
+    
+    // Store current scroll position for the specific dataset container
+    if (datasetScrollContainerRef.current) {
+      const datasetElement = datasetScrollContainerRef.current.querySelector(
+        `[data-dataset-id="${datasetId}"]`
+      );
+      if (datasetElement) {
+        const scrollContainer = datasetElement.querySelector('.dataset-layer-container') as HTMLElement;
+        if (scrollContainer) {
+          datasetScrollPositionRef.current[datasetId] = scrollContainer.scrollTop;
+        }
+      }
+    }
+    if (onLayerChangeWithDataset) {
+      onLayerChangeWithDataset(datasetId, layerName, checked);
+    }
+  };
+
+  // Restore scroll positions after render
+  useEffect(() => {
+    if (datasetScrollContainerRef.current) {
+      // First restore the main container scroll position
+      datasetScrollContainerRef.current.scrollTop = mainScrollPositionRef.current;
+      
+      // Then restore individual dataset scroll positions
+      Object.keys(expandedDatasets).forEach(datasetId => {
+        if (expandedDatasets[datasetId] && datasetScrollPositionRef.current[datasetId] !== undefined) {
+          const datasetElement = datasetScrollContainerRef.current?.querySelector(
+            `[data-dataset-id="${datasetId}"]`
+          );
+          if (datasetElement) {
+            const scrollContainer = datasetElement.querySelector('.dataset-layer-container') as HTMLElement;
+            if (scrollContainer) {
+              scrollContainer.scrollTop = datasetScrollPositionRef.current[datasetId];
+            }
+          }
+        }
+      });
+    }
+  }, [trackedDatasets, expandedDatasets]); 
+
+  // Also save main scroll position when removing datasets
+  const handleRemoveDataset = (datasetId: string) => {
+    if (datasetScrollContainerRef.current) {
+      mainScrollPositionRef.current = datasetScrollContainerRef.current.scrollTop;
+    }
+    if (onRemoveDataset) {
+      onRemoveDataset(datasetId);
+    }
+  };
+
+  // Also save main scroll position when deselecting all layers
+  const handleDeselectAllLayers = () => {
+    if (datasetScrollContainerRef.current) {
+      mainScrollPositionRef.current = datasetScrollContainerRef.current.scrollTop;
+    }
+    deselectAllLayersGlobally();
+  };
 
   return (
     <Sidebar
@@ -235,7 +375,6 @@ export function AppSidebar({
       <SidebarHeader className="p-4 border-b bg-white shadow-sm flex-shrink-0">
         <GeoNorgeLogo className="h-auto w-40 mx-auto" />
       </SidebarHeader>
-
       <SidebarContent className="p-4 flex-grow overflow-y-auto">
         <div className="space-y-4">
           <Section
@@ -276,7 +415,6 @@ export function AppSidebar({
                     {t("landscape_map")}
                   </span>
                 </button>
-
                 <button
                   className={cn(
                     "flex flex-col items-center p-2 rounded-md border transition-colors",
@@ -303,7 +441,6 @@ export function AppSidebar({
                     {t("grayscale_map")}
                   </span>
                 </button>
-
                 <button
                   className={cn(
                     "flex flex-col items-center p-2 rounded-md border transition-colors",
@@ -342,15 +479,7 @@ export function AppSidebar({
             onToggle={() => setIsLayerSectionVisible(!isLayerSectionVisible)}
           >
             <div className="space-y-3">
-              <div
-                className="relative"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (searchInputRef.current) {
-                    searchInputRef.current.focus();
-                  }
-                }}
-              >
+              <div className="relative">
                 <input
                   ref={searchInputRef}
                   type="text"
@@ -368,44 +497,107 @@ export function AppSidebar({
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               </div>
 
-              <div
-                className={cn(
-                  "rounded-md border border-gray-200 bg-white overflow-hidden",
-                  isLayerSectionVisible ? "max-h-[25vh]" : "max-h-0"
-                )}
-              >
-                {filteredLayers.length > 0 ? (
-                  <div className="overflow-y-auto max-h-[25vh] divide-y divide-gray-100">
-                    {filteredLayers.map((layer) => (
-                      <div
-                        key={layer.name}
-                        className="flex items-center gap-2.5 p-2.5 hover:bg-gray-50 transition-colors"
+              {/* Add tracked datasets section */}
+              {trackedDatasets.length > 0 && (
+                <div className="mb-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="font-medium text-sm text-gray-700">{t("active_datasets")}</span>
+                    {hasSelectedLayers && (
+                      <button 
+                        onClick={handleDeselectAllLayers}
+                        className="flex items-center gap-1 text-xs px-2 py-1 bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors"
                       >
-                        <Checkbox
-                          checked={selectedLayers.includes(layer.name)}
-                          id={layer.name}
-                          onCheckedChange={(checked) => {
-                            onLayerChange(layer.name, checked as boolean);
-                          }}
-                          className="h-4 w-4 border-gray-300 rounded"
-                        />
-                        <label
-                          htmlFor={layer.name}
-                          className="text-sm cursor-pointer flex-1 truncate text-gray-700"
+                        <Trash2 className="h-3 w-3" />
+                        <span>{t("deselect_all")}</span>
+                      </button>
+                    )}
+                  </div>
+                  
+                  <div 
+                    className="space-y-2 max-h-[30vh] overflow-y-auto" 
+                    ref={datasetScrollContainerRef}
+                    id="datasets-scroll-container"
+                  >
+                    {filteredDatasets.map((dataset) => (
+                      <div 
+                        key={dataset.id} 
+                        className="border border-gray-200 rounded-md bg-white overflow-hidden"
+                        data-dataset-id={dataset.id}
+                      >
+                        <div 
+                          className="flex items-center justify-between p-2.5 bg-gray-50 cursor-pointer border-b border-gray-100"
+                          onClick={() => handleToggleDatasetExpansion(dataset.id)}
                         >
-                          {layer.title}
-                        </label>
+                          <div className="flex items-center gap-2">
+                            <div className="bg-color-gn-primary/10 rounded-md p-1.5 flex items-center justify-center">
+                              <Layers2 className="h-3.5 w-3.5 text-color-gn-primary" />
+                            </div>
+                            <span className="font-medium text-sm">{dataset.title}</span>
+                            <span className="text-xs bg-color-gn-primary/10 text-color-gn-primary px-1.5 py-0.5 rounded">
+                              {dataset.selectedLayers.length}/{dataset.availableLayers.length}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            {onRemoveDataset && (
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRemoveDataset(dataset.id);
+                                }}
+                                className="p-1 rounded-md hover:bg-gray-100 text-gray-500 hover:text-red-500 transition-colors"
+                                title={t("remove_dataset")}
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            )}
+                            {expandedDatasets[dataset.id] ? 
+                              <ChevronUp className="h-4 w-4 text-gray-500" /> : 
+                              <ChevronDown className="h-4 w-4 text-gray-500" />
+                            }
+                          </div>
+                        </div>
+                        
+                        {expandedDatasets[dataset.id] && (
+                          <div 
+                            className="max-h-[20vh] overflow-y-auto dataset-layer-container"
+                          >
+                            {dataset.availableLayers.map((layer) => (
+                              <div 
+                                key={`${dataset.id}-${layer.name}`}
+                                className="flex items-center gap-2.5 p-2.5 hover:bg-gray-50 transition-colors border-t border-gray-100 first:border-t-0"
+                              >
+                                <Checkbox
+                                  checked={dataset.selectedLayers.includes(layer.name)}
+                                  id={`${dataset.id}-${layer.name}`}
+                                  onCheckedChange={(checked) => {
+                                    handleLayerChange(dataset.id, layer.name, checked as boolean);
+                                  }}
+                                  className="h-4 w-4 border-gray-300 rounded"
+                                />
+                                <label
+                                  htmlFor={`${dataset.id}-${layer.name}`}
+                                  className="text-sm cursor-pointer flex-1 truncate text-gray-700"
+                                >
+                                  {layer.title}
+                                </label>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
-                ) : (
-                  <div className="p-4 text-center">
-                    <p className="text-sm text-gray-500">
-                      {t("no_layers_found")}
-                    </p>
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
+              
+              {/* Show a message when no layers or datasets match the search */}
+              {filteredLayers.length === 0 && filteredDatasets.length === 0 && layerSearch.trim() !== "" && (
+                <div className="p-4 text-center border border-gray-200 bg-white rounded-md">
+                  <p className="text-sm text-gray-500">
+                    {t("no_layers_found")}
+                  </p>
+                </div>
+              )}
             </div>
           </Section>
           <Section
@@ -449,7 +641,6 @@ export function AppSidebar({
               </a>
             ))}
           </div>
-
           <div className="pt-2 border-t border-gray-200">
             <div className="flex items-center justify-center gap-3 text-sm">
               <button
