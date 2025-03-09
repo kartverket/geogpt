@@ -46,6 +46,16 @@ interface LayerChangeFunctions {
   changeToRasterKart: () => void;
 }
 
+interface TrackedDataset {
+  id: string;
+  title: string;
+  wmsUrl: string;
+  availableLayers: WMSLayer[];
+  selectedLayers: string[];
+  titleMatch?: boolean; // Added for search highlighting
+}
+
+
 export function AppSidebar({
   selectedLayers,
   onLayerChange,
@@ -67,9 +77,69 @@ export function AppSidebar({
   const [isBaseMapSectionVisible, setIsBaseMapSectionVisible] = useState(true);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
 
-  const filteredLayers = availableLayers.filter((layer) =>
-    layer.title.toLowerCase().includes(layerSearch.toLowerCase())
+  // Save scroll position before toggling dataset expansion
+  const handleToggleDatasetExpansion = (datasetId: string) => {
+    // Save the main container scroll position
+    if (datasetScrollContainerRef.current) {
+      mainScrollPositionRef.current = datasetScrollContainerRef.current.scrollTop;
+    }
+
+    // If dataset is expanded, save its scroll position before collapsing
+    if (expandedDatasets[datasetId] && datasetScrollContainerRef.current) {
+      const datasetElement = datasetScrollContainerRef.current.querySelector(
+        `[data-dataset-id="${datasetId}"]`
+      );
+      
+      if (datasetElement) {
+        const scrollContainer = datasetElement.querySelector('.dataset-layer-container') as HTMLElement;
+        if (scrollContainer) {
+          datasetScrollPositionRef.current[datasetId] = scrollContainer.scrollTop;
+        }
+      }
+    }
+    
+    // Toggle the dataset expansion
+    setExpandedDatasets(prev => ({
+      ...prev,
+      [datasetId]: !prev[datasetId]
+    }));
+  };
+
+  // Filter layers based on search
+  const filteredLayers = useMemo(() => 
+    availableLayers.filter((layer) =>
+      layer.title.toLowerCase().includes(layerSearch.toLowerCase())
+    ),
+    [availableLayers, layerSearch]
   );
+
+  // Filter datasets based on search
+  const filteredDatasets = useMemo(() => {
+    if (!layerSearch.trim()) return trackedDatasets;
+
+    const searchTerm = layerSearch.toLowerCase().trim();
+    
+    return trackedDatasets
+      .map(dataset => {
+        // Check if dataset title matches search
+        const datasetTitleMatch = dataset.title.toLowerCase().includes(searchTerm);
+        
+        // Filter layers that match search term
+        const filteredLayers = dataset.availableLayers.filter(layer =>
+          layer.title.toLowerCase().includes(searchTerm)
+        );
+        
+        // If dataset title matches, include all layers
+        return {
+          ...dataset,
+          titleMatch: datasetTitleMatch,
+          availableLayers: datasetTitleMatch ? dataset.availableLayers : filteredLayers,
+        };
+      })
+      // Only include datasets with matching layers or matching title
+      .filter(dataset => dataset.availableLayers.length > 0 || dataset.titleMatch);
+  }, [trackedDatasets, layerSearch]);
+
 
   const cn = (...classes: string[]) => {
     return classes.filter(Boolean).join(" ");
