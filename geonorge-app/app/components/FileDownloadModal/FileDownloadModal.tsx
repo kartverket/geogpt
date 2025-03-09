@@ -85,8 +85,7 @@ const SelectionPopover = ({
   items,
   placeholder,
   grouped = false,
-  isDisabled = false, 
-
+  isDisabled = false,
 }: {
   label: string;
   helpLink?: string;
@@ -228,7 +227,7 @@ const renderSelectionPopover = (
   placeholder: string,
   grouped = false,
   helpLink?: string,
-  isDisabled = false 
+  isDisabled = false
 ) => (
   <SelectionPopover
     label={label}
@@ -240,7 +239,7 @@ const renderSelectionPopover = (
     items={items}
     placeholder={placeholder}
     grouped={grouped}
-    isDisabled={isDisabled} 
+    isDisabled={isDisabled}
   />
 );
 
@@ -472,6 +471,9 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
           </div>
           <h2 className="text-xl text-color-gn-secondary mb-2">
             Filnedlastning - {step === 2 ? "nedlastning" : "bestilling"}
+            <h1 className="text-2xl font-bold text-color-kv-secondary">
+              {datasetName || "N/A"}
+            </h1>
           </h2>
           <Separator />
           <Progress
@@ -496,16 +498,6 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
             {step === 0 && (
               <div className="space-y-4 mt-4">
                 <Separator />
-                <span className="block mt-2 text-sm text-color-gn-secondary">
-                  <strong>Datasettets navn:</strong>{" "}
-                  <Badge
-                    variant="default"
-                    className="bg-color-gn-lightblue text-white"
-                  >
-                    {datasetName || "N/A"}
-                  </Badge>
-                </span>
-                {/* Moved from step 2 to step 0 */}
                 {renderSelectionPopover(
                   "Brukergruppe",
                   selectedGroup,
@@ -531,15 +523,6 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
             {step === 1 && (
               <div className="space-y-4 mt-4">
                 <Separator />
-                <span className="block mt-2 text-sm text-color-gn-secondary">
-                  <strong>Datasettets navn:</strong>{" "}
-                  <Badge
-                    variant="default"
-                    className="bg-color-gn-lightblue text-white"
-                  >
-                    {datasetName || "N/A"}
-                  </Badge>
-                </span>
                 <div>
                   <div className="flex items-center gap-1 text-sm text-color-gn-secondary">
                     <strong id="geo-area-label">Geografisk område</strong>
@@ -619,7 +602,7 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
                   "Velg format...",
                   false,
                   "https://www.geonorge.no/aktuelt/om-geonorge/slik-bruker-du-geonorge/formater/",
-                  !selectedLocation || !selectedProj 
+                  !selectedLocation || !selectedProj
                 )}
               </div>
             )}
@@ -628,15 +611,6 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
               <div className="space-y-4 mt-4">
                 <Separator />
 
-                <span className="block mt-2 text-sm text-color-gn-secondary">
-                  <strong>Datasettets navn:</strong>{" "}
-                  <Badge
-                    variant="default"
-                    className="bg-color-gn-lightblue text-white"
-                  >
-                    {datasetName || "N/A"}
-                  </Badge>
-                </span>
                 <span className="block mt-2 text-sm text-color-gn-secondary">
                   <strong>Geografisk område:</strong>{" "}
                   <Badge
