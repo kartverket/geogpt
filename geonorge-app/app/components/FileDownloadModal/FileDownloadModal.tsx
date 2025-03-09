@@ -473,9 +473,9 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
           </div>
           <h2 className="text-xl text-color-gn-secondary mb-2">
             Filnedlastning - {step === 2 ? "nedlastning" : "bestilling"}
-            <h1 className="text-2xl font-bold text-color-kv-secondary">
+            <p className="text-2xl font-bold text-color-kv-secondary">
               {datasetName || "N/A"}
-            </h1>
+            </p>
           </h2>
           <Separator />
           <Progress
