@@ -4,6 +4,9 @@ export type TranslationKey =
   | "background_map"
   | "theme_maps"
   | "search_layers"
+  | "active_datasets"
+  | "deselect_all"
+  | "remove_dataset"
   | "no_layers_found"
   | "tool"
   | "draw_and_measure"
@@ -20,6 +23,9 @@ export const translations: Record<Language, Record<TranslationKey, string>> = {
   nb: {
     background_map: "Bakgrunnskart",
     theme_maps: "Temakart",
+    active_datasets: "Aktive datasett",
+    deselect_all: "Fjern alle valgte lag",
+    remove_dataset:"Fjern datasett",
     search_layers: "Søk etter lag...",
     no_layers_found: "Ingen lag funnet",
     tool: "Verktøy",
@@ -36,6 +42,9 @@ export const translations: Record<Language, Record<TranslationKey, string>> = {
   nn: {
     background_map: "Bakgrunnskart",
     theme_maps: "Temakart",
+    active_datasets: "Aktive datasett",
+    deselect_all: "Fjern alle valgte lag",
+    remove_dataset:"Fjern datasett",
     search_layers: "Søk etter lag...",
     no_layers_found: "Ingen lag funne",
     tool: "Verktøy",
@@ -52,6 +61,9 @@ export const translations: Record<Language, Record<TranslationKey, string>> = {
   en: {
     background_map: "Background Map",
     theme_maps: "Thematic Maps",
+    active_datasets: "Active daatasets",
+    deselect_all: "Deselect all layers",
+    remove_dataset:"Remove dataset",
     search_layers: "Search for layers...",
     no_layers_found: "No layers found",
     tool: "Tools",
