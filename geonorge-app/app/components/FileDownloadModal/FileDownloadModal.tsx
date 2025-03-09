@@ -459,13 +459,15 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
   flex flex-col justify-between"
         >
           {" "}
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={handleClose}
-            className="absolute top-2 right-2 text-gray-600 hover:text-gray-800"
+            className="absolute top-2 right-2 px-4 text-gray-600 hover:text-gray-800"
             aria-label="Lukk"
           >
             <X />
-          </button>
+          </Button>
           <div className="flex items-center justify-start mb-4">
             <GeoNorgeLogo className="w-32 h-auto" />
           </div>
