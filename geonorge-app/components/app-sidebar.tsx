@@ -58,6 +58,7 @@ interface TrackedDataset {
   titleMatch?: boolean; // Added for search highlighting
 }
 
+
 export function AppSidebar({
   availableLayers = [],
   trackedDatasets = [],
@@ -149,6 +150,7 @@ export function AppSidebar({
       // Only include datasets with matching layers or matching title
       .filter(dataset => dataset.availableLayers.length > 0 || dataset.titleMatch);
   }, [trackedDatasets, layerSearch]);
+
 
   const cn = (...classes: string[]) => {
     return classes.filter(Boolean).join(" ");
