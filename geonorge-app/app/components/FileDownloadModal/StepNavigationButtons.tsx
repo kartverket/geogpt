@@ -2,10 +2,9 @@ import React from "react";
 
 // UI Components
 import { Button } from "@/components/ui/button";
+import { Download, Edit } from "lucide-react";
 
 // Icons
-import DownloadIcon from "@mui/icons-material/Download";
-import EditIcon from "@mui/icons-material/Edit";
 
 interface StepNavigationButtonsProps {
   step: number;
@@ -31,14 +30,14 @@ const StepNavigationButtons: React.FC<StepNavigationButtonsProps> = ({
           </Button>
           <div className="flex gap-2">
             <Button variant="next" onClick={nextStep}>
-              <EditIcon />
+              <Edit />
               Tilpass
             </Button>
             <Button
               variant="download"
               onClick={handleConfirmSelectionWithLoading}
             >
-              <DownloadIcon />
+              <Download />
               {/* Standard download button */}
               Last ned datasett
             </Button>
@@ -62,7 +61,7 @@ const StepNavigationButtons: React.FC<StepNavigationButtonsProps> = ({
             variant="download"
             onClick={handleConfirmSelectionWithLoading}
           >
-            <DownloadIcon />
+            <Download />
             {/* User input download button */}
             Last ned datasett
           </Button>

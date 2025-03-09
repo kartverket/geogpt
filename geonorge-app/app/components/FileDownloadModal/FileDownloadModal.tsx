@@ -36,9 +36,8 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 
 // Icons or images
-import CloseIcon from "@mui/icons-material/Close";
 import GeoNorgeLogo from "../GeoNorgeLogo";
-import HelpOutlinedIcon from "@mui/icons-material/HelpOutlined";
+import { Info, X } from "lucide-react";
 
 interface FileDownloadModalProps {
   isOpen: boolean;
@@ -63,8 +62,9 @@ const renderTooltip = (helpLink: string, label: string) => (
           target="_blank"
           rel="noopener noreferrer"
           aria-label={`Lær mer om ${label.toLowerCase()}`}
+          className="inline-flex"
         >
-          <HelpOutlinedIcon className="text-color-kv-secondary hover:text-color-gn-primary transition-colors duration-100" />
+          <Info className="h-4 w-4 text-color-kv-secondary hover:text-color-gn-primary transition-colors duration-100 ml-1" />
         </a>
       </TooltipTrigger>
       <TooltipContent side="right">
@@ -85,6 +85,8 @@ const SelectionPopover = ({
   items,
   placeholder,
   grouped = false,
+  isDisabled = false, 
+
 }: {
   label: string;
   helpLink?: string;
@@ -95,28 +97,53 @@ const SelectionPopover = ({
   items: { name: string; category?: string }[];
   placeholder: string;
   grouped?: boolean;
+  isDisabled?: boolean;
 }) => {
   // Autofill the selected value if there is only one item in the list
   useEffect(() => {
-    if (items.length === 1 && !selectedValue) {
+    if (items.length === 1 && !selectedValue && !isDisabled) {
       setSelectedValue(items[0].name);
       setOpen(false);
     }
-  }, [items, selectedValue, setSelectedValue, setOpen]);
+  }, [
+    items,
+    items.length,
+    selectedValue,
+    setSelectedValue,
+    setOpen,
+    isDisabled,
+  ]);
 
   return (
     <div>
       <div className="flex items-center gap-1 text-sm text-color-gn-secondary">
         <strong>{label}</strong>
-        {label.includes(":") && (
-          <span className="text-color-gn-primary text-sm">*</span>
-        )}
         {helpLink && renderTooltip(helpLink, label)}
       </div>
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover
+        open={isDisabled ? false : open}
+        onOpenChange={(newOpen) => {
+          if (!isDisabled) {
+            setOpen(newOpen);
+          }
+        }}
+      >
         <PopoverTrigger asChild>
-          <Button variant="outline" className="w-full justify-start text-left">
+          <Button
+            variant="outline"
+            className={`w-full justify-start text-left ${
+              isDisabled ? "opacity-60 cursor-not-allowed" : ""
+            }`}
+            disabled={isDisabled}
+          >
             {selectedValue || placeholder}
+            {isDisabled && (
+              <span className="ml-auto text-color-kv-secondary text-xs italic">
+                {label.includes("Format")
+                  ? "Velg projeksjon først"
+                  : "Velg område først"}
+              </span>
+            )}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-full min-w-[var(--radix-popper-anchor-width)] p-0">
@@ -200,7 +227,8 @@ const renderSelectionPopover = (
   items: { name: string; category?: string }[],
   placeholder: string,
   grouped = false,
-  helpLink?: string
+  helpLink?: string,
+  isDisabled = false 
 ) => (
   <SelectionPopover
     label={label}
@@ -212,6 +240,7 @@ const renderSelectionPopover = (
     items={items}
     placeholder={placeholder}
     grouped={grouped}
+    isDisabled={isDisabled} 
   />
 );
 
@@ -226,7 +255,6 @@ const stepLabels = [
 const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
   isOpen,
   handleClose,
-  handleConfirmSelection,
   handleStandardDownload,
   geographicalAreas,
   projections,
@@ -286,13 +314,28 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
   ).map((format) => JSON.parse(format));
 
   const nextStep = () => {
+    if (step === 1) {
+      if (!selectedLocation) {
+        alert("Du må velge et geografisk område først");
+        return;
+      }
+      if (!selectedProj) {
+        alert("Du må velge en projeksjon");
+        return;
+      }
+      if (!selectedFmt) {
+        alert("Du må velge et format");
+        return;
+      }
+    }
+
     setManualStepChange(true);
     setStep((prev) => Math.min(prev + 1, 2));
   };
 
   const prevStep = () => {
     setManualStepChange(true);
-    setStep((prev) => Math.max(prev - 1, 0));
+    setStep((prev) => Math.max(prev - 0, 0));
   };
 
   // Auto-step progression to require both user group and purpose
@@ -305,7 +348,7 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
   }, [
     step,
     selectedGroup,
-    selectedGoal, // Added selectedGoal to dependencies
+    selectedGoal,
     selectedLocation,
     selectedProj,
     selectedFmt,
@@ -422,10 +465,10 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
             className="absolute top-2 right-2 text-gray-600 hover:text-gray-800"
             aria-label="Lukk"
           >
-            <CloseIcon />
+            <X />
           </button>
           <div className="flex items-center justify-start mb-4">
-            <GeoNorgeLogo />
+            <GeoNorgeLogo className="w-32 h-auto" />
           </div>
           <h2 className="text-xl text-color-gn-secondary mb-2">
             Filnedlastning - {step === 2 ? "nedlastning" : "bestilling"}
@@ -464,7 +507,7 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
                 </span>
                 {/* Moved from step 2 to step 0 */}
                 {renderSelectionPopover(
-                  "Brukergruppe:",
+                  "Brukergruppe",
                   selectedGroup,
                   setSelectedGroup,
                   openGroup,
@@ -473,7 +516,7 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
                   "Velg brukergruppe..."
                 )}
                 {renderSelectionPopover(
-                  "Formål:",
+                  "Formål",
                   selectedGoal,
                   setSelectedGoal,
                   openGoal,
@@ -562,8 +605,10 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
                   uniqueProjections,
                   "Velg projeksjon...",
                   false,
-                  "https://www.geonorge.no/aktuelt/om-geonorge/slik-bruker-du-geonorge/kartprojeksjoner-og-koordinatsystemer/"
+                  "https://www.geonorge.no/aktuelt/om-geonorge/slik-bruker-du-geonorge/kartprojeksjoner-og-koordinatsystemer/",
+                  !selectedLocation
                 )}
+
                 {renderSelectionPopover(
                   "Format",
                   selectedFmt,
@@ -573,7 +618,8 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
                   uniqueFormats,
                   "Velg format...",
                   false,
-                  "https://www.geonorge.no/aktuelt/om-geonorge/slik-bruker-du-geonorge/formater/"
+                  "https://www.geonorge.no/aktuelt/om-geonorge/slik-bruker-du-geonorge/formater/",
+                  !selectedLocation || !selectedProj 
                 )}
               </div>
             )}
