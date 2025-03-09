@@ -55,6 +55,7 @@ interface TrackedDataset {
   wmsUrl: string;
   availableLayers: WMSLayer[];
   selectedLayers: string[];
+  titleMatch?: boolean; // Added for search highlighting
 }
 
 export function AppSidebar({
@@ -121,19 +122,33 @@ export function AppSidebar({
     ),
     [availableLayers, layerSearch]
   );
-  
+
   // Filter datasets based on search
-  const filteredDatasets = useMemo(() => 
-    trackedDatasets
-      .map(dataset => ({
-        ...dataset,
-        availableLayers: dataset.availableLayers.filter(layer =>
-          layer.title.toLowerCase().includes(layerSearch.toLowerCase())
-        ),
-      }))
-      .filter(dataset => dataset.availableLayers.length > 0),
-    [trackedDatasets, layerSearch]
-  );
+  const filteredDatasets = useMemo(() => {
+    if (!layerSearch.trim()) return trackedDatasets;
+
+    const searchTerm = layerSearch.toLowerCase().trim();
+    
+    return trackedDatasets
+      .map(dataset => {
+        // Check if dataset title matches search
+        const datasetTitleMatch = dataset.title.toLowerCase().includes(searchTerm);
+        
+        // Filter layers that match search term
+        const filteredLayers = dataset.availableLayers.filter(layer =>
+          layer.title.toLowerCase().includes(searchTerm)
+        );
+        
+        // If dataset title matches, include all layers
+        return {
+          ...dataset,
+          titleMatch: datasetTitleMatch,
+          availableLayers: datasetTitleMatch ? dataset.availableLayers : filteredLayers,
+        };
+      })
+      // Only include datasets with matching layers or matching title
+      .filter(dataset => dataset.availableLayers.length > 0 || dataset.titleMatch);
+  }, [trackedDatasets, layerSearch]);
 
   const cn = (...classes: string[]) => {
     return classes.filter(Boolean).join(" ");
