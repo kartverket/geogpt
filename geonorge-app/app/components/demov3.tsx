@@ -1230,7 +1230,7 @@ const DemoV3 = () => {
                                 }}
                                 className={`text-xs ${
                                   msg.wmsUrl && msg.wmsUrl !== "None"
-                                    ? "bg-[#FF8B65] hover:bg-[#FE642F] text-white"
+                                    ? "rounded-[2px] bg-[#FF8B65] hover:bg-[#FE642F] text-white"
                                     : "bg-gray-300 text-gray-500 cursor-not-allowed"
                                 }`}
                                 disabled={!msg.wmsUrl || msg.wmsUrl === "None"}
