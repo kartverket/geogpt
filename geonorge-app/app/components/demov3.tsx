@@ -1228,7 +1228,7 @@ const DemoV3 = () => {
                                     replaceIframe(msg.wmsUrl);
                                   }
                                 }}
-                                className={`text-xs ${
+                                className={`text-xs rounded-[2px] ${
                                   msg.wmsUrl && msg.wmsUrl !== "None"
                                     ? "bg-[#FF8B65] hover:bg-[#FE642F] text-white"
                                     : "bg-gray-300 text-gray-500 cursor-not-allowed"
