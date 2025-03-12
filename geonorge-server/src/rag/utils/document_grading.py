@@ -58,7 +58,7 @@ def create_evaluation_prompt(datasets_text: str) -> ChatPromptTemplate:
     For hvert datasett, gi en score fra 0-100 hvor 100 er høyest relevans.
     Datasett med 'dam', 'dammer', eller lignende vannrelaterte begreper bør få høy score når brukeren spør om dam-relatert informasjon.
     
-    Returner resultatet i JSON-format
+    Returner resultatet i JSON-format med følgende nøkkelnavn i LOWERCASE: "id", "title", "relevance_score", "is_relevant", "explanation".
     
     Bruk 'true' (ikke 'True') og 'false' (ikke 'False') for boolske verdier i JSON.
     
@@ -126,14 +126,17 @@ def get_relevance_info(eval_item: Dict) -> Tuple[Optional[int], bool, int, str]:
     Returns:
         Tuple of (document_id, is_relevant, relevance_score, explanation)
     """
+    # CASE CHECK
+    case_insensitive_item = {k.lower(): v for k, v in eval_item.items()}
+    
     # Support both "id" and "dataset_id" fields
-    doc_id = eval_item.get("id") if eval_item.get("id") is not None else eval_item.get("dataset_id")
+    doc_id = case_insensitive_item.get("id") if case_insensitive_item.get("id") is not None else case_insensitive_item.get("dataset_id")
     
     # Handle boolean value that might be a string or directly in relevance field
     # Also handle Norwegian field names (relevant)
-    is_relevant_val = eval_item.get("is_relevant", 
-                    eval_item.get("relevance", 
-                    eval_item.get("relevant", False)))
+    is_relevant_val = case_insensitive_item.get("is_relevant", 
+                    case_insensitive_item.get("relevant", 
+                    case_insensitive_item.get("relevance", False)))
     
     if isinstance(is_relevant_val, str):
         is_relevant = is_relevant_val.lower() == "true"
@@ -141,14 +144,15 @@ def get_relevance_info(eval_item: Dict) -> Tuple[Optional[int], bool, int, str]:
         is_relevant = bool(is_relevant_val)
     
     # Support both English and Norwegian field names for scores
-    relevance_score = eval_item.get("relevance_score", 
-                    eval_item.get("score", 
-                    eval_item.get("relevans", 0)))
+    relevance_score = case_insensitive_item.get("relevance_score", 
+                    case_insensitive_item.get("score", 
+                    case_insensitive_item.get("relevans", 0)))
     
     # Support both English and Norwegian field names for explanations
-    explanation = eval_item.get("explanation", 
-                eval_item.get("reason", 
-                eval_item.get("begrunnelse", "")))
+    explanation = case_insensitive_item.get("explanation", 
+                case_insensitive_item.get("reason", 
+                case_insensitive_item.get("comment",
+                case_insensitive_item.get("begrunnelse", ""))))
     
     return doc_id, is_relevant, relevance_score, explanation
 
@@ -250,15 +254,23 @@ def select_fallback_documents(result_json: Any, documents_to_evaluate: List[Dict
     try:
         # Try to pick the highest scoring documents based on the LLM evaluation
         if result_json and isinstance(result_json, list):
-            # Sort documents by score in descending order
-            sorted_docs = sorted(result_json, key=lambda x: x.get('Score', 0), reverse=True)
+            # Convert all keys to lowercase for case-insensitive matching
+            normalized_docs = []
+            for doc in result_json:
+                normalized_doc = {k.lower(): v for k, v in doc.items()}
+                normalized_docs.append(normalized_doc)
+            
+            # Sort documents by score in descending order, default to 0 if no score barehyggelig
+            sorted_docs = sorted(normalized_docs, 
+                key=lambda x: x.get('score', x.get('relevance_score', 0)), 
+                reverse=True)
             
             # Keep documents with score >= 70, or at least the top 5
-            high_scoring_docs = [
-                documents_to_evaluate[doc.get('ID', 0)]['row'] 
-                for doc in sorted_docs 
-                if doc.get('Score', 0) >= 70 and doc.get('Relevans', False)
-            ]
+            high_scoring_docs = []
+            for doc in sorted_docs:
+                doc_id = doc.get('id', 0)
+                if doc_id < len(documents_to_evaluate) and doc.get('score', doc.get('relevance_score', 0)) >= 70:
+                    high_scoring_docs.append(documents_to_evaluate[doc_id]['row'])
             
             if high_scoring_docs:
                 print(f"Keeping {len(high_scoring_docs)} high-scoring documents (score >= 70)")
@@ -266,12 +278,14 @@ def select_fallback_documents(result_json: Any, documents_to_evaluate: List[Dict
             else:
                 # If no documents with score >= 70, take top 5 or fewer
                 top_count = min(5, len(sorted_docs))
+                top_docs = []
+                for doc in sorted_docs[:top_count]:
+                    doc_id = doc.get('id', 0)
+                    if doc_id < len(documents_to_evaluate):
+                        top_docs.append(documents_to_evaluate[doc_id]['row'])
+                
                 print(f"No documents with score >= 70, keeping top {top_count} by score")
-                return [
-                    documents_to_evaluate[doc.get('ID', 0)]['row'] 
-                    for doc in sorted_docs[:top_count] 
-                    if doc.get('Relevans', False)
-                ]
+                return top_docs
         else:
             # If we can't get the scores, fallback to top 3 from vector search
             top_count = min(3, len(metadata_context))
