@@ -36,9 +36,8 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 
 // Icons or images
-import CloseIcon from "@mui/icons-material/Close";
 import GeoNorgeLogo from "../GeoNorgeLogo";
-import HelpOutlinedIcon from "@mui/icons-material/HelpOutlined";
+import { ArrowDownAZ, Info, X } from "lucide-react";
 
 interface FileDownloadModalProps {
   isOpen: boolean;
@@ -63,8 +62,9 @@ const renderTooltip = (helpLink: string, label: string) => (
           target="_blank"
           rel="noopener noreferrer"
           aria-label={`Lær mer om ${label.toLowerCase()}`}
+          className="inline-flex"
         >
-          <HelpOutlinedIcon className="text-color-kv-secondary hover:text-color-gn-primary transition-colors duration-100" />
+          <Info className="h-4 w-4 text-color-kv-secondary hover:text-color-gn-primary transition-colors duration-100 ml-1" />
         </a>
       </TooltipTrigger>
       <TooltipContent side="right">
@@ -72,6 +72,21 @@ const renderTooltip = (helpLink: string, label: string) => (
       </TooltipContent>
     </Tooltip>
   </TooltipProvider>
+);
+
+// Summary Component
+const SummaryItem = ({ label, value }: { label: string; value: string }) => (
+  <div className="flex justify-between items-center text-sm text-color-gn-secondary mb-3">
+    <span className="font-semibold text-color-gn-secondary">{label}:</span>
+    <Badge
+      variant="default"
+      className={`${
+        value ? "bg-color-gn-lightblue text-white" : "bg-gray-200 text-gray-500"
+      } ml-2 px-3 py-1 text-xs rounded-lg`}
+    >
+      {value || "Ikke valgt"}
+    </Badge>
+  </div>
 );
 
 // SelectionPopover component for selecting values from a list
@@ -85,6 +100,8 @@ const SelectionPopover = ({
   items,
   placeholder,
   grouped = false,
+  isDisabled = false,
+  hasError = false,
 }: {
   label: string;
   helpLink?: string;
@@ -95,28 +112,57 @@ const SelectionPopover = ({
   items: { name: string; category?: string }[];
   placeholder: string;
   grouped?: boolean;
+  isDisabled?: boolean;
+  hasError?: boolean;
 }) => {
   // Autofill the selected value if there is only one item in the list
   useEffect(() => {
-    if (items.length === 1 && !selectedValue) {
+    if (items.length === 1 && !selectedValue && !isDisabled) {
       setSelectedValue(items[0].name);
       setOpen(false);
     }
-  }, [items, selectedValue, setSelectedValue, setOpen]);
+  }, [
+    items,
+    items.length,
+    selectedValue,
+    setSelectedValue,
+    setOpen,
+    isDisabled,
+  ]);
 
   return (
     <div>
-      <div className="flex items-center gap-1 text-sm text-color-gn-secondary">
-        <strong>{label}</strong>
-        {label.includes(":") && (
-          <span className="text-color-gn-primary text-sm">*</span>
-        )}
+      <div className="flex items-center mb-2 gap-1 text-sm text-color-gn-secondary">
+        <p className="font-semibold">{label}</p>
         {helpLink && renderTooltip(helpLink, label)}
       </div>
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover
+        open={isDisabled ? false : open}
+        onOpenChange={(newOpen) => {
+          if (!isDisabled) {
+            setOpen(newOpen);
+          }
+        }}
+      >
         <PopoverTrigger asChild>
-          <Button variant="outline" className="w-full justify-start text-left">
+          <Button
+            variant="outline"
+            className={`w-full justify-start text-left 
+              ${isDisabled ? "opacity-60 cursor-not-allowed" : ""} 
+              ${hasError ? "" : ""}`}
+            disabled={isDisabled}
+          >
             {selectedValue || placeholder}
+
+            {isDisabled ? (
+              <span className="ml-auto text-color-kv-secondary text-xs italic">
+                {label.includes("Format")
+                  ? "Velg projeksjon først"
+                  : "Velg område først"}
+              </span>
+            ) : (
+              <ArrowDownAZ className="ml-auto" />
+            )}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-full min-w-[var(--radix-popper-anchor-width)] p-0">
@@ -186,6 +232,15 @@ const SelectionPopover = ({
           </Command>
         </PopoverContent>
       </Popover>
+      {hasError && (
+        <p className="text-xs text-color-gn-primary mt-1 animate-fadeIn">
+          {label.includes("Geo")
+            ? "Du må velge et geografisk område"
+            : label.includes("Proj")
+            ? "Du må velge en projeksjon"
+            : "Du må velge et format"}
+        </p>
+      )}
     </div>
   );
 };
@@ -200,7 +255,9 @@ const renderSelectionPopover = (
   items: { name: string; category?: string }[],
   placeholder: string,
   grouped = false,
-  helpLink?: string
+  helpLink?: string,
+  isDisabled = false,
+  hasError = false
 ) => (
   <SelectionPopover
     label={label}
@@ -212,6 +269,8 @@ const renderSelectionPopover = (
     items={items}
     placeholder={placeholder}
     grouped={grouped}
+    isDisabled={isDisabled}
+    hasError={hasError}
   />
 );
 
@@ -226,7 +285,6 @@ const stepLabels = [
 const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
   isOpen,
   handleClose,
-  handleConfirmSelection,
   handleStandardDownload,
   geographicalAreas,
   projections,
@@ -248,6 +306,33 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
   const [openFmt, setOpenFmt] = useState<boolean>(false);
   const [openGroup, setOpenGroup] = useState<boolean>(false);
   const [openGoal, setOpenGoal] = useState<boolean>(false);
+
+  const [validationErrors, setValidationErrors] = useState<{
+    location?: boolean;
+    projection?: boolean;
+    format?: boolean;
+  }>({});
+
+  // Clear location error when location is selected
+  useEffect(() => {
+    if (selectedLocation && validationErrors.location) {
+      setValidationErrors((prev) => ({ ...prev, location: false }));
+    }
+  }, [selectedLocation, validationErrors.location]);
+
+  // Clear projection error when projection is selected
+  useEffect(() => {
+    if (selectedProj && validationErrors.projection) {
+      setValidationErrors((prev) => ({ ...prev, projection: false }));
+    }
+  }, [selectedProj, validationErrors.projection]);
+
+  // Clear format error when format is selected
+  useEffect(() => {
+    if (selectedFmt && validationErrors.format) {
+      setValidationErrors((prev) => ({ ...prev, format: false }));
+    }
+  }, [selectedFmt, validationErrors.format]);
 
   // Reset modal state when new modal is opened
   useEffect(() => {
@@ -286,6 +371,23 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
   ).map((format) => JSON.parse(format));
 
   const nextStep = () => {
+    if (step === 1) {
+      // Check for validation errors
+      const errors = {
+        location: !selectedLocation,
+        projection: !selectedProj,
+        format: !selectedFmt,
+      };
+
+      // If any errors, set them and add visual feedback
+      if (errors.location || errors.projection || errors.format) {
+        setValidationErrors(errors);
+        return;
+      }
+      // Clear errors if all fields are valid
+      setValidationErrors({});
+    }
+
     setManualStepChange(true);
     setStep((prev) => Math.min(prev + 1, 2));
   };
@@ -295,24 +397,26 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
     setStep((prev) => Math.max(prev - 1, 0));
   };
 
-  // Auto-step progression to require both user group and purpose
+  // Auto-step progression
   useEffect(() => {
     if (!manualStepChange) {
       if (step === 1 && selectedLocation && selectedProj && selectedFmt) {
         setStep(2);
+      } else if (step === 0 && selectedGroup && selectedGoal) {
+        setStep(1);
       }
     }
   }, [
     step,
     selectedGroup,
-    selectedGoal, // Added selectedGoal to dependencies
+    selectedGoal,
     selectedLocation,
     selectedProj,
     selectedFmt,
     manualStepChange,
   ]);
 
-  // Once step 2 is reached, lock auto-step progression by setting manualStepChange to true
+  // Once step 2 is reached, set manual step change to true
   useEffect(() => {
     if (step === 2) {
       setManualStepChange(true);
@@ -416,32 +520,44 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
   sm:w-[70%] md:w-[60%] lg:w-[50%] xl:w-[40%] 
   flex flex-col justify-between"
         >
-          {" "}
-          <button
-            onClick={handleClose}
-            className="absolute top-2 right-2 text-gray-600 hover:text-gray-800"
-            aria-label="Lukk"
-          >
-            <CloseIcon />
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleClose}
+                className="absolute top-2 right-2 px-4 text-gray-600 hover:text-gray-800"
+                aria-label="Lukk"
+              >
+                <X />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <p>Lukk</p>
+            </TooltipContent>
+          </Tooltip>
           <div className="flex items-center justify-start mb-4">
             <GeoNorgeLogo className="w-32 h-auto" />
           </div>
-          <h2 className="text-xl text-color-gn-secondary mb-2">
-            Filnedlastning - {step === 2 ? "nedlastning" : "bestilling"}
+          <h2 className="text-1xl font-semibold text-color-gn-secondary mb-3">
+            Filnedlastning - {step === 2 ? "Nedlastning" : "Bestilling"}
+            <p className="text-2xl text-color-kv-secondary mt-1 font-medium">
+              {datasetName}
+            </p>
           </h2>
+
           <Separator />
           <Progress
             value={progressValue}
             className="my-4"
-            bgColor={"bg-color-gn-primary"}
+            bgColor={"bg-color-kv-primary"}
           />
           <div className="flex justify-between text-sm text-gray-600">
             {stepLabels.map((label, index) => (
               <span
                 key={index}
                 className={`${
-                  step === index ? "text-color-kv-secondary font-bold" : ""
+                  step === index ? "text-color-kv-secondary font-semibold" : ""
                 } cursor-pointer`}
                 onClick={() => setStep(index)}
               >
@@ -450,21 +566,12 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
             ))}
           </div>
           <div className="flex-1 overflow-y-auto">
+            {/* Steg 0: Velg brukergruppe og formål */}
             {step === 0 && (
               <div className="space-y-4 mt-4">
                 <Separator />
-                <span className="block mt-2 text-sm text-color-gn-secondary">
-                  <strong>Datasettets navn:</strong>{" "}
-                  <Badge
-                    variant="default"
-                    className="bg-color-gn-lightblue text-white"
-                  >
-                    {datasetName || "N/A"}
-                  </Badge>
-                </span>
-                {/* Moved from step 2 to step 0 */}
                 {renderSelectionPopover(
-                  "Brukergruppe:",
+                  "Brukergruppe",
                   selectedGroup,
                   setSelectedGroup,
                   openGroup,
@@ -473,7 +580,7 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
                   "Velg brukergruppe..."
                 )}
                 {renderSelectionPopover(
-                  "Formål:",
+                  "Formål",
                   selectedGoal,
                   setSelectedGoal,
                   openGoal,
@@ -484,22 +591,13 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
                 )}
               </div>
             )}
-
+            {/* Steg 1: Velg område, projeksjon og format */}
             {step === 1 && (
               <div className="space-y-4 mt-4">
                 <Separator />
-                <span className="block mt-2 text-sm text-color-gn-secondary">
-                  <strong>Datasettets navn:</strong>{" "}
-                  <Badge
-                    variant="default"
-                    className="bg-color-gn-lightblue text-white"
-                  >
-                    {datasetName || "N/A"}
-                  </Badge>
-                </span>
                 <div>
-                  <div className="flex items-center gap-1 text-sm text-color-gn-secondary">
-                    <strong id="geo-area-label">Geografisk område</strong>
+                  <div className="flex items-center mb-2 gap-1 text-sm text-color-gn-secondary">
+                    <p className="font-semibold">Geografisk område</p>
                     {renderTooltip(
                       "https://www.geonorge.no/aktuelt/om-geonorge/slik-bruker-du-geonorge/omradeinndelinger/",
                       "Geografisk område"
@@ -509,10 +607,11 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
-                        className="w-full justify-start text-left"
+                        className={`w-full justify-start text-left ${validationErrors.location}`}
                         aria-labelledby="geo-area-label"
                       >
                         {selectedLocation || "Velg område..."}
+                        <ArrowDownAZ className="ml-auto" />
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-full min-w-[var(--radix-popper-anchor-width)] p-0">
@@ -551,6 +650,11 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
                       </Command>
                     </PopoverContent>
                   </Popover>
+                  {validationErrors.location && (
+                    <p className="text-xs text-color-gn-primary mt-1 animate-fadeIn">
+                      Du må velge et geografisk område
+                    </p>
+                  )}
                 </div>
 
                 {renderSelectionPopover(
@@ -562,8 +666,11 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
                   uniqueProjections,
                   "Velg projeksjon...",
                   false,
-                  "https://www.geonorge.no/aktuelt/om-geonorge/slik-bruker-du-geonorge/kartprojeksjoner-og-koordinatsystemer/"
+                  "https://www.geonorge.no/aktuelt/om-geonorge/slik-bruker-du-geonorge/kartprojeksjoner-og-koordinatsystemer/",
+                  !selectedLocation,
+                  validationErrors.projection
                 )}
+
                 {renderSelectionPopover(
                   "Format",
                   selectedFmt,
@@ -573,69 +680,28 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
                   uniqueFormats,
                   "Velg format...",
                   false,
-                  "https://www.geonorge.no/aktuelt/om-geonorge/slik-bruker-du-geonorge/formater/"
+                  "https://www.geonorge.no/aktuelt/om-geonorge/slik-bruker-du-geonorge/formater/",
+                  !selectedLocation || !selectedProj,
+                  validationErrors.projection
                 )}
               </div>
             )}
 
+            {/* Steg 2: Oversikt Items */}
             {step === 2 && (
               <div className="space-y-4 mt-4">
                 <Separator />
-
-                <span className="block mt-2 text-sm text-color-gn-secondary">
-                  <strong>Datasettets navn:</strong>{" "}
-                  <Badge
-                    variant="default"
-                    className="bg-color-gn-lightblue text-white"
-                  >
-                    {datasetName || "N/A"}
-                  </Badge>
-                </span>
-                <span className="block mt-2 text-sm text-color-gn-secondary">
-                  <strong>Geografisk område:</strong>{" "}
-                  <Badge
-                    variant="default"
-                    className="bg-color-gn-lightblue text-white"
-                  >
-                    {selectedLocation || "N/A"}
-                  </Badge>
-                </span>
-                <span className="block mt-2 text-sm text-color-gn-secondary">
-                  <strong>Projeksjon:</strong>{" "}
-                  <Badge
-                    variant="default"
-                    className="bg-color-gn-lightblue text-white ml-1"
-                  >
-                    {selectedProj || "N/A"}
-                  </Badge>
-                </span>
-                <span className="block mt-2 text-sm text-color-gn-secondary">
-                  <strong>Format:</strong>{" "}
-                  <Badge
-                    variant="default"
-                    className="bg-color-gn-lightblue text-white ml-1"
-                  >
-                    {selectedFmt || "N/A"}
-                  </Badge>
-                </span>
-                <span className="block mt-2 text-sm text-color-gn-secondary">
-                  <strong>Brukergruppe:</strong>{" "}
-                  <Badge
-                    variant="default"
-                    className="bg-color-gn-lightblue text-white ml-1"
-                  >
-                    {selectedGroup || "N/A"}
-                  </Badge>
-                </span>
-                <span className="block mt-2 text-sm text-color-gn-secondary">
-                  <strong>Formål:</strong>{" "}
-                  <Badge
-                    variant="default"
-                    className="bg-color-gn-lightblue text-white ml-1"
-                  >
-                    {selectedGoal || "N/A"}
-                  </Badge>
-                </span>
+                <p className="text-xl font-semibold text-color-gn-secondary">
+                  Oversikt - bekreft og last ned
+                </p>
+                <SummaryItem
+                  label="Geografisk område"
+                  value={selectedLocation}
+                />
+                <SummaryItem label="Projeksjon" value={selectedProj} />
+                <SummaryItem label="Format" value={selectedFmt} />
+                <SummaryItem label="Brukergruppe" value={selectedGroup} />
+                <SummaryItem label="Formål" value={selectedGoal} />
               </div>
             )}
           </div>

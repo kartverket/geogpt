@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useRef, FormEvent } from "react";
-import { Maximize, MessageSquare, Send } from "lucide-react";
+import { LogOut, Maximize, MessageSquare, Send, X } from "lucide-react";
+
 import Image from "next/image";
 
 // Components
@@ -362,6 +363,23 @@ const DemoV3 = () => {
   // State for full screen mode and popover open state
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+
+  // ESC key can be used for quick exit
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isFullScreen) {
+        exitFullScreen();
+      }
+    };
+
+    if (isFullScreen) {
+      document.addEventListener("keydown", handleKeyDown);
+    }
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isFullScreen]);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -1195,7 +1213,7 @@ const DemoV3 = () => {
                         className="px-4"
                         onClick={() => setIsPopoverOpen(false)}
                       >
-                        X
+                        <X size={16} />
                       </Button>
                     </div>
                   </div>
@@ -1317,14 +1335,26 @@ const DemoV3 = () => {
 
         {/* Full Screen Chat UI */}
         {isFullScreen && (
-          <div className="fixed inset-0 z-[1001] bg-white flex flex-col">
-            <div className="flex justify-between items-center p-4 border-b">
+          <div className="fixed inset-0 z-[50] bg-white">
+            <div className="flex justify-between items-center p-4 border-b container mx-auto">
               <div className="flex items-center">
                 <GeoNorgeIcon />
                 <h2 className="text-xl font-bold ml-2">GeoGPT</h2>
               </div>
-              <Button variant="outline" onClick={exitFullScreen}>
-                Gå ut fra fullskjerm
+              <Button
+                variant="outline"
+                onClick={exitFullScreen}
+                className="group flex items-center justify-between hover:bg-gray-100 transition-colors duration-200 rounded-md px-3 py-2"
+                aria-label="Forlat fullskjerm"
+              >
+                <div className="flex items-center gap-3">
+                  <LogOut
+                    size={16}
+                    className="text-gray-500 group-hover:text-gray-700 transition-colors"
+                  />
+                  <span className="font-medium">Forlat fullskjerm</span>
+                </div>
+
               </Button>
             </div>
             <div className="flex-1 flex flex-col overflow-hidden">
