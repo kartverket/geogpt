@@ -1,3 +1,4 @@
+fetch_valid_download_api
 from helpers.fetch_valid_download_api import fetch_get_data_api
 from xml.etree import ElementTree
 import aiohttp
@@ -14,18 +15,18 @@ async def get_wms(uuid: str) -> dict:
     try:
         raw = await fetch_get_data_api(uuid)
         if not raw:
-            # return {'error': 'No data found'}
             return "None"
             
         related_view_services = raw.get('Distributions', {}).get('RelatedViewServices', [])
         if not related_view_services:
-            # return {'error': 'No WMS services available'}
             return "None"
             
         capabilities_url = related_view_services[0].get('GetCapabilitiesUrl') if related_view_services else None
         
         if not capabilities_url:
             return {'error': 'No WMS capabilities URL found'}
+
+        dataset_title = raw.get('Title', '')
 
         async with aiohttp.ClientSession() as session:
             async with session.get(capabilities_url) as response:
@@ -56,7 +57,8 @@ async def get_wms(uuid: str) -> dict:
                 return {
                     "wms_url": capabilities_url,
                     "available_layers": layers,
-                    "available_formats": formats
+                    "available_formats": formats,
+                    "title": dataset_title
                 }
 
     except ElementTree.ParseError:
