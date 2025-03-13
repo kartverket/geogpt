@@ -1,8 +1,12 @@
 pandas
-openai
+aiohttp
 python-dotenv
 requests
 psycopg2
 pgvector
-aiohttp
 websockets
+psycopg2-binary
+numpy
+PyPDF2
+tiktoken
+langchain
