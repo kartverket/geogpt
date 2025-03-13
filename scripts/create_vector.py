@@ -11,7 +11,7 @@ import socket
 BASE_URL = config.CONFIG["api"]["azure_embeddings_endpoint"]
 API_KEY = config.CONFIG["api"]["azure_embedding_api_key"]
 MODEL = "text-embedding-3-large"
-API_URL = f"{BASE_URL}/openai/deployments/{MODEL}/embeddings?api-version=2023-05-15"
+API_URL = f"{BASE_URL}https:///openai/deployments/text-embedding-3-large/embeddings?api-version=2023-05-15"
 def test_connection():
     try:
         # Attempt to resolve the hostname to check for connectivity
