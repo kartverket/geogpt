@@ -1,24 +1,9 @@
-import { NorgeskartSidebar } from "@/components/norgeskart-sidebar";
-import { AppSidebar } from "../../components/app-sidebar";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { Separator } from "@/components/ui/separator";
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
-
+import { SidebarProvider } from "@/components/ui/sidebar";
+import DemoV3 from "../components/demov3";
 export default function Page() {
   return (
     <SidebarProvider>
-      <NorgeskartSidebar />
+      <DemoV3 />
     </SidebarProvider>
   );
 }

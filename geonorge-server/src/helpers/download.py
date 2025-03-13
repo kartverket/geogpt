@@ -2,6 +2,7 @@ import asyncio
 import aiohttp
 import logging
 from typing import Any, Dict, List, Optional
+import re
 
 from helpers.fetch_valid_download_api_data import get_wms
 
@@ -18,20 +19,31 @@ async def fetch_area_data(uuid: str) -> List[Dict[str, Any]]:
     Returns a list (parsed JSON). If not valid, returns an empty list.
     """
     url = f"https://nedlasting.geonorge.no/api/codelists/area/{uuid}"
-    logger.info("Fetching area data for UUID: %s from URL: %s", uuid, url)
 
-    # Optional: Define a timeout for the request.
     timeout = aiohttp.ClientTimeout(total=10)
-    async with aiohttp.ClientSession(timeout=timeout) as session:
-        async with session.get(url) as response:
-            logger.info("Response status: %s, URL: %s", response.status, response.url)
-            if not response.ok:
-                raise RuntimeError(f"HTTP error! status: {response.status}")
-            # Check if redirected to a login page.
-            if str(response.url).startswith("https://auth2.geoid.no"):
-                logger.warning("Dataset requires authentication. UUID: %s", uuid)
+    
+    try:
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            try:
+                async with session.get(url) as response:
+                    # logger.info("Response status: %s, URL: %s", response.status, response.url)
+                    if not response.ok:
+                        logger.warning(f"HTTP error! status: {response.status}")
+                        return []
+                    # Check if redirected to a login page.
+                    if str(response.url).startswith("https://auth2.geoid.no"):
+                        logger.warning("Dataset requires authentication. UUID: %s", uuid)
+                        return []
+                    return await response.json()
+            except aiohttp.ClientConnectorError as e:
+                logger.error(f"Connection error for {uuid}: {str(e)}")
                 return []
-            return await response.json()
+            except asyncio.TimeoutError:
+                logger.error(f"Timeout while fetching area data for {uuid}")
+                return []
+    except Exception as error:
+        logger.error(f'Error fetching area data for {uuid}: {str(error)}')
+        return []
 
 
 async def dataset_has_download(uuid: str) -> bool:
@@ -173,6 +185,49 @@ async def get_download_url(metadata_uuid: str, download_formats: Dict[str, Any])
             return None
 
 
+async def get_dataset_download_formats(vdb_search_response: List[tuple]) -> List[Dict[str, Any]]:
+    """
+    For each item in vdb_search_response, fetch only the download formats
+    and return minimal dataset information.
+    Returns a list of datasets with uuid, title and download formats.
+    """
+    # Convert tuples to dictionaries with only needed fields
+    field_names = ['uuid', 'title', 'abstract', 'image', 'distance']
+    dict_response = [dict(zip(field_names, row)) for row in vdb_search_response]
+
+    async def fetch_formats(dataset: Dict[str, Any]) -> Dict[str, Any]:
+        try:
+            uuid = dataset.get("uuid")
+            formats_api_response = await fetch_area_data(uuid)
+            
+            return {
+                "uuid": dataset["uuid"],
+                "title": dataset["title"],
+                "downloadFormats": formats_api_response
+            }
+        except Exception as e:
+            logger.error(f"Error fetching formats for dataset {dataset.get('uuid', 'unknown')}: {str(e)}")
+            return {
+                "uuid": dataset.get("uuid", "unknown"),
+                "title": dataset.get("title", "Unknown dataset"),
+                "downloadFormats": []
+            }
+
+    tasks = [fetch_formats(ds) for ds in dict_response]
+    
+    # Allow individual tasks to fail without affecting others
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    
+    # Filter out exceptions and keep valid results
+    valid_results = []
+    for item in results:
+        if isinstance(item, Exception):
+            logger.error(f"Task failed: {str(item)}")
+        else:
+            valid_results.append(item)
+    
+    return valid_results
+
 async def get_dataset_download_and_wms_status(vdb_search_response: List[tuple]) -> List[Dict[str, Any]]:
     """
     For each item in vdb_search_response, fetch:
@@ -180,46 +235,124 @@ async def get_dataset_download_and_wms_status(vdb_search_response: List[tuple]) 
       - The WMS URL
       - A direct downloadUrl if the dataset supports it (using a default/first area/format).
     Returns a list of enriched dataset dictionaries.
+    
+    Deduplicates results by keeping only one entry per base document title.
     """
     # Convert tuples to dictionaries.
     field_names = ['uuid', 'title', 'abstract', 'image', 'distance']
     dict_response = [dict(zip(field_names, row)) for row in vdb_search_response]
+    
+    # REMOVE PART INDICATORS
+    title_groups = {}
+    
+    for dataset in dict_response:
+        title = dataset.get("title", "")
+        
+        # Extract base title by removing part indicators like "(Del 2)" or "(Part 2)" brazy regex
+        # This regex looks for patterns like " (Del X)" or " (Part X)" at the end of titles
+        base_title = re.sub(r'\s+\([Dd]el\s+\d+\)$|\s+\([Pp]art\s+\d+\)$', '', title)
+        
+        if base_title not in title_groups:
+            title_groups[base_title] = []
+            
+        title_groups[base_title].append(dataset)
+    
+    deduplicated_response = []
+    
+    for base_title, datasets in title_groups.items():
+        # DISTANCE SORT, LOWER IS GOOD
+        datasets.sort(key=lambda x: float(x.get('distance', float('inf'))))
+        
+        # KEEP THE BEST MATCH
+        deduplicated_response.append(datasets[0])
 
     async def enrich_dataset(dataset: Dict[str, Any]) -> Dict[str, Any]:
-        uuid = dataset.get("uuid")
-        # 1) Get WMS URL.
-        wms_url = await get_wms(uuid)
+        try:
+            uuid = dataset.get("uuid")
+            # 1) Get WMS URL.
+            wms_url = await get_wms(uuid)
 
-        # 2) Fetch the raw area/projection/format data.
-        formats_api_response = await fetch_area_data(uuid)
+            # 2) Fetch the raw area/projection/format data.
+            formats_api_response = await fetch_area_data(uuid)
 
-        # 3) Attempt to get a direct download link using defaults.
-        download_url = None
-        if formats_api_response:
-            standard_format = await get_standard_or_first_format(uuid)
-            if standard_format:
+            # 3) Attempt to get a direct download link using defaults.
+            download_url = None
+            if formats_api_response:
                 try:
-                    download_url = await get_download_url(uuid, standard_format)
-                except RuntimeError as e:
-                    if "Order contains restricted datasets" in str(e):
-                        # Mark dataset as restricted.
-                        return {
-                            **dataset,
-                            "downloadFormats": formats_api_response,
-                            "wmsUrl": wms_url,
-                            "downloadUrl": None,
-                            "restricted": True
-                        }
+                    standard_format = await get_standard_or_first_format(uuid)
+                    if standard_format:
+                        try:
+                            download_url = await get_download_url(uuid, standard_format)
+                        except RuntimeError as e:
+                            if "Order contains restricted datasets" in str(e):
+                                # Mark dataset as restricted.
+                                return {
+                                    **dataset,
+                                    "downloadFormats": formats_api_response,
+                                    "wmsUrl": wms_url,
+                                    "downloadUrl": None,
+                                    "restricted": True
+                                }
+                except Exception as e:
+                    logger.error(f"Error getting download format for dataset {uuid}: {str(e)}")
+
+            return {
+                **dataset,
+                "downloadFormats": formats_api_response,
+                "wmsUrl": wms_url,
+                "downloadUrl": download_url,
+            }
+        except Exception as e:
+            logger.error(f"Error enriching dataset {dataset.get('uuid', 'unknown')}: {str(e)}")
+            return {
+                **dataset,
+                "downloadFormats": [],
+                "wmsUrl": None,
+                "downloadUrl": None,
+                "error": str(e)
+            }
+
+    # Use the deduplicated list for processing
+    tasks = [enrich_dataset(ds) for ds in deduplicated_response]
+    
+    # Allow individual tasks to fail without affecting others
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    
+    # Filter out exceptions and keep valid results
+    valid_results = []
+    for item in results:
+        if isinstance(item, Exception):
+            logger.error(f"Task failed: {str(item)}")
+        else:
+            valid_results.append(item)
+    
+    return valid_results
+
+async def check_download_api_connectivity() -> bool:
+    """
+    Check if the Geonorge download API is accessible.
+    Returns True if accessible, False otherwise.
+    """
+    try:
+        # Test URL that should always be accessible
+        url = "https://nedlasting.geonorge.no/api/codelists/defaults"
+        timeout = aiohttp.ClientTimeout(total=5)
+        
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            try:
+                async with session.get(url) as response:
+                    if response.ok:
+                        logger.info("Geonorge Download API is accessible")
+                        return True
                     else:
-                        raise
-
-        return {
-            **dataset,
-            "downloadFormats": formats_api_response,
-            "wmsUrl": wms_url,
-            "downloadUrl": download_url,
-        }
-
-    tasks = [enrich_dataset(ds) for ds in dict_response]
-    results = await asyncio.gather(*tasks, return_exceptions=False)
-    return results
+                        logger.warning(f"Geonorge Download API returned non-OK status: {response.status}")
+                        return False
+            except aiohttp.ClientConnectorError as e:
+                logger.error(f"Connection error to Geonorge Download API: {str(e)}")
+                return False
+            except asyncio.TimeoutError:
+                logger.error("Timeout connecting to Geonorge Download API")
+                return False
+    except Exception as e:
+        logger.error(f"Error checking Geonorge Download API connectivity: {str(e)}")
+        return False

@@ -1,12 +1,18 @@
-import asyncio
-import json
-import websockets
-import sys
+from concurrent.futures import ThreadPoolExecutor
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 from pathlib import Path
-import datetime
-import logging
-import traceback
 from typing import Any, Dict, List, Set
+from xml.etree import ElementTree
+from action_enums import Action
+import asyncio
+import datetime
+import json
+import logging
+import requests
+import sys
+import traceback
+import websockets
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -18,48 +24,20 @@ sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 # Import config directly from project root
 from config import CONFIG
 
-from helpers.retrieval_augmented_generation import (
-    get_rag_context,
-    get_rag_response,
-    insert_image_rag_response,
-)
+from rag import get_rag_response
 from helpers.download import (
-    get_standard_or_first_format,
-    dataset_has_download,
-    get_download_url,
-    get_dataset_download_and_wms_status,
+    get_dataset_download_formats, 
+    get_dataset_download_and_wms_status
 )
 from helpers.vector_database import get_vdb_response, get_vdb_search_response
 from helpers.websocket import send_websocket_message, send_websocket_action
 
+# Initialize Flask app 
+app = Flask(__name__)
+CORS(app)
 
-def build_memory_context(messages: List[Dict[str, Any]]) -> str:
-    """
-    Build a memory context string from a list of messages (assumed to be in Q/A pairs).
-
-    Args:
-        messages: A list of message dictionaries.
-
-    Returns:
-        A string representing the conversation history.
-    """
-    if not messages:
-        return ""
-    conversation_pairs = []
-    # Group messages into Q&A pairs.
-    # Note: This assumes messages are stored as [user_message, system_message, ...]
-    for i in range(0, len(messages), 2):
-        if i + 1 < len(messages):
-            q = messages[i]["content"]
-            a = messages[i + 1]["content"]
-            conversation_pairs.append(f"Spørsmål: {q}\nSvar: {a}")
-    memory_context = "\n\nTidligere samtalehistorikk:\n" + "\n\n".join(conversation_pairs)
-    memory_context += (
-        "\n\nVIKTIG: Dette er et oppfølgingsspørsmål. Prioriter informasjon fra den tidligere samtalen "
-        "før du introduserer nye datasett. Hvis spørsmålet er relatert til tidligere nevnte datasett, fokuser på disse først.\n\n"
-    )
-    return memory_context
-
+# Create a thread pool executor for running blocking operations
+executor = ThreadPoolExecutor()
 
 class ChatServer:
     """
@@ -68,56 +46,41 @@ class ChatServer:
 
     def __init__(self) -> None:
         self.clients: Set[Any] = set()
-        # Mapping of websocket -> message history (list of dicts)
         self.client_messages: Dict[Any, List[Dict[str, Any]]] = {}
 
     async def register(self, websocket: Any) -> None:
-        """
-        Register a new websocket client and initialize its message history.
-        """
         self.clients.add(websocket)
         self.client_messages[websocket] = []
 
     async def unregister(self, websocket: Any) -> None:
-        """
-        Unregister a websocket client.
-        """
         self.clients.remove(websocket)
         self.client_messages.pop(websocket, None)
 
     async def handle_chat_form_submit(self, websocket: Any, user_question: str) -> None:
-        """
-        Handle chat form submission by processing the user's question and sending a response.
-
-        Args:
-            websocket: The client websocket connection.
-            user_question: The question submitted by the user.
-        """
         messages = self.client_messages.get(websocket, [])
-        memory = messages[-10:]  # Use the last 10 messages for context
         try:
-            # Get VDB response and RAG context
             vdb_response = await get_vdb_response(user_question)
-            rag_context = await get_rag_context(vdb_response)
+            
+            # Get only download formats for each dataset in vdb_response
+            datasets_with_formats = []
+            if vdb_response:
+                datasets_with_formats = await get_dataset_download_formats(vdb_response)
+            
+            await send_websocket_message(Action.USER_MESSAGE.value, user_question, websocket)
 
-            # Enhanced memory context formatting if available
-            if memory:
-                memory_context = build_memory_context(memory)
-                rag_context = memory_context + rag_context
-                logger.debug("Context being used: %s", rag_context[:500] + "...")
-
-            # Display user question in chat
-            await send_websocket_message("userMessage", user_question, websocket)
-
-            # Send RAG request with context and instruction
+            # Send RAG request with streaming
             full_rag_response = await get_rag_response(
                 user_question,
-                memory,
-                rag_context,
+                datasets_with_formats, 
+                vdb_response,
                 websocket
             )
-            await send_websocket_action("streamComplete", websocket)
-
+            
+            if datasets_with_formats:
+                await send_websocket_message(Action.CHAT_DATASETS.value, datasets_with_formats, websocket)
+            
+            await send_websocket_action(Action.STREAM_COMPLETE.value, websocket)
+    
             # Add messages to history with timestamp and exchange_id
             timestamp = datetime.datetime.now().isoformat()
             exchange_id = len(messages) // 2
@@ -133,17 +96,16 @@ class ChatServer:
                     "content": full_rag_response,
                     "timestamp": timestamp,
                     "exchange_id": exchange_id,
+                    "datasets": datasets_with_formats if datasets_with_formats else None
                 }
             ])
-
-            # Handle image UI and markdown formatting
-            await insert_image_rag_response(full_rag_response, vdb_response, websocket)
-            await send_websocket_action("formatMarkdown", websocket)  # Frontend may use this action to format output
-
+            
+            await send_websocket_action(Action.FORMAT_MARKDOWN.value, websocket)
+    
         except Exception as error:
             logger.error("Server controller failed: %s", str(error))
             logger.error("Stack trace: %s", traceback.format_exc())
-            await send_websocket_action("streamComplete", websocket)
+            await send_websocket_action(Action.STREAM_COMPLETE.value, websocket)
 
     async def handle_search_form_submit(self, websocket: Any, query: str) -> None:
         """
@@ -156,7 +118,7 @@ class ChatServer:
         try:
             vdb_search_response = await get_vdb_search_response(query)
             datasets_with_status = await get_dataset_download_and_wms_status(vdb_search_response)
-            await send_websocket_message("searchVdbResults", datasets_with_status, websocket)
+            await send_websocket_message(Action.SEARCH_VDB_RESULTS.value, datasets_with_status, websocket)
 
         except Exception as error:
             logger.error("Search failed: %s", str(error))
@@ -185,15 +147,15 @@ class ChatServer:
                 logger.warning("No action specified in message")
                 return
                 
-            if action == "chatFormSubmit":
+            if action == Action.CHAT_FORM_SUBMIT.value:
                 await self.handle_chat_form_submit(websocket, data["payload"])
                 return
                 
-            elif action == "searchFormSubmit":
+            elif action == Action.SEARCH_FORM_SUBMIT.value:
                 asyncio.create_task(self.handle_search_form_submit(websocket, data["payload"]))
                 return
                 
-            elif action == "showDataset":
+            elif action == Action.SHOW_DATASET.value:                
                 # TODO: Implement WMS logic
                 pass
                 
@@ -229,24 +191,72 @@ class ChatServer:
         finally:
             await self.unregister(websocket)
 
+# Add WMS endpoint
+@app.route('/wms-info', methods=['GET'])
+def get_wms_info():
+    """ Handle WMS information requests """
+    wms_url = request.args.get('url')
+    if not wms_url:
+        return jsonify({"error": "WMS URL is required"}), 400
+
+    try:
+        response = requests.get(wms_url, timeout=10)
+        response.raise_for_status()
+        tree = ElementTree.fromstring(response.content)
+
+        ns = {"wms": "http://www.opengis.net/wms"}
+
+        layers = []
+        for layer in tree.findall(".//wms:Layer", ns):
+            name = layer.find("wms:Name", ns)
+            title = layer.find("wms:Title", ns)
+            if name is not None and title is not None:
+                layers.append({"name": name.text, "title": title.text})
+
+        formats = [
+            fmt.text for fmt in tree.findall(".//wms:GetMap/wms:Format", ns)
+        ]
+
+        return jsonify({
+            "wms_url": wms_url,
+            "available_layers": layers,
+            "available_formats": formats
+        })
+
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": str(e)}), 500
+    except ElementTree.ParseError:
+        return jsonify({"error": "Failed to parse WMS XML response"}), 500
+
+def run_flask():
+    """Run Flask in a separate thread"""
+    host = CONFIG.get("host", "localhost")
+    http_port = CONFIG.get("http_port", 5000)
+    app.run(host=host, port=http_port, debug=False, use_reloader=False)
 
 async def main() -> None:
     """
-    Initialize and run the WebSocket server.
+    Initialize and run both the WebSocket server and Flask app
     """
     server = ChatServer()
-    # Use host and port from configuration if available, else default values
     host = CONFIG.get("host", "localhost")
-    port = CONFIG.get("port", 8080)
-    async with websockets.serve(
+    ws_port = CONFIG.get("port", 8080)
+
+    # Start WebSocket server
+    ws_server = await websockets.serve(
         server.ws_handler,
         host,
-        port,
-        compression=None  # Disable compression for better compatibility
-    ):
-        logger.info("WebSocket server running on ws://%s:%s", host, port)
-        await asyncio.Future()  # Run forever
+        ws_port,
+        compression=None
+    )
+    logger.info("WebSocket server running on ws://%s:%s", host, ws_port)
 
+    # Start Flask server in a separate thread
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, run_flask)
+
+    # Keep the WebSocket server running
+    await ws_server.wait_closed()
 
 if __name__ == "__main__":
     asyncio.run(main())

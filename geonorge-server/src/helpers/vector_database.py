@@ -19,9 +19,9 @@ def _vector_search(vector_array):
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT uuid, title, title_vector <-> %s::vector AS distance 
+                SELECT uuid, title, combined_text_vector <-> %s::vector AS distance 
                 FROM text_embedding_3_large 
-                ORDER BY title_vector <-> %s::vector LIMIT 20
+                ORDER BY combined_text_vector <-> %s::vector LIMIT 20
                 """,
                 (vector_array, vector_array)
             )
@@ -32,15 +32,22 @@ def _vector_search(vector_array):
 
 
 def _rag_vector_search(vector_array):
-    """Synchronous search function used for RAG returning 3 results."""
+    """Synchronous search function used for RAG returning 10 results."""
     conn = get_connection()
     try:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT uuid, title, abstract, image, title_vector <-> %s::vector AS distance 
+                SELECT 
+                    uuid, 
+                    title, 
+                    abstract, 
+                    image, 
+                    metadatacreationdate,
+                    (combined_text_vector <-> %s::vector) * 0.7 + 
+                    (title_vector <-> %s::vector) * 0.3 AS distance 
                 FROM text_embedding_3_large 
-                ORDER BY title_vector <-> %s::vector LIMIT 3
+                ORDER BY distance LIMIT 10
                 """,
                 (vector_array, vector_array)
             )
@@ -69,7 +76,7 @@ async def rag_vector_search(vector_array):
 async def get_vdb_response(user_question):
     """
     Get the vector database response for a user question. This is used in RAG
-    and limits results to 3 datasets.
+    and limits results to 10 datasets.
     """
     json_input = await fetch_openai_embeddings(user_question)
     vectorized_input = json_input['data'][0]['embedding']
