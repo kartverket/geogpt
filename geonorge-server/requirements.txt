@@ -1,15 +1,11 @@
 pandas
-aiohttp
+openai
 python-dotenv
 requests
 psycopg2
 pgvector
+aiohttp
 websockets
-psycopg2-binary
-numpy
-PyPDF2
-tiktoken
-langchain
 flask
 flask-cors
 langchain
