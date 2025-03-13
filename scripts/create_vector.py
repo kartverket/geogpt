@@ -1,3 +1,6 @@
+import os
+import sys
+from aiohappyeyeballs import start_connection
 import pandas as pd
 import requests
 import json
@@ -8,6 +11,9 @@ BASE_URL = config.CONFIG["api"]["azure_embeddings_endpoint"]
 API_KEY = config.CONFIG["api"]["azure_embedding_api_key"]
 MODEL = "text-embedding-3-large"
 API_URL = f"{BASE_URL}/openai/deployments/{MODEL}/embeddings?api-version=2023-05-15"
+
+def log_error(message):
+    print(f"ERROR: {message}", file=sys.stderr)
 
 def fetch_embeddings(texts, model=MODEL):
     headers = {
@@ -51,8 +57,33 @@ def process_csv(file_path, output_path, columns_to_combine):
 
 # Eksempel på bruk
 if __name__ == "__main__":
-    process_csv(
-        "app/cleaned_metadata.csv",  # Inndatafil
-        "all_columns_vectorized.csv",  # Utdatafil
-        ["title", "abstract", "keyword"]  # Kolonner som skal kombineres
-    )
+    try:
+        # Initial setup and validation
+        input_file = os.path.abspath("/app/cleaned_metadata.csv")
+        output_file = os.path.abspath("/app/all_columns_vectorized.csv")
+        
+        # Validate input file
+        if not os.path.exists(input_file):
+            raise FileNotFoundError(f"Input file not found: {input_file}")
+            
+        # Test connection
+        if not start_connection():
+            raise ConnectionError("Failed to establish connection to Azure API")
+        
+        # Process the CSV
+        process_csv(
+            input_file,
+            output_file,
+            ["title", "abstract", "keyword"]
+        )
+        
+        
+    except FileNotFoundError as e:
+        log_error(f"File error: {str(e)}")
+        sys.exit(1)
+    except ConnectionError as e:
+        log_error(f"Connection error: {str(e)}")
+        sys.exit(1)
+    except Exception as e:
+        log_error(f"Unexpected error: {str(e)}")
+        sys.exit(1)
