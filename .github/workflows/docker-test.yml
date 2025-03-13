@@ -4,11 +4,11 @@ name: Docker Application Test
 on:
   push:
     branches:
-      - 'test-actions2'
+      - 'test-actions3'
       - main
   pull_request:
     branches:
-      - 'test-actions2'
+      - 'test-actions3'
       - main
 
 jobs:
@@ -24,7 +24,7 @@ jobs:
       AZURE_GPT_API_KEY: ${{ secrets.AZURE_GPT_API_KEY }}
       AZURE_GPT_ENDPOINT: ${{ secrets.AZURE_GPT_ENDPOINT }}
       AZURE_EMBEDDING_API_KEY: ${{ secrets.AZURE_EMBEDDING_API_KEY }}
-      AZURE_EMBEDDING_ENDPOINT: ${{ secrets.AZURE_EMBEDDING_ENDPOINT }}
+      AZURE_EMBEDDING_URL: ${{ secrets.AZURE_EMBEDDING_ENDPOINT }}
 
     steps:
       - name: Checkout code
@@ -49,7 +49,7 @@ jobs:
           echo "AZURE_GPT_API_KEY=${{ secrets.AZURE_GPT_API_KEY }}" >> .env
           echo "AZURE_GPT_ENDPOINT=${{ secrets.AZURE_GPT_ENDPOINT }}" >> .env
           echo "AZURE_EMBEDDING_API_KEY=${{ secrets.AZURE_EMBEDDING_API_KEY }}" >> .env
-          echo "AZURE_EMBEDDING_ENDPOINT=${{ secrets.AZURE_EMBEDDING_ENDPOINT }}" >> .env
+          echo "AZURE_EMBEDDING_URL=${{ secrets.AZURE_EMBEDDING_ENDPOINT }}" >> .env
 
       - name: Build and start containers
         run: |
