@@ -5,14 +5,23 @@ import pandas as pd
 import requests
 import json
 import config
+import socket
 
 # Correct API URL format using the correct domain
 BASE_URL = config.CONFIG["api"]["azure_embeddings_endpoint"]
 API_KEY = config.CONFIG["api"]["azure_embedding_api_key"]
 MODEL = "text-embedding-3-large"
 API_URL = f"{BASE_URL}/openai/deployments/{MODEL}/embeddings?api-version=2023-05-15"
+def test_connection():
+    try:
+        # Attempt to resolve the hostname to check for connectivity
+        socket.gethostbyname(BASE_URL)
+        return True
+    except socket.error:
+        return False
 
 def log_error(message):
+
     print(f"ERROR: {message}", file=sys.stderr)
 
 def fetch_embeddings(texts, model=MODEL):
@@ -67,7 +76,7 @@ if __name__ == "__main__":
             raise FileNotFoundError(f"Input file not found: {input_file}")
             
         # Test connection
-        if not start_connection():
+        if not test_connection():
             raise ConnectionError("Failed to establish connection to Azure API")
         
         # Process the CSV
