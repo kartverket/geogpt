@@ -14,7 +14,7 @@ if not BASE_URL:
     raise ValueError("Azure Embedding Endpoint URL is empty. Please check your configuration or environment variables.")
 
 # Ensure BASE_URL doesn't end with a slash
-BASE_URL = BASE_URL.rstrip('/')
+BASE_URL = "https://kartai-openai.openai.azure.com"
 API_KEY = config.CONFIG["api"]["azure_embedding_api_key"]
 MODEL = "text-embedding-3-large"
 API_URL = f"{BASE_URL}/openai/deployments/{MODEL}/embeddings?api-version=2023-05-15"
