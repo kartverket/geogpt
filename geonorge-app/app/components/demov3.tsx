@@ -386,7 +386,7 @@ const DemoV3 = () => {
 
   // Set up WebSocket and message handling
   useEffect(() => {
-    const socket = new WebSocket("ws://localhost:8080");
+    const socket = new WebSocket("ws://0.0.0.0:8080");
     setWs(socket);
 
     socket.onmessage = (event) => {
