@@ -12,29 +12,39 @@ cd geonorge-app
 npm i
 cd ..
 
-# 2️⃣ Start PostgreSQL med pgvector
-echo "🐘 Starter PostgreSQL med pgvector..."
-cd pgvector_docker
-./run_pgvector.sh
-cd ..
+# 2️⃣ Start PostgreSQL med pgvector hvis den ikke allerede kjører
+echo "🐘 Sjekker PostgreSQL med pgvector..."
+if ! docker ps --format '{{.Names}}' | grep -q "pgvector_container"; then
+    echo "🐘 Starter PostgreSQL med pgvector..."
+    cd pgvector_docker
+    ./run_pgvector.sh
+    cd ..
+else
+    echo "✅ PostgreSQL er allerede oppe."
+fi
 
 # 3️⃣ Installer Python-avhengigheter
 echo "🐍 Installerer Python-avhengigheter..."
 pip install -r scripts/requirements.txt
 
-# 4️⃣ Generer vektorer og sett dem inn i databasen
+# 4️⃣ Generer vektorer hvis det ikke allerede er gjort
 echo "🔢 Genererer vektorer..."
 cd scripts
 python create_vector.py
 
+# 5️⃣ Sett alltid inn data i databasen
 echo "📤 Setter inn data i databasen..."
 python insert_csv.py
 cd ..
 
-# 5️⃣ Start backend-serveren
+# 6️⃣ Start backend-serveren hvis den ikke allerede kjører
 echo "🖥️ Starter backend-serveren..."
 cd geonorge-server/src
-python server.py &
+if pgrep -f "server.py" > /dev/null; then
+    echo "✅ Backend-serveren kjører allerede."
+else
+    python server.py &
+fi
 cd ../..
 
 # 5️⃣ Start frontend-utviklingsserveren
