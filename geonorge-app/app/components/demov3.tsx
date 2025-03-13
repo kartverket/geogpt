@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, FormEvent } from "react";
-import { LogOut, Maximize, MessageSquare, X } from "lucide-react";
+import { LogOut, Maximize, MessageSquare, Send, X } from "lucide-react";
 
 import Image from "next/image";
 
@@ -1337,7 +1337,10 @@ const DemoV3 = () => {
         {isFullScreen && (
           <div className="fixed inset-0 z-[50] bg-white">
             <div className="flex justify-between items-center p-4 border-b container mx-auto">
-              <h2 className="text-xl font-semibold">GeoGPT Chat</h2>
+              <div className="flex items-center">
+                <GeoNorgeIcon />
+                <h2 className="text-xl font-bold ml-2">GeoGPT</h2>
+              </div>
               <Button
                 variant="outline"
                 onClick={exitFullScreen}
@@ -1350,9 +1353,6 @@ const DemoV3 = () => {
                     className="text-gray-500 group-hover:text-gray-700 transition-colors"
                   />
                   <span className="font-medium">Forlat fullskjerm</span>
-                  <kbd className="px-2 py-1 text-xs font-semibold bg-gray-100 border border-gray-300 rounded shadow-sm text-gray-700">
-                    ESC
-                  </kbd>
                 </div>
 
               </Button>
