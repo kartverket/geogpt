@@ -101,7 +101,7 @@ export function Chat({
   );
 
   return (
-    <ChatContainer className={cn("overflow-y-auto container mx-auto max-w-4xl flex flex-col justify-end mt-5", className)}>
+    <ChatContainer className="overflow-y-auto container mx-auto">
       {isEmpty && append && suggestions ? (
         <PromptSuggestions
           label="Prøv noen av disse ✨"
@@ -161,16 +161,16 @@ export function ChatMessages({
 
   return (
     <div
-      className="grid grid-cols-1 overflow-y-auto pb-4 pr-6 pl-3"
+      className="grid grid-cols-1 overflow-y-auto pb-4"
       ref={containerRef}
       onScroll={handleScroll}
       onTouchStart={handleTouchStart}
     >
-      <div className="max-w-[96%]  [grid-column:1/1] [grid-row:1/1]">
+      <div className="max-w-full [grid-column:1/1] [grid-row:1/1]">
         {children}
       </div>
 
-      <div className="flex flex-1 items-end justify-end [grid-column:1/1] [grid-row:1/1]"></div>
+      <div className="flex flex-1 items-end justify-end [grid-column:1/1] [grid-row:1/1]">
         {!shouldAutoScroll && (
           <div className="sticky bottom-0 left-0 flex w-full justify-end">
             <Button
@@ -184,6 +184,7 @@ export function ChatMessages({
           </div>
         )}
       </div>
+    </div>
   );
 }
 
@@ -195,7 +196,7 @@ export const ChatContainer = forwardRef<
     <div
       ref={ref}
       className={cn(
-        "flex flex-col max-h-[85vh] min-h-[65vh] w-full grid-rows-[1fr_auto] relative",
+        "grid max-h-[85vh] min-h-[65vh] w-full grid-rows-[1fr_auto]",
         className
       )}
       {...props}
@@ -233,10 +234,7 @@ export const ChatForm = forwardRef<HTMLFormElement, ChatFormProps>(
     };
 
     return (
-      <form 
-        ref={ref} 
-        onSubmit={onSubmit} 
-        className={cn("sticky bottom-0 bg-background w-full mt-auto py-4 shadow-md", className)}>
+      <form ref={ref} onSubmit={onSubmit} className={className}>
         {children({ files, setFiles })}
       </form>
     );

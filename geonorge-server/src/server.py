@@ -1,18 +1,17 @@
-from concurrent.futures import ThreadPoolExecutor
+import asyncio
+import json
+import websockets
+import sys
+from pathlib import Path
+import datetime
+import logging
+import traceback
+from typing import Any, Dict, List, Set
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from pathlib import Path
-from typing import Any, Dict, List, Set
-from xml.etree import ElementTree
-from action_enums import Action
-import asyncio
-import datetime
-import json
-import logging
 import requests
-import sys
-import traceback
-import websockets
+from xml.etree import ElementTree
+from concurrent.futures import ThreadPoolExecutor
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -24,7 +23,9 @@ sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 # Import config directly from project root
 from config import CONFIG
 
-from rag import get_rag_response
+from helpers.retrieval_augmented_generation import (
+    get_rag_response
+)
 from helpers.download import (
     get_dataset_download_formats, 
     get_dataset_download_and_wms_status
@@ -66,7 +67,7 @@ class ChatServer:
             if vdb_response:
                 datasets_with_formats = await get_dataset_download_formats(vdb_response)
             
-            await send_websocket_message(Action.USER_MESSAGE.value, user_question, websocket)
+            await send_websocket_message("userMessage", user_question, websocket)
 
             # Send RAG request with streaming
             full_rag_response = await get_rag_response(
@@ -77,9 +78,9 @@ class ChatServer:
             )
             
             if datasets_with_formats:
-                await send_websocket_message(Action.CHAT_DATASETS.value, datasets_with_formats, websocket)
+                await send_websocket_message("chatDatasets", datasets_with_formats, websocket)
             
-            await send_websocket_action(Action.STREAM_COMPLETE.value, websocket)
+            await send_websocket_action("streamComplete", websocket)
     
             # Add messages to history with timestamp and exchange_id
             timestamp = datetime.datetime.now().isoformat()
@@ -100,12 +101,12 @@ class ChatServer:
                 }
             ])
             
-            await send_websocket_action(Action.FORMAT_MARKDOWN.value, websocket)
+            await send_websocket_action("formatMarkdown", websocket)
     
         except Exception as error:
             logger.error("Server controller failed: %s", str(error))
             logger.error("Stack trace: %s", traceback.format_exc())
-            await send_websocket_action(Action.STREAM_COMPLETE.value, websocket)
+            await send_websocket_action("streamComplete", websocket)
 
     async def handle_search_form_submit(self, websocket: Any, query: str) -> None:
         """
@@ -118,7 +119,7 @@ class ChatServer:
         try:
             vdb_search_response = await get_vdb_search_response(query)
             datasets_with_status = await get_dataset_download_and_wms_status(vdb_search_response)
-            await send_websocket_message(Action.SEARCH_VDB_RESULTS.value, datasets_with_status, websocket)
+            await send_websocket_message("searchVdbResults", datasets_with_status, websocket)
 
         except Exception as error:
             logger.error("Search failed: %s", str(error))
@@ -147,15 +148,15 @@ class ChatServer:
                 logger.warning("No action specified in message")
                 return
                 
-            if action == Action.CHAT_FORM_SUBMIT.value:
+            if action == "chatFormSubmit":
                 await self.handle_chat_form_submit(websocket, data["payload"])
                 return
                 
-            elif action == Action.SEARCH_FORM_SUBMIT.value:
+            elif action == "searchFormSubmit":
                 asyncio.create_task(self.handle_search_form_submit(websocket, data["payload"]))
                 return
                 
-            elif action == Action.SHOW_DATASET.value:                
+            elif action == "showDataset":
                 # TODO: Implement WMS logic
                 pass
                 
