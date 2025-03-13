@@ -1,4 +1,3 @@
-import os
 import pandas as pd
 import requests
 import json
@@ -53,8 +52,7 @@ def process_csv(file_path, output_path, columns_to_combine):
 # Eksempel på bruk
 if __name__ == "__main__":
     process_csv(
-        input_file=os.environ.get("INPUT_CSV_PATH", "../cleaned_metadata.csv"),
-        output_file=os.environ.get("OUTPUT_CSV_PATH", "all_columns_vectorized.csv"),
-        columns_to_combine=["title", "abstract", "keyword"]  # Kolonner som skal kombineres
+        "app/cleaned_metadata.csv",  # Inndatafil
+        "all_columns_vectorized.csv",  # Utdatafil
+        ["title", "abstract", "keyword"]  # Kolonner som skal kombineres
     )
-    
