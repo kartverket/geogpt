@@ -11,18 +11,28 @@ import socket
 BASE_URL = config.CONFIG["api"]["azure_embeddings_endpoint"]
 API_KEY = config.CONFIG["api"]["azure_embedding_api_key"]
 MODEL = "text-embedding-3-large"
-API_URL = f"{BASE_URL}https:///openai/deployments/text-embedding-3-large/embeddings?api-version=2023-05-15"
+API_URL = f"{BASE_URL}/openai/deployments/{MODEL}/embeddings?api-version=2023-05-15"
+
+print(f"BASE_URL: {BASE_URL}")
+print(f"Full API URL: {API_URL}")
+
 def test_connection():
     try:
-        # Attempt to resolve the hostname to check for connectivity
-        socket.gethostbyname(BASE_URL)
+        # Extract hostname from URL
+        from urllib.parse import urlparse
+        parsed_url = urlparse(BASE_URL)
+        hostname = parsed_url.hostname
+        if not hostname:
+            print(f"Invalid hostname in URL: {BASE_URL}")
+            return False
+            
+        # Attempt to resolve the hostname
+        socket.gethostbyname(hostname)
         return True
-    except socket.error:
+    except Exception as e:
+        print(f"Connection test failed: {e}")
         return False
 
-def log_error(message):
-
-    print(f"ERROR: {message}", file=sys.stderr)
 
 def fetch_embeddings(texts, model=MODEL):
     headers = {
@@ -63,6 +73,9 @@ def process_csv(file_path, output_path, columns_to_combine):
         print(f"Embeddings lagret i: {output_path}")
     except Exception as e:
         print(f"En feil oppsto: {e}")
+
+def log_error(message):
+    print(f"ERROR: {message}")
 
 # Eksempel på bruk
 if __name__ == "__main__":
