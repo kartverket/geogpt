@@ -8,7 +8,13 @@ import config
 import socket
 
 # Correct API URL format using the correct domain
-BASE_URL = config.CONFIG["api"]["azure_embeddings_endpoint"]
+BASE_URL = config.CONFIG["api"]["azure_embeddings_endpoint"] or os.environ.get("AZURE_EMBEDDING_URL") or os.environ.get("AZURE_EMBEDDING_ENDPOINT")
+# Exit early if BASE_URL is empty
+if not BASE_URL:
+    raise ValueError("Azure Embedding Endpoint URL is empty. Please check your configuration or environment variables.")
+
+# Ensure BASE_URL doesn't end with a slash
+BASE_URL = BASE_URL.rstrip('/')
 API_KEY = config.CONFIG["api"]["azure_embedding_api_key"]
 MODEL = "text-embedding-3-large"
 API_URL = f"{BASE_URL}/openai/deployments/{MODEL}/embeddings?api-version=2023-05-15"
