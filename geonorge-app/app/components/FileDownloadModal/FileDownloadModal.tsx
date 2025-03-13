@@ -425,7 +425,7 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
             <CloseIcon />
           </button>
           <div className="flex items-center justify-start mb-4">
-            <GeoNorgeLogo />
+            <GeoNorgeLogo className="w-32 h-auto" />
           </div>
           <h2 className="text-xl text-color-gn-secondary mb-2">
             Filnedlastning - {step === 2 ? "nedlastning" : "bestilling"}
