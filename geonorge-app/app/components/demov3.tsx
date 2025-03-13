@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, FormEvent } from "react";
-import { Maximize, MessageSquare, Send } from "lucide-react";
+import { Maximize, MessageSquare } from "lucide-react";
 import Image from "next/image";
 
 // Chat components
@@ -13,7 +13,6 @@ import { ChatMessage, WMSLayer, MessageType, Address, SearchResult } from "./cha
 import { AppSidebar } from "@/components/app-sidebar";
 import { KartkatalogTab } from "@/components/kartkatalog-tab";
 import FileDownloadModal from "@/app/components/FileDownloadModal/FileDownloadModal";
-import GeoNorgeIcon from "@/app/components/GeoNorgeIcon";
 
 // Leaflet
 import L from "leaflet";
@@ -24,15 +23,6 @@ import { Button } from "@/components/ui/button";
 import { Chat as FullScreenChat } from "@/components/ui/chat";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { 
-  AlertDialog, 
-  AlertDialogAction, 
-  AlertDialogContent, 
-  AlertDialogDescription, 
-  AlertDialogFooter, 
-  AlertDialogHeader, 
-  AlertDialogTitle 
-} from "@/components/ui/alert-dialog";
 
 // Utils
 import {
@@ -45,14 +35,6 @@ import {
 
 const INITIAL_MAP_URL = "https://norgeskart.no/geoportal/#!?zoom=4.6366666666666685&lon=168670.22&lat=6789452.95&wms=https:%2F%2Fnve.geodataonline.no%2Farcgis%2Fservices%2FSkredKvikkleire2%2FMapServer%2FWMSServer&project=geonorge&layers=1002";
 
-interface TrackedDataset {
-  id: string;
-  title: string;
-  wmsUrl: string;
-  availableLayers: WMSLayer[];
-  selectedLayers: string[];
-}
-
 const DemoV3 = () => {
   const [map, setMap] = useState<L.Map | null>(null);
   const [wmsLayer, setWmsLayer] = useState<Record<string, L.TileLayer.WMS>>({});
@@ -62,7 +44,9 @@ const DemoV3 = () => {
   const [searchMarker, setSearchMarker] = useState<L.Marker | null>(null);
   const mapRef = useRef<HTMLDivElement>(null);
 
-  const [wmsUrl, setWmsUrl] = useState<string>("");
+  const [wmsUrl, setWmsUrl] = useState(
+    "https://nve.geodataonline.no/arcgis/services/SkredKvikkleire2/MapServer/WMSServer?request=GetCapabilities&service=WMS"
+  );
   const [availableLayers, setAvailableLayers] = useState<WMSLayer[]>([]);
   const [selectedLayers, setSelectedLayers] = useState<string[]>([]);
   const [currentBaseLayer, setCurrentBaseLayer] = useState<L.TileLayer | null>(
@@ -103,11 +87,6 @@ const DemoV3 = () => {
   const [searchInput, setSearchInput] = useState("");
 
   const { ws, messages, isStreaming, sendMessage } = useWebSocket();
-  const [trackedDatasets, setTrackedDatasets] = useState<TrackedDataset[]>([]);
-
-  // Add state for duplicate dataset alert
-  const [isDuplicateAlertOpen, setIsDuplicateAlertOpen] = useState(false);
-  const [duplicateDatasetTitle, setDuplicateDatasetTitle] = useState("");
 
   // Add this near the top of the file, after the imports
   useEffect(() => {
@@ -191,57 +170,58 @@ const DemoV3 = () => {
     setCurrentBaseLayer(initialLayer);
 
     setMap(mapInstance);
+    fetchWMSInfo();
 
     return () => {
       mapInstance.remove();
     };
   }, []);
 
-  const fetchWMSInfo = async (
-    urlToFetch?: string,
-    datasetId?: string,
-    datasetTitle?: string
-  ) => {
-    if (!urlToFetch && !wmsUrl) {
-      return { available_layers: [] };
-    }
-
+  const fetchWMSInfo = async () => {
     try {
       const apiUrl = `http://127.0.0.1:5000/wms-info?url=${encodeURIComponent(
-        urlToFetch || wmsUrl
+        wmsUrl
       )}`;
       const response = await fetch(apiUrl);
       const data = await response.json();
-
-      if (datasetId) {
-        setTrackedDatasets((prevDatasets) =>
-          prevDatasets.map((dataset) =>
-            dataset.id === datasetId
-              ? {
-                  ...dataset,
-                  availableLayers: data.available_layers,
-                  selectedLayers:
-                    dataset.selectedLayers.length > 0
-                      ? dataset.selectedLayers
-                      : data.available_layers.length > 0
-                      ? [data.available_layers[0].name]
-                      : [],
-                }
-              : dataset
-          )
-        );
-      } else {
-        setAvailableLayers(data.available_layers);
-        if (data.available_layers.length > 0 && selectedLayers.length === 0) {
-          setSelectedLayers([data.available_layers[0].name]);
-        }
+      setAvailableLayers(data.available_layers);
+      if (data.available_layers.length > 0) {
+        setSelectedLayers([data.available_layers[0].name]);
       }
-
-      return data;
     } catch (error) {
       console.error("Error fetching WMS info:", error);
-      return { available_layers: [] };
     }
+  };
+
+  // Update the layers displayed on the map
+  const updateLayers = () => {
+    if (!map) return;
+
+    // Remove layers that are no longer selected
+    Object.entries(wmsLayer).forEach(([name, layer]) => {
+      if (!selectedLayers.includes(name)) {
+        map.removeLayer(layer);
+        delete wmsLayer[name];
+      }
+    });
+
+    // Add or update selected layers
+    selectedLayers.forEach((layerName) => {
+      if (!wmsLayer[layerName]) {
+        const baseWmsUrl = wmsUrl.split("?")[0];
+        const newWmsLayer = L.tileLayer.wms(baseWmsUrl, {
+          layers: layerName,
+          format: "image/png",
+          transparent: true,
+          version: "1.3.0",
+          zIndex: 10, // Ensure WMS layers stay on top
+        });
+        newWmsLayer.addTo(map);
+        wmsLayer[layerName] = newWmsLayer;
+      }
+    });
+
+    setWmsLayer({ ...wmsLayer });
   };
 
   const searchAddress = async (query: string) => {
@@ -507,7 +487,6 @@ const DemoV3 = () => {
     wms_url: string;
     available_layers: WMSLayer[];
     available_formats: string[];
-    title?: string; // Add title to the interface
   }
 
   // Update the replaceIframe function
@@ -526,7 +505,6 @@ const DemoV3 = () => {
     }
 
     // Handle string type WMS URL
-  const replaceIframe = async (wmsUrl: any, datasetTitle?: string) => {
     if (
       !wmsUrl ||
       wmsUrl === "NONE" ||
@@ -536,191 +514,40 @@ const DemoV3 = () => {
       return;
     }
 
-    let processedWmsUrl: string;
-    let extractedLayers: WMSLayer[] = [];
-    let extractedTitle: string | undefined = datasetTitle;
+    try {
+      const wmsData =
+        typeof wmsUrl === "string" && wmsUrl.startsWith("{")
+          ? JSON.parse(wmsUrl)
+          : { wms_url: wmsUrl };
 
-
-    if (typeof wmsUrl === "object" && wmsUrl.wms_url) {
-      processedWmsUrl = wmsUrl.wms_url;
-      extractedLayers = wmsUrl.available_layers || [];
-      extractedTitle = wmsUrl.title || datasetTitle;
-    } else {
-      try {
-        const wmsData =
-          typeof wmsUrl === "string" && wmsUrl.startsWith("{")
-            ? JSON.parse(wmsUrl)
-            : { wms_url: wmsUrl };
-
-        if (wmsData.wms_url) {
-          processedWmsUrl = wmsData.wms_url;
-          extractedLayers = wmsData.available_layers || [];
-          extractedTitle = wmsData.title || datasetTitle;
-        } else {
-          processedWmsUrl = wmsUrl;
-        }
-      } catch (error) {
-        processedWmsUrl = wmsUrl;
-      }
-    }
-
-    const baseWmsUrl = processedWmsUrl.split("?")[0];
-    const isDuplicate = trackedDatasets.some((dataset) => {
-      const existingBaseUrl = dataset.wmsUrl.split("?")[0];
-      return existingBaseUrl === baseWmsUrl;
-    });
-
-    if (isDuplicate) {
-      setDuplicateDatasetTitle(extractedTitle || "Dette datasettet");
-      setIsDuplicateAlertOpen(true);
-      return;
-    }
-
-    const datasetId = `dataset-${Date.now()}`;
-    const title = extractedTitle || `Dataset ${trackedDatasets.length + 1}`;
-
-    if (extractedLayers.length === 0) {
-      const layerData = await fetchWMSInfo(processedWmsUrl);
-      extractedLayers = layerData.available_layers || [];
-    }
-
-    const newDataset: TrackedDataset = {
-      id: datasetId,
-      title: title,
-      wmsUrl: processedWmsUrl,
-      availableLayers: extractedLayers,
-      selectedLayers:
-        extractedLayers.length > 0 ? [extractedLayers[0].name] : [],
-    };
-
-    setTrackedDatasets((prev) => [...prev, newDataset]);
-
-    if (extractedLayers.length > 0 && map) {
-      const baseWmsUrl = processedWmsUrl.split("?")[0];
-      const layerName = extractedLayers[0].name;
-      const newWmsLayer = L.tileLayer.wms(baseWmsUrl, {
-        layers: layerName,
-        format: "image/png",
-        transparent: true,
-        version: "1.3.0",
-        zIndex: 10,
-      });
-
-      newWmsLayer.addTo(map);
-      setWmsLayer((prev) => ({
-        ...prev,
-        [`${datasetId}:${layerName}`]: newWmsLayer,
-      }));
-    }
-  };
-
-  const removeTrackedDataset = (datasetId: string) => {
-    if (map) {
-      trackedDatasets
-        .find((dataset) => dataset.id === datasetId)
-        ?.selectedLayers.forEach((layerName) => {
-          const layerId = `${datasetId}:${layerName}`;
-          if (wmsLayer[layerId]) {
-            map.removeLayer(wmsLayer[layerId]);
-
-            // Remove from wmsLayer state
-            setWmsLayer((prev) => {
-              const newLayers = { ...prev };
-              delete newLayers[layerId];
-              return newLayers;
-            });
+      if (wmsData.wms_url) {
+        setWmsUrl(wmsData.wms_url);
+        if (wmsData.available_layers) {
+          setAvailableLayers(wmsData.available_layers);
+          if (wmsData.available_layers.length > 0) {
+            setSelectedLayers([wmsData.available_layers[0].name]);
           }
-        });
-    }
-
-    setTrackedDatasets((prev) =>
-      prev.filter((dataset) => dataset.id !== datasetId)
-    );
-  };
-
-  // Updated function to handle layer selection with dataset ID
-  const handleLayerChangeWithDataset = (
-    datasetId: string,
-    layerName: string,
-    isChecked: boolean
-  ) => {
-    const dataset = trackedDatasets.find((d) => d.id === datasetId);
-    if (!dataset) return;
-
-    // Update selected layers in the dataset
-    setTrackedDatasets((prevDatasets) =>
-      prevDatasets.map((dataset) =>
-        dataset.id === datasetId
-          ? {
-              ...dataset,
-              selectedLayers: isChecked
-                ? [...dataset.selectedLayers, layerName]
-                : dataset.selectedLayers.filter((name) => name !== layerName),
-            }
-          : dataset
-      )
-    );
-
-    // Add or remove the layer from the map
-    if (map) {
-      const layerId = `${datasetId}:${layerName}`;
-
-      if (isChecked && !wmsLayer[layerId]) {
-        const baseWmsUrl = dataset.wmsUrl.split("?")[0];
-        const newWmsLayer = L.tileLayer.wms(baseWmsUrl, {
-          layers: layerName,
-          format: "image/png",
-          transparent: true,
-          version: "1.3.0",
-          zIndex: 10,
-        });
-
-        newWmsLayer.addTo(map);
-        setWmsLayer((prev) => ({
-          ...prev,
-          [layerId]: newWmsLayer,
-        }));
-      } else if (!isChecked && wmsLayer[layerId]) {
-        map.removeLayer(wmsLayer[layerId]);
-        setWmsLayer((prev) => {
-          const newLayers = { ...prev };
-          delete newLayers[layerId];
-          return newLayers;
-        });
+        } else {
+          // If no layers provided, fetch them
+          fetchWMSInfo();
+        }
       }
+    } catch (error) {
+      // If parsing fails, treat it as a simple WMS URL
+      setWmsUrl(wmsUrl);
+      fetchWMSInfo();
     }
   };
-
-  // Update the layers displayed on the map
-  const updateLayers = () => {
-    if (!map) return;
-
-    // Remove layers that are no longer selected
-    Object.entries(wmsLayer).forEach(([name, layer]) => {
-      if (!selectedLayers.includes(name)) {
-        map.removeLayer(layer);
-        delete wmsLayer[name];
-      }
-    });
-
-    // Add or update selected layers
-    selectedLayers.forEach((layerName) => {
-      if (!wmsLayer[layerName]) {
-        const baseWmsUrl = wmsUrl.split("?")[0];
-        const newWmsLayer = L.tileLayer.wms(baseWmsUrl, {
-          layers: layerName,
-          format: "image/png",
-          transparent: true,
-          version: "1.3.0",
-          zIndex: 10,
-        });
-        newWmsLayer.addTo(map);
-        wmsLayer[layerName] = newWmsLayer;
-      }
-    });
-
-    setWmsLayer({ ...wmsLayer });
-  };
+  // const onSearchSubmit = (e: FormEvent<HTMLFormElement>) => {
+  //   e.preventDefault();
+  //   if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  //   ws.send(
+  //     JSON.stringify({
+  //       action: "searchFormSubmit",
+  //       payload: searchInput,
+  //     })
+  //   );
+  // };
 
   // For the non-fullscreen chat submit handler
   const onChatSubmit = (e: FormEvent<HTMLFormElement>) => {
@@ -804,7 +631,7 @@ const DemoV3 = () => {
     handleSendMessage(message.content);
   };
 
-  // Function to handle direct download
+  // Replace the old handleDatasetDownload function with this new implementation
   const handleDatasetDownload = (msg: ChatMessage) => {
     console.log("Handling dataset download with message:", msg);
     console.log("msg.downloadUrl", msg.downloadUrl);
@@ -1124,13 +951,13 @@ const DemoV3 = () => {
                 onReplaceIframe={replaceIframe}
                 onDatasetDownload={executeDatasetDownload}
                 ws={ws}
-                trackedDatasets={trackedDatasets}
               />
             </div>
 
             <Popover
               open={isPopoverOpen}
               onOpenChange={(open) => {
+                // Only allow closing if modal is closed
                 if (!open && !blockPopoverClose) {
                   setIsPopoverOpen(false);
                 } else if (open) {
@@ -1150,7 +977,7 @@ const DemoV3 = () => {
               <PopoverContent
                 side="top"
                 align="end"
-                className="w-[450px] h-[30rem] p-0 overflow-hidden shadow-lg rounded-lg"
+                className="w-96 h-[28rem] p-0 overflow-hidden shadow-lg rounded-lg"
               >
                  <ChatWindow
                   messages={messages}
@@ -1170,17 +997,14 @@ const DemoV3 = () => {
 
         {/* Full Screen Chat UI */}
         {isFullScreen && (
-          <div className="fixed inset-0 z-[1001] bg-white flex flex-col">
-            <div className="flex justify-between items-center p-4 border-b">
-              <div className="flex items-center">
-                <GeoNorgeIcon />
-                <h2 className="text-xl font-bold ml-2">GeoGPT</h2>
-              </div>
+          <div className="fixed inset-0 z-[50] bg-white">
+            <div className="flex justify-between items-center p-4 border-b container mx-auto">
+              <h2 className="text-xl font-semibold">GeoGPT Chat</h2>
               <Button variant="outline" onClick={exitFullScreen}>
-                Gå ut fra fullskjerm
+                Exit Full Screen
               </Button>
             </div>
-            <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="p-4 h-full">
               <FullScreenChat
                 messages={transformMessagesForChatKit()}
                 handleSubmit={(e) => {
@@ -1198,17 +1022,15 @@ const DemoV3 = () => {
                 onWmsClick={replaceIframe}
                 onDownloadClick={handleFullScreenDownload}
                 onExitFullScreen={exitFullScreen}
-                className="max-w-4xl mx-auto w-full flex-1 flex flex-col justify-end"
               />
             </div>
           </div>
         )}
         <div className="z-40">
           <AppSidebar
+            selectedLayers={selectedLayers}
+            onLayerChange={handleLayerChange}
             availableLayers={availableLayers ?? []}
-            trackedDatasets={trackedDatasets}
-            onLayerChangeWithDataset={handleLayerChangeWithDataset}
-            onRemoveDataset={removeTrackedDataset}
             onChangeBaseLayer={{
               revertToBaseMap,
               changeToGraattKart,
@@ -1229,35 +1051,13 @@ const DemoV3 = () => {
           onAreaChange={handleAreaChange}
           metadataUuid={specificObject?.uuid || ""}
         />
-
-        {/*AlertDialog for duplicate datasets */}
-        <AlertDialog
-          open={isDuplicateAlertOpen}
-          onOpenChange={setIsDuplicateAlertOpen}
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Datasett finnes allerede</AlertDialogTitle>
-              <AlertDialogDescription>
-                <span className="font-medium">{duplicateDatasetTitle}</span> er
-                allerede lagt til i kartet. Det er ikke mulig å legge til samme
-                datasett flere ganger.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogAction
-                onClick={() => setIsDuplicateAlertOpen(false)}
-                className="text-white"
-              >
-                OK
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
       </div>
     </>
-    );
-  };
+  );
 };
 
 export default DemoV3;
+function sleep(arg0: number) {
+  throw new Error("Function not implemented.");
+}
+
