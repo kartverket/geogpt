@@ -10,14 +10,8 @@ import { KartkatalogTab } from "@/components/kartkatalog-tab";
 import FileDownloadModal from "@/app/components/FileDownloadModal/FileDownloadModal";
 import GeoNorgeIcon from "@/app/components/GeoNorgeIcon";
 
-// Import only types from Leaflet
-import type {
-  Map as LeafletMap,
-  TileLayer,
-  Marker,
-  TileLayerOptions,
-  Control,
-} from "leaflet";
+// Leaflet
+import type { Map as LeafletMap, TileLayer, Marker } from "leaflet";
 import "leaflet/dist/leaflet.css";
 
 // UI Components
@@ -180,9 +174,9 @@ const DemoV3 = () => {
               zoomControl: false, // Disable default zoom controls
             }).setView([65.5, 13.5], 5);
 
-            // GET POSITION BUTTON
+            // Get posistion - Simplified implementation
             const LocationControl = L.Control.extend({
-              onAdd: function (map) {
+              onAdd: function () {
                 const container = L.DomUtil.create(
                   "div",
                   "leaflet-bar leaflet-control"
@@ -192,6 +186,7 @@ const DemoV3 = () => {
                   "location-button",
                   container
                 );
+
                 button.href = "#";
                 button.title = "Find my location";
                 button.innerHTML =
@@ -199,81 +194,35 @@ const DemoV3 = () => {
 
                 L.DomEvent.disableClickPropagation(button)
                   .disableScrollPropagation(button)
-                  .on(button, "click", function (e) {
-                    L.DomEvent.preventDefault(e);
+                  .on(button, "click", (event) => {
+                    L.DomEvent.preventDefault(event);
 
-                    // Create a local reference to avoid state closure issues
-                    const currentMap = mapInstance;
+                    navigator.geolocation.getCurrentPosition(
+                      (position) => {
+                        const { latitude, longitude } = position.coords;
 
-                    // Safely handle geolocation
-                    if (navigator.geolocation) {
-                      navigator.geolocation.getCurrentPosition(
-                        (position) => {
-                          try {
-                            const { latitude, longitude } = position.coords;
-
-                            // Use the local reference to userMarker
-                            if (userMarker) {
-                              try {
-                                currentMap.removeLayer(userMarker);
-                              } catch (err) {
-                                console.error("Error removing marker:", err);
-                              }
-                            }
-
-                            // Create and add new marker
-                            const newMarker = L.marker([latitude, longitude]);
-
-                            try {
-                              newMarker.addTo(currentMap);
-                              // Update state after successful operation
-                              setUserMarker(newMarker);
-
-                              // Set view safely
-                              currentMap.setView([latitude, longitude], 14);
-                            } catch (err) {
-                              console.error("Error adding marker to map:", err);
-                              alert(
-                                "Det oppstod en feil ved visning av din posisjon."
-                              );
-                            }
-                          } catch (err) {
-                            console.error("Error handling position:", err);
-                            alert(
-                              "Det oppstod en feil ved visning av din posisjon."
-                            );
-                          }
-                        },
-                        (error) => {
-                          console.error("Geolocation error:", error);
-                          let errorMessage = "Kunne ikke hente din posisjon.";
-
-                          switch (error.code) {
-                            case error.PERMISSION_DENIED:
-                              errorMessage +=
-                                " Du må gi tillatelse til posisjonstjenester.";
-                              break;
-                            case error.POSITION_UNAVAILABLE:
-                              errorMessage +=
-                                " Posisjonsinformasjon er ikke tilgjengelig.";
-                              break;
-                            case error.TIMEOUT:
-                              errorMessage +=
-                                " Forespørselen om posisjon tok for lang tid.";
-                              break;
-                          }
-
-                          alert(errorMessage);
-                        },
-                        {
-                          enableHighAccuracy: true,
-                          timeout: 10000,
-                          maximumAge: 0,
+                        // Remove existing marker if present
+                        if (userMarker) {
+                          mapInstance.removeLayer(userMarker);
                         }
-                      );
-                    } else {
-                      alert("Nettleseren din støtter ikke geolokasjon.");
-                    }
+
+                        // Create and add new marker
+                        const newMarker = L.marker([latitude, longitude]);
+                        newMarker.addTo(mapInstance);
+
+                        // Update state and view
+                        setUserMarker(newMarker);
+                        mapInstance.setView([latitude, longitude], 14);
+                      },
+                      (error) => {
+                        console.warn("Could not get location:", error);
+                      },
+                      {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 0,
+                      }
+                    );
                   });
 
                 return container;
@@ -403,34 +352,6 @@ const DemoV3 = () => {
 
     map.setView([lat, lon], 14);
     setSearchResults2([]);
-  };
-
-  const getUserLocation = async () => {
-    if (!map) return;
-
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-
-        if (userMarker) {
-          map.removeLayer(userMarker);
-        }
-
-        // Import Leaflet dynamically
-        const L = (await import("leaflet")).default;
-        const newMarker = L.marker([latitude, longitude]);
-        newMarker.addTo(map);
-        setUserMarker(newMarker);
-
-        map.setView([latitude, longitude], 14);
-      },
-      (error) => {
-        console.error("Error getting location:", error);
-        alert(
-          "Kunne ikke hente din posisjon. Sjekk at du har gitt tillatelse til posisjonstjenester."
-        );
-      }
-    );
   };
 
   useEffect(() => {
@@ -1014,19 +935,6 @@ const DemoV3 = () => {
     setIsPopoverOpen(true);
   };
 
-  // Handles layer selection
-  const handleLayerChange = (layerName: string, isChecked: boolean) => {
-    setSelectedLayers((prev) => {
-      if (isChecked && !prev.includes(layerName)) {
-        return [...prev, layerName];
-      }
-      if (!isChecked && prev.includes(layerName)) {
-        return prev.filter((name) => name !== layerName);
-      }
-      return prev;
-    });
-  };
-
   // Update setBaseLayer function to handle errors
   async function setBaseLayer(url, options = {}) {
     if (!map) return;
@@ -1084,6 +992,12 @@ const DemoV3 = () => {
   function changeToRasterKart() {
     setBaseLayer(
       "https://cache.kartverket.no/v1/wmts/1.0.0/toporaster/default/webmercator/{z}/{y}/{x}.png"
+    );
+  }
+
+  function changeToSjoKart() {
+    setBaseLayer(
+      "https://cache.kartverket.no/v1/wmts/1.0.0/sjokartraster/default/webmercator/{z}/{y}/{x}.png"
     );
   }
 
@@ -1482,6 +1396,7 @@ const DemoV3 = () => {
               revertToBaseMap,
               changeToGraattKart,
               changeToRasterKart,
+              changeToSjoKart,
             }}
           />
         </div>

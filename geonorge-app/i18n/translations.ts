@@ -17,7 +17,8 @@ export type TranslationKey =
   | "privacy"
   | "landscape_map"
   | "grayscale_map"
-  | "raster_map";
+  | "raster_map"
+  | "sea_map";
 
 export const translations: Record<Language, Record<TranslationKey, string>> = {
   nb: {
@@ -25,7 +26,7 @@ export const translations: Record<Language, Record<TranslationKey, string>> = {
     theme_maps: "Temakart",
     active_datasets: "Aktive datasett",
     deselect_all: "Fjern alle valgte lag",
-    remove_dataset:"Fjern datasett",
+    remove_dataset: "Fjern datasett",
     search_layers: "Søk etter lag...",
     no_layers_found: "Ingen lag funnet",
     tool: "Verktøy",
@@ -38,13 +39,14 @@ export const translations: Record<Language, Record<TranslationKey, string>> = {
     landscape_map: "Landskart",
     grayscale_map: "Gråtone",
     raster_map: "Rasterkart",
+    sea_map: "Sjøkart",
   },
   nn: {
     background_map: "Bakgrunnskart",
     theme_maps: "Temakart",
     active_datasets: "Aktive datasett",
     deselect_all: "Fjern alle valgte lag",
-    remove_dataset:"Fjern datasett",
+    remove_dataset: "Fjern datasett",
     search_layers: "Søk etter lag...",
     no_layers_found: "Ingen lag funne",
     tool: "Verktøy",
@@ -57,13 +59,14 @@ export const translations: Record<Language, Record<TranslationKey, string>> = {
     landscape_map: "Landskart",
     grayscale_map: "Gråtone",
     raster_map: "Rasterkart",
+    sea_map: "Sjøkart",
   },
   en: {
     background_map: "Background Map",
     theme_maps: "Thematic Maps",
     active_datasets: "Active daatasets",
     deselect_all: "Deselect all layers",
-    remove_dataset:"Remove dataset",
+    remove_dataset: "Remove dataset",
     search_layers: "Search for layers...",
     no_layers_found: "No layers found",
     tool: "Tools",
@@ -76,5 +79,6 @@ export const translations: Record<Language, Record<TranslationKey, string>> = {
     landscape_map: "Landscape map",
     grayscale_map: "Grayscale",
     raster_map: "Raster map",
+    sea_map: "Sea map",
   },
 };
