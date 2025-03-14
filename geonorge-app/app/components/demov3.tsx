@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useRef, FormEvent } from "react";
 import { LogOut, Maximize, MessageSquare, Send, X } from "lucide-react";
-
 import Image from "next/image";
 
 // Components
@@ -11,8 +10,14 @@ import { KartkatalogTab } from "@/components/kartkatalog-tab";
 import FileDownloadModal from "@/app/components/FileDownloadModal/FileDownloadModal";
 import GeoNorgeIcon from "@/app/components/GeoNorgeIcon";
 
-// Leaflet
-import L from "leaflet";
+// Import only types from Leaflet
+import type {
+  Map as LeafletMap,
+  TileLayer,
+  Marker,
+  TileLayerOptions,
+  Control,
+} from "leaflet";
 import "leaflet/dist/leaflet.css";
 
 // UI Components
@@ -104,19 +109,19 @@ interface TrackedDataset {
 }
 
 const DemoV3 = () => {
-  const [map, setMap] = useState<L.Map | null>(null);
-  const [wmsLayer, setWmsLayer] = useState<Record<string, L.TileLayer.WMS>>({});
+  const [map, setMap] = useState<LeafletMap | null>(null);
+  const [wmsLayer, setWmsLayer] = useState<Record<string, TileLayer>>({});
   const [searchResults2, setSearchResults2] = useState<Address[]>([]);
   const [searchResults, setSearchResults] = useState<Address[]>([]);
 
-  const [userMarker, setUserMarker] = useState<L.Marker | null>(null);
-  const [searchMarker, setSearchMarker] = useState<L.Marker | null>(null);
+  const [userMarker, setUserMarker] = useState<Marker | null>(null);
+  const [searchMarker, setSearchMarker] = useState<Marker | null>(null);
   const mapRef = useRef<HTMLDivElement>(null);
 
   const [wmsUrl, setWmsUrl] = useState<string>("");
   const [availableLayers, setAvailableLayers] = useState<WMSLayer[]>([]);
   const [selectedLayers, setSelectedLayers] = useState<string[]>([]);
-  const [currentBaseLayer, setCurrentBaseLayer] = useState<L.TileLayer | null>(
+  const [currentBaseLayer, setCurrentBaseLayer] = useState<TileLayer | null>(
     null
   );
 
@@ -152,94 +157,169 @@ const DemoV3 = () => {
   const [isDuplicateAlertOpen, setIsDuplicateAlertOpen] = useState(false);
   const [duplicateDatasetTitle, setDuplicateDatasetTitle] = useState("");
 
-  // Add this near the top of the file, after the imports
   useEffect(() => {
-    // Fix Leaflet's default icon path issues
-    delete (L.Icon.Default.prototype as any)._getIconUrl;
-    L.Icon.Default.mergeOptions({
-      iconRetinaUrl:
-        "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
-      iconUrl:
-        "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
-      shadowUrl:
-        "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
-    });
-  }, []);
-  useEffect(() => {
-    if (!mapRef.current || map) return;
-
-    const mapInstance = L.map(mapRef.current, {
-      zoomControl: false, // Disable default zoom controls
-    }).setView([65.5, 13.5], 5);
-
-    // GET POSITION BUTTON ----->>>>------<<<<<<--<<-<-<-
-    const LocationControl = L.Control.extend({
-      onAdd: function (map: L.Map) {
-        const container = L.DomUtil.create(
-          "div",
-          "leaflet-bar leaflet-control"
-        );
-        const button = L.DomUtil.create("a", "location-button", container);
-        button.href = "#";
-        button.title = "Find my location";
-        button.innerHTML =
-          '<div class="flex items-center justify-center w-full h-full"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-locate"><line x1="2" x2="5" y1="12" y2="12"/><line x1="19" x2="22" y1="12" y2="12"/><line x1="12" x2="12" y1="2" y2="5"/><line x1="12" x2="12" y1="19" y2="22"/><circle cx="12" cy="12" r="7"/></svg></div>';
-
-        L.DomEvent.disableClickPropagation(button)
-          .disableScrollPropagation(button)
-          .on(button, "click", function (e) {
-            L.DomEvent.preventDefault(e);
-            navigator.geolocation.getCurrentPosition(
-              (position) => {
-                const { latitude, longitude } = position.coords;
-                if (userMarker) {
-                  map.removeLayer(userMarker);
-                }
-                const newMarker = L.marker([latitude, longitude]);
-                newMarker.addTo(map);
-                setUserMarker(newMarker);
-                map.setView([latitude, longitude], 14);
-              },
-              (error) => {
-                console.error("Error getting location:", error);
-                alert(
-                  "Kunne ikke hente din posisjon. Sjekk at du har gitt tillatelse til posisjonstjenester."
-                );
-              }
-            );
+    // Only import Leaflet on the client side
+    if (typeof window !== "undefined") {
+      // Import Leaflet dynamically
+      import("leaflet")
+        .then((L) => {
+          // Fix Leaflet's default icon path issues
+          delete (L.Icon.Default.prototype as any)._getIconUrl;
+          L.Icon.Default.mergeOptions({
+            iconRetinaUrl:
+              "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
+            iconUrl:
+              "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+            shadowUrl:
+              "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
           });
 
-        return container;
-      },
-    });
+          // Initialize map if ref exists and map doesn't exist yet
+          if (mapRef.current && !map) {
+            const mapInstance = L.map(mapRef.current, {
+              zoomControl: false, // Disable default zoom controls
+            }).setView([65.5, 13.5], 5);
 
-    // Add the custom control below zoom controls
-    new LocationControl({ position: "topright" }).addTo(mapInstance);
-    // Add zoom control in custom position
-    L.control
-      .zoom({
-        position: "topright",
-      })
-      .addTo(mapInstance);
+            // GET POSITION BUTTON
+            const LocationControl = L.Control.extend({
+              onAdd: function (map) {
+                const container = L.DomUtil.create(
+                  "div",
+                  "leaflet-bar leaflet-control"
+                );
+                const button = L.DomUtil.create(
+                  "a",
+                  "location-button",
+                  container
+                );
+                button.href = "#";
+                button.title = "Find my location";
+                button.innerHTML =
+                  '<div class="flex items-center justify-center w-full h-full"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-locate"><line x1="2" x2="5" y1="12" y2="12"/><line x1="19" x2="22" y1="12" y2="12"/><line x1="12" x2="12" y1="2" y2="5"/><line x1="12" x2="12" y1="19" y2="22"/><circle cx="12" cy="12" r="7"/></svg></div>';
 
-    // Replace the OpenStreetMap tile layer with Kartverket's
-    const initialLayer = L.tileLayer(
-      "https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png",
-      {
-        maxZoom: 18,
-        attribution:
-          '&copy; <a href="http://www.kartverket.no/">Kartverket</a>',
-      }
-    );
-    initialLayer.addTo(mapInstance);
-    setCurrentBaseLayer(initialLayer);
+                L.DomEvent.disableClickPropagation(button)
+                  .disableScrollPropagation(button)
+                  .on(button, "click", function (e) {
+                    L.DomEvent.preventDefault(e);
 
-    setMap(mapInstance);
+                    // Create a local reference to avoid state closure issues
+                    const currentMap = mapInstance;
+
+                    // Safely handle geolocation
+                    if (navigator.geolocation) {
+                      navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                          try {
+                            const { latitude, longitude } = position.coords;
+
+                            // Use the local reference to userMarker
+                            if (userMarker) {
+                              try {
+                                currentMap.removeLayer(userMarker);
+                              } catch (err) {
+                                console.error("Error removing marker:", err);
+                              }
+                            }
+
+                            // Create and add new marker
+                            const newMarker = L.marker([latitude, longitude]);
+
+                            try {
+                              newMarker.addTo(currentMap);
+                              // Update state after successful operation
+                              setUserMarker(newMarker);
+
+                              // Set view safely
+                              currentMap.setView([latitude, longitude], 14);
+                            } catch (err) {
+                              console.error("Error adding marker to map:", err);
+                              alert(
+                                "Det oppstod en feil ved visning av din posisjon."
+                              );
+                            }
+                          } catch (err) {
+                            console.error("Error handling position:", err);
+                            alert(
+                              "Det oppstod en feil ved visning av din posisjon."
+                            );
+                          }
+                        },
+                        (error) => {
+                          console.error("Geolocation error:", error);
+                          let errorMessage = "Kunne ikke hente din posisjon.";
+
+                          switch (error.code) {
+                            case error.PERMISSION_DENIED:
+                              errorMessage +=
+                                " Du må gi tillatelse til posisjonstjenester.";
+                              break;
+                            case error.POSITION_UNAVAILABLE:
+                              errorMessage +=
+                                " Posisjonsinformasjon er ikke tilgjengelig.";
+                              break;
+                            case error.TIMEOUT:
+                              errorMessage +=
+                                " Forespørselen om posisjon tok for lang tid.";
+                              break;
+                          }
+
+                          alert(errorMessage);
+                        },
+                        {
+                          enableHighAccuracy: true,
+                          timeout: 10000,
+                          maximumAge: 0,
+                        }
+                      );
+                    } else {
+                      alert("Nettleseren din støtter ikke geolokasjon.");
+                    }
+                  });
+
+                return container;
+              },
+            });
+
+            // Add the custom control below zoom controls
+            new LocationControl({ position: "topright" }).addTo(mapInstance);
+
+            // Add zoom control in custom position
+            L.control
+              .zoom({
+                position: "topright",
+              })
+              .addTo(mapInstance);
+
+            // Replace the OpenStreetMap tile layer with Kartverket's
+            const initialLayer = L.tileLayer(
+              "https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png",
+              {
+                maxZoom: 18,
+                attribution:
+                  '&copy; <a href="http://www.kartverket.no/">Kartverket</a>',
+              }
+            );
+            initialLayer.addTo(mapInstance);
+            setCurrentBaseLayer(initialLayer);
+
+            setMap(mapInstance);
+          }
+        })
+        .catch((err) => {
+          console.error("Error loading Leaflet:", err);
+        });
+    }
 
     return () => {
-      mapInstance.remove();
+      if (map) {
+        try {
+          map.remove();
+        } catch (err) {
+          console.error("Error removing map:", err);
+        }
+      }
     };
-  }, []);
+  }, [map]); // Remove userMarker from dependencies to avoid re-initialization
 
   const fetchWMSInfo = async (
     urlToFetch?: string,
@@ -306,7 +386,7 @@ const DemoV3 = () => {
     }
   };
 
-  const selectAddress = (address: Address) => {
+  const selectAddress = async (address: Address) => {
     if (!map) return;
 
     const { lat, lon } = address.representasjonspunkt;
@@ -315,6 +395,8 @@ const DemoV3 = () => {
       map.removeLayer(searchMarker);
     }
 
+    // Import Leaflet dynamically
+    const L = (await import("leaflet")).default;
     const newMarker = L.marker([lat, lon]);
     newMarker.addTo(map);
     setSearchMarker(newMarker);
@@ -323,17 +405,19 @@ const DemoV3 = () => {
     setSearchResults2([]);
   };
 
-  const getUserLocation = () => {
+  const getUserLocation = async () => {
     if (!map) return;
 
     navigator.geolocation.getCurrentPosition(
-      (position) => {
+      async (position) => {
         const { latitude, longitude } = position.coords;
 
         if (userMarker) {
           map.removeLayer(userMarker);
         }
 
+        // Import Leaflet dynamically
+        const L = (await import("leaflet")).default;
         const newMarker = L.marker([latitude, longitude]);
         newMarker.addTo(map);
         setUserMarker(newMarker);
@@ -577,7 +661,6 @@ const DemoV3 = () => {
     let processedWmsUrl: string;
     let extractedLayers: WMSLayer[] = [];
     let extractedTitle: string | undefined = datasetTitle;
-
 
     if (typeof wmsUrl === "object" && wmsUrl.wms_url) {
       processedWmsUrl = wmsUrl.wms_url;
@@ -944,31 +1027,46 @@ const DemoV3 = () => {
     });
   };
 
-  // Handles map layer changes, keep track of WMS layer order
-  function setBaseLayer(url: string, options?: L.TileLayerOptions) {
+  // Update setBaseLayer function to handle errors
+  async function setBaseLayer(url, options = {}) {
     if (!map) return;
 
-    // Remove current WMS layer when changing map layer
-    if (currentBaseLayer) {
-      map.removeLayer(currentBaseLayer);
+    try {
+      // Remove current WMS layer when changing map layer
+      if (currentBaseLayer) {
+        try {
+          map.removeLayer(currentBaseLayer);
+        } catch (err) {
+          console.error("Error removing current base layer:", err);
+        }
+      }
+
+      // Import Leaflet dynamically
+      const L = (await import("leaflet")).default;
+
+      // Sets a new map layer with low z-index
+      const newLayer = L.tileLayer(url, {
+        zIndex: 0, // Ensure map layer stays at bottom
+        ...options,
+      });
+
+      // Add map layer first
+      newLayer.addTo(map);
+      setCurrentBaseLayer(newLayer);
+
+      // Re-add all WMS layers to ensure they stay on top
+      Object.values(wmsLayer).forEach((layer) => {
+        try {
+          map.removeLayer(layer);
+          layer.setZIndex(10); // Set higher z-index for WMS layers
+          layer.addTo(map);
+        } catch (err) {
+          console.error("Error re-adding WMS layer:", err);
+        }
+      });
+    } catch (err) {
+      console.error("Error changing base layer:", err);
     }
-
-    // Sets a new map layer with low z-index
-    const newLayer = L.tileLayer(url, {
-      zIndex: 0, // Ensure map layer stays at bottom
-      ...options,
-    });
-
-    // Add map layer first
-    newLayer.addTo(map);
-    setCurrentBaseLayer(newLayer);
-
-    // Re-add all WMS layers to ensure they stay on top
-    Object.values(wmsLayer).forEach((layer) => {
-      map.removeLayer(layer);
-      layer.setZIndex(10); // Set higher z-index for WMS layers
-      layer.addTo(map);
-    });
   }
 
   function revertToBaseMap() {
@@ -1354,7 +1452,6 @@ const DemoV3 = () => {
                   />
                   <span className="font-medium">Forlat fullskjerm</span>
                 </div>
-
               </Button>
             </div>
             <div className="flex-1 flex flex-col overflow-hidden">

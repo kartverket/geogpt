@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import L from "leaflet";
 import {
   Search,
   ChevronLeft,
@@ -62,6 +61,7 @@ interface KartkatalogTabProps {
   onReplaceIframe: (wmsUrl: string) => void;
   onDatasetDownload: (dataset: SearchResult) => void;
   ws: WebSocket | null;
+  trackedDatasets: string[];
 }
 
 export function KartkatalogTab({
@@ -69,6 +69,7 @@ export function KartkatalogTab({
   onReplaceIframe,
   onDatasetDownload,
   ws,
+  trackedDatasets,
 }: KartkatalogTabProps) {
   const [isExpanded, setIsExpanded] = React.useState(false);
   const [searchInput, setSearchInput] = React.useState("");
@@ -92,11 +93,15 @@ export function KartkatalogTab({
   // Create a ref for the main panel container
   const panelRef = React.useRef<HTMLDivElement>(null);
 
+  // Use client-side only import for Leaflet
   React.useEffect(() => {
-    if (panelRef.current) {
+    if (typeof window === "undefined" || !panelRef.current) return;
+
+    // Import Leaflet dynamically
+    import("leaflet").then((L) => {
       // This will prevent the scroll (wheel) events on the panel from propagating to the map.
-      L.DomEvent.disableScrollPropagation(panelRef.current);
-    }
+      L.DomEvent.disableScrollPropagation(panelRef.current!);
+    });
   }, []);
 
   React.useEffect(() => {
