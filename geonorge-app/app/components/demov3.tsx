@@ -2,8 +2,12 @@
 
 import { useEffect, useState, useRef, FormEvent } from "react";
 import { LogOut, Maximize, MessageSquare, Send, X } from "lucide-react";
-
 import Image from "next/image";
+
+// Chat imports
+import { useWebSocket } from "./chat/useWebSocket";
+import { ChatWindow } from "./chat";
+import { ChatMessage, WMSLayer, MessageType, Address, SearchResult } from "./chat/types";
 
 // Components
 import { AppSidebar } from "@/components/app-sidebar";
@@ -42,59 +46,6 @@ import {
   getAreaFormatsAndProjections,
 } from "@/utils/datasetUtils";
 
-interface WMSLayer {
-  name: string;
-  title: string;
-}
-
-type MessageType = {
-  action: string;
-  payload?: any;
-  isNewMessage?: boolean;
-};
-
-interface Address {
-  adressetekst: string;
-  poststed?: string;
-  representasjonspunkt: {
-    lat: number;
-    lon: number;
-  };
-}
-
-// Update the ChatMessage interface to include title and downloadFormats
-interface ChatMessage {
-  title: string;
-  type: "text" | "image" | "streaming";
-  content?: string;
-  imageUrl?: string;
-  downloadUrl?: string | null;
-  wmsUrl?: string | null;
-  uuid?: string;
-  downloadFormats?: {
-    type: string;
-    name: string;
-    code: string;
-    projections?: { name: string; code: string }[];
-    formats?: { name: string }[];
-  }[];
-}
-
-export interface SearchResult {
-  title?: string;
-  wmsUrl?: string;
-  downloadUrl?: string | null;
-  restricted?: boolean;
-  uuid?: string;
-  downloadFormats?: {
-    type: string;
-    name: string;
-    code: string;
-    projections?: { name: string; code: string }[];
-    formats?: { name: string }[];
-  }[];
-}
-
 interface TrackedDataset {
   id: string;
   title: string;
@@ -104,8 +55,11 @@ interface TrackedDataset {
 }
 
 const DemoV3 = () => {
+  // Existing map state...
   const [map, setMap] = useState<L.Map | null>(null);
   const [wmsLayer, setWmsLayer] = useState<Record<string, L.TileLayer.WMS>>({});
+  // ... other map related state
+
   const [searchResults2, setSearchResults2] = useState<Address[]>([]);
   const [searchResults, setSearchResults] = useState<Address[]>([]);
 
@@ -152,6 +106,17 @@ const DemoV3 = () => {
   const [isDuplicateAlertOpen, setIsDuplicateAlertOpen] = useState(false);
   const [duplicateDatasetTitle, setDuplicateDatasetTitle] = useState("");
 
+  // Add inside the DemoV3 component, with the other state declarations
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [isChatStreaming, setIsChatStreaming] = useState(false);
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const [isFullScreen, setIsFullScreen] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const [chatInput, setChatInput] = useState<string>("");
+  const [ws, setWs] = useState<WebSocket | null>(null);
+  
+  // Use the custom WebSocket hook instead of direct management
+  const { messages, isStreaming, sendMessage } = useWebSocket();
   // Add this near the top of the file, after the imports
   useEffect(() => {
     // Fix Leaflet's default icon path issues
@@ -353,36 +318,6 @@ const DemoV3 = () => {
     updateLayers();
   }, [selectedLayers]);
 
-  const [ws, setWs] = useState<WebSocket | null>(null);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const [chatInput, setChatInput] = useState("");
-
-  // State for chat streaming
-  const [isChatStreaming, setIsChatStreaming] = useState(false);
-
-  // State for full screen mode and popover open state
-  const [isFullScreen, setIsFullScreen] = useState(false);
-  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-
-  // ESC key can be used for quick exit
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isFullScreen) {
-        exitFullScreen();
-      }
-    };
-
-    if (isFullScreen) {
-      document.addEventListener("keydown", handleKeyDown);
-    }
-
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isFullScreen]);
-
-  const chatEndRef = useRef<HTMLDivElement>(null);
-
   // Add these state variables to track modal and popover state
   const [modalOpen, setModalOpen] = useState(false);
   const [blockPopoverClose, setBlockPopoverClose] = useState(false);
@@ -403,14 +338,15 @@ const DemoV3 = () => {
   }, [isFileDownloadModalOpen]);
 
   // Set up WebSocket and message handling
-  useEffect(() => {
-    const socket = new WebSocket("ws://localhost:8080");
-    setWs(socket);
-
-    socket.onmessage = (event) => {
-      const data: MessageType = JSON.parse(event.data);
-      handleServerMessage(data);
-    };
+useEffect(() => {
+  // Dynamically determine the WebSocket URL based on current window location
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const host = window.location.hostname; 
+  const port = "8080"; 
+  
+  const wsUrl = `${protocol}//${host}:${port}`;
+  const socket = new WebSocket(wsUrl);
+  setWs(socket);
 
     socket.onopen = () => {
       // Trigger an initial search on connection
@@ -431,130 +367,22 @@ const DemoV3 = () => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
 
-  const handleServerMessage = (data: MessageType) => {
-    const { action, payload } = data;
-    console.log("Incoming action:", action, "payload:", payload);
-    switch (action) {
-      case "chatStream":
-        setIsChatStreaming(true);
-        if (payload.isNewMessage && !payload.payload) break;
-        setChatMessages((prev) => {
-          const lastMsg = prev[prev.length - 1];
-          if (
-            !lastMsg ||
-            lastMsg.type !== "streaming" ||
-            payload.isNewMessage
-          ) {
-            return [
-              ...prev,
-              { type: "streaming", content: payload.payload || "" },
-            ];
-          } else {
-            const updated: ChatMessage = {
-              ...lastMsg,
-              content: lastMsg.content + (payload.payload || ""),
-            };
-            return [...prev.slice(0, -1), updated];
-          }
-        });
-        break;
 
-      case "streamComplete":
-        setIsChatStreaming(false); // Re-enable send button after stream complete
-        setChatMessages((prev) => {
-          const lastMsg = prev[prev.length - 1];
-          if (!lastMsg || lastMsg.type !== "streaming") return prev;
-          const systemMsg = `System: ${lastMsg.content}`;
-          const converted: ChatMessage = { type: "text", content: systemMsg };
-          return [...prev.slice(0, -1), converted];
-        });
-        break;
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isFullScreen) {
+        exitFullScreen();
+      }
+    };
 
-      case "searchVdbResults":
-        setSearchResults(payload);
-        break;
-
-      case "insertImage":
-        const { datasetImageUrl, datasetDownloadUrl, wmsUrl } = payload;
-        setChatMessages((prev) => [
-          ...prev,
-          {
-            type: "image",
-            imageUrl: datasetImageUrl,
-            downloadUrl: datasetDownloadUrl,
-            wmsUrl: wmsUrl,
-            title: datasetName,
-          },
-        ]);
-        break;
-
-      case "chatDatasets":
-        if (payload && Array.isArray(payload)) {
-          const firstUuid = payload[0].uuid;
-          setUuidToFind(firstUuid);
-
-          const datasetObject = payload.find(
-            (item: SearchResult) => item.uuid === firstUuid
-          );
-
-          // Store the dataset info
-          setSpecificObject(datasetObject || null);
-          console.log("Specific object set to:", datasetObject);
-
-          if (datasetObject) {
-            // Update any pending image message with dataset details
-            setChatMessages((prev) => {
-              const lastIndex = prev.length - 1;
-              for (let i = lastIndex; i >= 0; i--) {
-                if (
-                  prev[i].type === "image" &&
-                  (!prev[i].downloadFormats ||
-                    prev[i].downloadFormats?.length === 0)
-                ) {
-                  const updatedMessages = [...prev];
-                  updatedMessages[i] = {
-                    ...updatedMessages[i],
-                    downloadFormats: datasetObject.downloadFormats || [],
-                    title: datasetObject.title || "",
-                    uuid: datasetObject.uuid,
-                  };
-                  return updatedMessages;
-                }
-              }
-              return prev;
-            });
-            setDatasetName(datasetObject.title || "");
-
-            const rawGeoAreas = datasetObject.downloadFormats.map((fmt) => ({
-              type: fmt.type,
-              name: fmt.name,
-              code: fmt.code,
-            }));
-            setGeographicalAreas(dedupeAreas(rawGeoAreas));
-
-            const rawProjections = datasetObject.downloadFormats.flatMap(
-              (fmt) =>
-                fmt.projections
-                  ? fmt.projections.map((proj) => ({
-                      name: proj.name,
-                      code: proj.code,
-                    }))
-                  : []
-            );
-            setProjections(dedupeProjections(rawProjections));
-
-            const rawFormats = datasetObject.downloadFormats.flatMap((fmt) =>
-              fmt.formats ? fmt.formats.map((format) => format.name) : []
-            );
-            setFormats(dedupeFormats(rawFormats));
-          }
-        }
-        break;
-
-      default:
-        console.log("Unknown action:", data);
+    if (isFullScreen) {
+      document.addEventListener("keydown", handleKeyDown);
     }
-  };
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isFullScreen]);
 
   // Update the interface for WMS data
   interface WMSData {
@@ -656,7 +484,7 @@ const DemoV3 = () => {
     if (map) {
       trackedDatasets
         .find((dataset) => dataset.id === datasetId)
-        ?.selectedLayers.forEach((layerName) => {
+        ?.selectedLayers.forEach((layerName: any) => {
           const layerId = `${datasetId}:${layerName}`;
           if (wmsLayer[layerId]) {
             map.removeLayer(wmsLayer[layerId]);
@@ -693,7 +521,7 @@ const DemoV3 = () => {
               ...dataset,
               selectedLayers: isChecked
                 ? [...dataset.selectedLayers, layerName]
-                : dataset.selectedLayers.filter((name) => name !== layerName),
+                : dataset.selectedLayers.filter((name: string) => name !== layerName),
             }
           : dataset
       )
@@ -760,176 +588,12 @@ const DemoV3 = () => {
     setWmsLayer({ ...wmsLayer });
   };
 
-  // For the non-fullscreen chat submit handler
-  const onChatSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const trimmedInput = chatInput.trim();
-    if (
-      !ws ||
-      ws.readyState !== WebSocket.OPEN ||
-      !trimmedInput ||
-      isChatStreaming
-    )
-      return;
-    ws.send(
-      JSON.stringify({ action: "chatFormSubmit", payload: trimmedInput })
-    );
-    setChatMessages((prev) => [
-      ...prev,
-      { type: "text", content: `You: ${trimmedInput}` },
-    ]);
-    setChatInput("");
-    setIsChatStreaming(true);
-  };
-
-  // Shared function for sending a message
-  const handleSendMessage = (message: string) => {
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    ws.send(JSON.stringify({ action: "chatFormSubmit", payload: message }));
-    setChatMessages((prev) => [
-      ...prev,
-      { type: "text", content: `You: ${message}` },
-    ]);
-  };
-
-  // Full screen chat handlers
-  const fullScreenHandleSubmit = (
-    e?: { preventDefault?: () => void },
-    options?: { experimental_attachments?: FileList }
-  ) => {
-    if (e && e.preventDefault) {
-      e.preventDefault();
-    }
-    if (!chatInput.trim() || isChatStreaming) return;
-    handleSendMessage(chatInput);
-    setChatInput("");
-  };
-
-  const fullScreenHandleInputChange = (
-    e: React.ChangeEvent<HTMLTextAreaElement>
-  ) => {
-    setChatInput(e.target.value);
-  };
-
-  // Transform chatMessages to the shape expected by the FullScreenChat component.
-  const transformMessagesForChatKit = () => {
-    return chatMessages.map((msg, idx) => {
-      if (msg.type === "image" && msg.imageUrl) {
-        return {
-          id: `msg-${idx}`,
-          type: "image" as const,
-          role: "assistant" as const,
-          imageUrl: msg.imageUrl,
-          wmsUrl: msg.wmsUrl || undefined,
-          downloadUrl: msg.downloadUrl || undefined,
-          content: "",
-        };
-      }
-      let role: "user" | "assistant" = "assistant";
-      let content = msg.content || "";
-      if (content.startsWith("You: ")) {
-        role = "user";
-        content = content.slice("You: ".length);
-      } else if (content.startsWith("System: ")) {
-        role = "assistant";
-        content = content.slice("System: ".length);
-      }
-      return {
-        id: `msg-${idx}`,
-        role,
-        content,
-        type: "text" as const,
-      };
-    });
-  };
-
   // Suggestions for the full screen chat
   const suggestions = [
     "Hva er FKB?",
     "Hvilke datasett er nyttige for byggesaksbehandlere?",
     "Er det kvikkleire der jeg bor?",
   ];
-
-  // Append function for suggestion prompts in full screen chat
-  const handleAppend = (message: { role: "user"; content: string }) => {
-    handleSendMessage(message.content);
-  };
-
-  // Function to handle direct download
-  const handleDatasetDownload = (msg: ChatMessage) => {
-    console.log("Handling dataset download with message:", msg);
-    console.log("msg.downloadUrl", msg.downloadUrl);
-
-    const formatsToUse =
-      msg.downloadFormats && msg.downloadFormats.length > 0
-        ? msg.downloadFormats
-        : specificObject?.downloadFormats || [];
-
-    if (formatsToUse.length > 0) {
-      // Extract and dedupe geographical areas
-      const rawGeoAreas = formatsToUse.map((fmt) => ({
-        type: fmt.type,
-        name: fmt.name,
-        code: fmt.code,
-      }));
-      const uniqueGeographicalAreas = dedupeAreas(rawGeoAreas);
-
-      // Extract and dedupe projections
-      const rawProjections = formatsToUse
-        .flatMap((fmt) => (fmt.projections ? fmt.projections : []))
-        .map((proj) => ({
-          name: proj.name,
-          code: proj.code,
-        }));
-      const uniqueProjections = dedupeProjections(rawProjections);
-
-      // Extract and dedupe formats
-      const rawFormats = formatsToUse.flatMap((fmt) =>
-        fmt.formats ? fmt.formats.map((format) => format.name) : []
-      );
-      const uniqueFormats = dedupeFormats(rawFormats);
-
-      setGeographicalAreas(uniqueGeographicalAreas);
-      setProjections(uniqueProjections);
-      setFormats(uniqueFormats);
-      setDatasetName(msg.title || specificObject?.title || "");
-      setPendingDownloadUrl(msg.downloadUrl || null); // Store the standard download URL
-      setFileDownloadModalOpen(true);
-    } else if (msg.downloadUrl) {
-      // If no formats but URL exists, use standard download
-      handleDirectDownload(msg.downloadUrl);
-    } else {
-      console.warn("No download URL or formats available");
-    }
-  };
-
-  // Adapter to handle full screen download, similar to Demo logic
-  const handleFullScreenDownload = (url: string) => {
-    const messageWithUrl = chatMessages.find((msg) => msg.downloadUrl === url);
-    if (messageWithUrl) {
-      handleDatasetDownload(messageWithUrl);
-    } else {
-      const minimalMsg: ChatMessage = {
-        type: "image",
-        downloadUrl: url,
-        title: specificObject?.title || "",
-        downloadFormats: specificObject?.downloadFormats || [],
-      };
-      handleDatasetDownload(minimalMsg);
-    }
-  };
-
-  // When entering full screen, close the popover
-  const enterFullScreen = () => {
-    setIsFullScreen(true);
-    setIsPopoverOpen(false);
-  };
-
-  // When exiting full screen, reopen the popover
-  const exitFullScreen = () => {
-    setIsFullScreen(false);
-    setIsPopoverOpen(true);
-  };
 
   // Handles layer selection
   const handleLayerChange = (layerName: string, isChecked: boolean) => {
@@ -1015,7 +679,7 @@ const DemoV3 = () => {
     const downloadFormats = dataset.downloadFormats || [];
     if (downloadFormats.length > 0) {
       // Extract and dedupe geographical areas
-      const rawGeoAreas = downloadFormats.map((fmt) => ({
+      const rawGeoAreas = downloadFormats.map((fmt: { type: any; name: any; code: any; }) => ({
         type: fmt.type,
         name: fmt.name,
         code: fmt.code,
@@ -1024,16 +688,16 @@ const DemoV3 = () => {
 
       // Extract projections and formats
       const rawProjections = downloadFormats
-        .flatMap((fmt) => fmt.projections || [])
-        .map((proj) => ({
+        .flatMap((fmt: { projections?: { name: string; code: string }[] }) => fmt.projections || [])
+        .map((proj: { name: any; code: any; }) => ({
           name: proj.name,
           code: proj.code,
         }));
       setProjections(dedupeProjections(rawProjections));
 
       const rawFormats = downloadFormats
-        .flatMap((fmt) => fmt.formats || [])
-        .map((format) => format.name);
+        .flatMap((fmt: { formats?: { name: string }[] }) => fmt.formats || [])
+        .map((format: { name: any; }) => format.name);
       setFormats(dedupeFormats(rawFormats));
 
       setDatasetName(dataset.title || "");
@@ -1079,60 +743,255 @@ const DemoV3 = () => {
     setFileDownloadModalOpen(false);
   };
 
+  const chatPopoverProps = {
+    open: isPopoverOpen,
+    onOpenChange: setIsPopoverOpen
+  };
+  
+  // Add inside the DemoV3 component
+
+const handleSendMessage = (message: string) => {
+  console.log('📨 Handling message send:', message);
+  sendMessage(message);
+};
+
+const fullScreenHandleSubmit = (
+  e?: { preventDefault?: () => void },
+  options?: { experimental_attachments?: FileList }
+) => {
+  if (e && e.preventDefault) {
+    e.preventDefault();
+  }
+  if (!chatInput.trim() || isChatStreaming) return;
+  handleSendMessage(chatInput);
+  setChatInput("");
+};
+
+const onChatSubmit = (e: FormEvent<HTMLFormElement>) => {
+  e.preventDefault();
+  const trimmedInput = chatInput.trim();
+  if (!trimmedInput || isStreaming) {
+    console.log('⚠️ Chat submission prevented:', { isEmpty: !trimmedInput, isStreaming });
+    return;
+  }
+  console.log('💬 Submitting chat message:', trimmedInput);
+  sendMessage(trimmedInput);
+  setChatInput("");
+};
+
+  const handleDatasetDownload = (msg: ChatMessage) => {
+  console.log("Handling dataset download with message:", msg);
+
+  // Set the specific object when handling download
+  if (msg.uuid && msg.downloadFormats) {
+    setSpecificObject({
+      uuid: msg.uuid,
+      title: msg.title,
+      downloadFormats: msg.downloadFormats,
+      downloadUrl: msg.downloadUrl
+    });
+  }
+
+  // Use formats from either the message or specificObject
+  const formatsToUse =
+    msg.downloadFormats && msg.downloadFormats.length > 0
+      ? msg.downloadFormats
+      : specificObject?.downloadFormats || [];
+
+  if (formatsToUse.length > 0) {
+    // Extract and dedupe geographical areas
+    const rawGeoAreas = formatsToUse.map((fmt) => ({
+      type: fmt.type,
+      name: fmt.name,
+      code: fmt.code,
+    }));
+    const uniqueGeographicalAreas = dedupeAreas(rawGeoAreas);
+
+    // Extract and dedupe projections
+    const rawProjections = formatsToUse
+      .flatMap((fmt) => (fmt.projections ? fmt.projections : []))
+      .map((proj) => ({
+        name: proj.name,
+        code: proj.code,
+      }));
+    const uniqueProjections = dedupeProjections(rawProjections);
+
+    // Extract and dedupe formats
+    const rawFormats = formatsToUse.flatMap((fmt) =>
+      fmt.formats ? fmt.formats.map((format) => format.name) : []
+    );
+    const uniqueFormats = dedupeFormats(rawFormats);
+
+    // Set all the necessary state before opening modal
+    setGeographicalAreas(uniqueGeographicalAreas);
+    setProjections(uniqueProjections);
+    setFormats(uniqueFormats);
+    setDatasetName(msg.title || "");
+    setPendingDownloadUrl(msg.downloadUrl || null);
+    setFileDownloadModalOpen(true);
+  } else if (msg.downloadUrl) {
+    // If no formats but direct URL exists, show modal with standard download option
+    setGeographicalAreas([]);
+    setProjections([]);
+    setFormats([]);
+    setDatasetName(msg.title || "");
+    setPendingDownloadUrl(msg.downloadUrl);
+    setFileDownloadModalOpen(true);
+  } else {
+    console.warn("No download URL or formats available");
+  }
+};
+  
+const handleFullScreenDownload = (url: string) => {
+  // Find message with matching URL from messages array instead of chatMessages
+  const messageWithUrl = messages.find((msg) => msg.downloadUrl === url);
+  if (messageWithUrl) {
+    // Create a SearchResult object from the message data
+    const datasetObject: SearchResult = {
+      uuid: messageWithUrl.uuid || '',
+      title: messageWithUrl.title || '',
+      downloadFormats: messageWithUrl.downloadFormats || [],
+      downloadUrl: messageWithUrl.downloadUrl
+    };
+    
+    // Set the specific object for the modal
+    setSpecificObject(datasetObject);
+    
+    // Process the download formats
+    const downloadFormats = messageWithUrl.downloadFormats || [];
+    if (downloadFormats.length > 0) {
+      // Extract and dedupe geographical areas
+      const rawGeoAreas = downloadFormats.map((fmt) => ({
+        type: fmt.type,
+        name: fmt.name,
+        code: fmt.code,
+      }));
+      setGeographicalAreas(dedupeAreas(rawGeoAreas));
+
+      // Extract and dedupe projections
+      const rawProjections = downloadFormats
+        .flatMap((fmt) => fmt.projections || [])
+        .map((proj) => ({
+          name: proj.name,
+          code: proj.code,
+        }));
+      setProjections(dedupeProjections(rawProjections));
+
+      // Extract and dedupe formats
+      const rawFormats = downloadFormats.flatMap((fmt) =>
+        fmt.formats ? fmt.formats.map((format) => format.name) : []
+      );
+      setFormats(dedupeFormats(rawFormats));
+
+      // Set dataset name and URL
+      setDatasetName(messageWithUrl.title || '');
+      setPendingDownloadUrl(messageWithUrl.downloadUrl || null);
+      
+      // Open the modal
+      setFileDownloadModalOpen(true);
+    } else if (messageWithUrl.downloadUrl) {
+      // If no formats but direct URL exists, handle standard download
+      handleDirectDownload(messageWithUrl.downloadUrl);
+    }
+  } else {
+    console.warn('No message found with the provided download URL');
+  }
+};
+
+
+const fullScreenHandleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  setChatInput(e.target.value);
+};
+
+const handleAppend = (message: { role: "user"; content: string }) => {
+  handleSendMessage(message.content);
+};
+
+const transformMessagesForChatKit = () => {
+  return messages.map((msg, idx) => {
+    if (msg.type === "image" && msg.imageUrl) {
+      return {
+        id: `msg-${idx}`,
+        type: "image" as const,
+        role: "assistant" as const,
+        imageUrl: msg.imageUrl,
+        wmsUrl: msg.wmsUrl || undefined,
+        downloadUrl: msg.downloadUrl || undefined,
+        content: "",
+      };
+    }
+    
+    let role: "user" | "assistant" = "assistant";
+    let content = msg.content || "";
+    
+    if (content.startsWith("You: ")) {
+      role = "user";
+      content = content.slice("You: ".length);
+    } else if (content.startsWith("System: ")) {
+      content = content.slice("System: ".length);
+    }
+    
+    return {
+      id: `msg-${idx}`,
+      role,
+      content,
+      type: "text" as const,
+    };
+  });
+};
+
+const enterFullScreen = () => {
+  setIsFullScreen(true);
+  setIsPopoverOpen(false);
+};
+
+const exitFullScreen = () => {
+  setIsFullScreen(false);
+  setIsPopoverOpen(true);
+};
+
   return (
     <>
       <style>
         {`
-    #map {
-      background-color: #FAFAFA;
-    }
-    
-    /* Zoom and location controls styling */
-    .leaflet-control-zoom a,
-    .location-button {
-      background-color: #FE642F !important;
-      color: white !important;
-      border: none !important;
-      margin-bottom: 4px !important;
-      margin-right: 8px !important;
-      text-decoration: none !important;
-      width: 36px !important;
-      height: 34px !important;
-      line-height: 34px !important;
-      font-size: 14px !important;
-      display: flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      padding: 0 !important;
-      border-radius: 2px !important;
-      transition: background-color 0.2s ease !important;
-    }
-
-    .location-button:hover,
-    .leaflet-control-zoom-in:hover,
-    .leaflet-control-zoom-out:hover {
-      background-color: #f35430 !important;
-    }
-    
-    .leaflet-control-zoom-in {
-      margin-bottom: 1px !important;
-    }
-    .leaflet-bar {
-      border: none !important;
-      box-shadow: none !important;
-    }
-    
-    .leaflet-control-zoom {
-      border: none !important;
-    }
-  `}
+          #map {
+            background-color: #FAFAFA;
+          }
+          
+          .leaflet-control-zoom a,
+          .location-button {
+            background-color: #FE642F !important;
+            color: white !important;
+            border: none !important;
+            margin-bottom: 4px !important;
+            margin-right: 8px !important;
+            text-decoration: none !important;
+            width: 36px !important;
+            height: 34px !important;
+            line-height: 34px !important;
+            font-size: 14px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 0 !important;
+            border-radius: 2px !important;
+          }
+          
+          .leaflet-control-zoom-in {
+            margin-bottom: 1px !important;
+          }
+          .leaflet-bar {
+            border: none !important;
+            box-shadow: none !important;
+          }
+        `}
       </style>
 
       <div className="flex flex-col h-screen w-full overflow-hidden">
         <div className="relative flex-1">
+          {/* Search bar */}
           <div className="absolute inset-x-0 top-4 z-[20] flex justify-center mx-auto max-w-min">
-            <div className="w-96 flex ">
-              {/* Sidebar button */}
+            <div className="w-96 flex">
               <SidebarTrigger className="bg-[#FE642F] hover:bg-[#f35430] shadow-lg h-[42px] w-[42px] rounded-sm flex-shrink-0 mr-2" />
               <input
                 type="text"
@@ -1165,21 +1024,11 @@ const DemoV3 = () => {
                 onReplaceIframe={replaceIframe}
                 onDatasetDownload={executeDatasetDownload}
                 ws={ws}
-                trackedDatasets={trackedDatasets}
               />
             </div>
 
-            <Popover
-              open={isPopoverOpen}
-              onOpenChange={(open) => {
-                if (!open && !blockPopoverClose) {
-                  setIsPopoverOpen(false);
-                } else if (open) {
-                  setIsPopoverOpen(true);
-                }
-              }}
-              modal={false}
-            >
+            {/* Chat popover */}
+            <Popover {...chatPopoverProps}>
               <PopoverTrigger asChild>
                 <Button
                   className="fixed bottom-6 right-10 bg-[#FE642F] hover:bg-[#f35a30] rounded-full p-0 h-16 w-16 flex items-center justify-center shadow-lg z-[1000]"
@@ -1193,141 +1042,17 @@ const DemoV3 = () => {
                 align="end"
                 className="w-[450px] h-[30rem] p-0 overflow-hidden shadow-lg rounded-lg"
               >
-                <div className="flex flex-col h-full bg-white">
-                  <div className="px-4 py-2 flex justify-between items-center border-b">
-                    <div className="flex items-center">
-                      <GeoNorgeIcon />
-                      <span className="font-bold text-lg ml-2">GeoGPT</span>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={enterFullScreen}
-                      >
-                        <Maximize />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="px-4"
-                        onClick={() => setIsPopoverOpen(false)}
-                      >
-                        <X size={16} />
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div
-                    id="chatMessages"
-                    className="flex-1 p-4 overflow-y-auto space-y-2"
-                  >
-                    <div className="text-sm text-gray-500">
-                      Hei! Jeg er GeoGPT. Spør meg om geodata!
-                    </div>
-                    {chatMessages.map((msg, idx) => {
-                      if (msg.type === "image" && msg.imageUrl) {
-                        return (
-                          <div
-                            key={idx}
-                            className="flex flex-col space-y-2 my-2"
-                          >
-                            <Image
-                              src={msg.imageUrl || "/placeholder.svg"}
-                              alt="Dataset"
-                              className="max-w-full h-auto rounded"
-                              width={400}
-                              height={300}
-                            />
-                            <div className="flex gap-2">
-                              <Button
-                                onClick={() => {
-                                  if (msg.wmsUrl && msg.wmsUrl !== "None") {
-                                    replaceIframe(msg.wmsUrl);
-                                  }
-                                }}
-                                className={`text-xs ${
-                                  msg.wmsUrl && msg.wmsUrl !== "None"
-                                    ? "rounded-[2px] bg-[#FF8B65] hover:bg-[#FE642F] text-white"
-                                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                                }`}
-                                disabled={!msg.wmsUrl || msg.wmsUrl === "None"}
-                              >
-                                Vis
-                              </Button>
-                              {msg.downloadUrl && (
-                                <Button
-                                  onClick={() => handleDatasetDownload(msg)}
-                                  className="rounded-[2px] bg-[#404041] hover:bg-[#5c5c5d] text-white text-xs"
-                                >
-                                  Last ned datasett
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      } else {
-                        let content = msg.content || "";
-                        let isUser = false;
-                        if (content.startsWith("You: ")) {
-                          isUser = true;
-                          content = content.slice("You: ".length);
-                        } else if (content.startsWith("System: ")) {
-                          content = content.slice("System: ".length);
-                        }
-                        content = content.replace(
-                          /\*\*(.*?)\*\*/g,
-                          "<strong>$1</strong>"
-                        );
-                        return (
-                          <div
-                            key={idx}
-                            className={`flex ${
-                              isUser ? "justify-end" : "justify-start"
-                            }`}
-                          >
-                            <div
-                              className={`max-w-[80%] p-2 rounded text-sm whitespace-pre-wrap ${
-                                isUser ? "bg-orange-100" : "bg-gray-100"
-                              }`}
-                            >
-                              {isUser ? (
-                                <strong>You:</strong>
-                              ) : (
-                                <strong>System:</strong>
-                              )}
-                              <span
-                                className="ml-1"
-                                dangerouslySetInnerHTML={{ __html: content }}
-                              />
-                            </div>
-                          </div>
-                        );
-                      }
-                    })}
-                    <div ref={chatEndRef} />
-                  </div>
-
-                  <form
-                    onSubmit={onChatSubmit}
-                    className="flex items-center border-t bord er-gray-300 p-2 pb-3"
-                  >
-                    <input
-                      type="text"
-                      value={chatInput}
-                      onChange={(e) => setChatInput(e.target.value)}
-                      placeholder="Spør GeoGPT..."
-                      className="flex-1 rounded px-2 py-2 pb-5 text-sm focus:outline-none"
-                    />
-                    <Button
-                      type="submit"
-                      disabled={isChatStreaming || !chatInput.trim()}
-                      className="w-10"
-                    >
-                      <Send />
-                    </Button>
-                  </form>
-                </div>
+                <ChatWindow
+                  messages={messages}
+                  input={chatInput}
+                  onInputChange={(value) => setChatInput(value)}
+                  onSubmit={onChatSubmit}
+                  isStreaming={isChatStreaming}
+                  onWmsClick={replaceIframe}
+                  onDownloadClick={handleFullScreenDownload}
+                  onEnterFullScreen={enterFullScreen}
+                  onClose={() => setIsPopoverOpen(false)}
+                />
               </PopoverContent>
             </Popover>
           </div>
@@ -1335,7 +1060,7 @@ const DemoV3 = () => {
 
         {/* Full Screen Chat UI */}
         {isFullScreen && (
-          <div className="fixed inset-0 z-[50] bg-white">
+          <div className="fixed inset-0 z-[50] bg-white flex flex-col">
             <div className="flex justify-between items-center p-4 border-b container mx-auto">
               <div className="flex items-center">
                 <GeoNorgeIcon />
@@ -1370,7 +1095,7 @@ const DemoV3 = () => {
                 onWmsClick={replaceIframe}
                 onDownloadClick={handleFullScreenDownload}
                 onExitFullScreen={exitFullScreen}
-                className="max-w-4xl mx-auto w-full flex-1 flex flex-col justify-end"
+                className="max-w-4xl mx-auto w-full flex-1 flex flex-col justify-end mb-10"
               />
             </div>
           </div>

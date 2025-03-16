@@ -10,3 +10,8 @@ numpy
 PyPDF2
 tiktoken
 langchain
+flask
+flask-cors
+langchain
+langgraph
+langchain-openai
