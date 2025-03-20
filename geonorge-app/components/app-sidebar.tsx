@@ -5,7 +5,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import Image from "next/image";
 
 // Logo
-import GeoNorgeLogo from "@/app/components/GeoNorgeLogo";
+import GeoNorgeLogo from "@/app/components/images/GeoNorgeLogo";
 
 // Icons
 import {

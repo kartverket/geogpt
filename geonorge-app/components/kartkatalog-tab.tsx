@@ -415,7 +415,7 @@ export function KartkatalogTab({
                             )}
                             {result.downloadUrl && (
                               <button
-                                onClick={() => onDatasetDownload(result)} // Modified this line
+                                onClick={() => onDatasetDownload(result)}
                                 className="px-3 py-1.5 text-sm bg-[#404041] hover:bg-[#5c5c5d] text-white rounded-[2px] transition-colors flex items-center gap-1"
                               >
                                 <Download className="h-4 w-4" /> Last ned
@@ -442,15 +442,15 @@ export function KartkatalogTab({
         {/* Tab Button */}
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className={`flex items-center bg-[#FE642F] hover:bg-[#f35a30] text-white px-2 py-6 ${
+          className={`flex items-center bg-[#FE642F] hover:bg-[#f35a30] text-white px-2 py-3 ${
             isExpanded ? "rounded-r-[2px] border-l-2" : "rounded-[2px]"
           } -ml-px`}
         >
-          <div className="flex flex-col items-center gap-3">
+          <div className="flex flex-col items-center gap-1">
             <Layers className="h-7 w-7" />
             <div className="flex flex-col">
               {[..."KARTKATALOGEN"].map((letter, index) => (
-                <span key={index} className="text-md font-medium">
+                <span key={index} className="text-sm font-medium">
                   {letter}
                 </span>
               ))}
