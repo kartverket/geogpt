@@ -1,9 +1,9 @@
 import { SidebarProvider } from "@/components/ui/sidebar";
-import DemoV3 from "../components/demov3";
+import Demo from "../components/demov3";
 export default function Page() {
   return (
     <SidebarProvider>
-      <DemoV3 />
+      <Demo />
     </SidebarProvider>
   );
 }
