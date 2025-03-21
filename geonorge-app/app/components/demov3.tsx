@@ -403,9 +403,16 @@ const DemoV3 = () => {
   }, [isFileDownloadModalOpen]);
 
   // Set up WebSocket and message handling
-  useEffect(() => {
-    const socket = new WebSocket("ws://localhost:8080");
-    setWs(socket);
+useEffect(() => {
+  // Dynamically determine the WebSocket URL based on current window location
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const host = window.location.hostname; // This will work in all environments
+  const port = "8080"; // Your WebSocket port
+  
+  const wsUrl = `${protocol}//${host}:${port}`;
+  const socket = new WebSocket(wsUrl);
+  setWs(socket);
+
 
     socket.onmessage = (event) => {
       const data: MessageType = JSON.parse(event.data);

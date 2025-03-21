@@ -8,6 +8,11 @@ CONFIG = {
     "app": {
         "name": "GeoGPT",
     },
+     "server": {  
+        "host": "0.0.0.0",  # Bind to all interfaces
+        "port": 8080,
+        "http_port": 5000,
+    },
     "db": {
         "host": os.getenv("DB_HOST"),
         "port": int(os.getenv("DB_PORT")),
