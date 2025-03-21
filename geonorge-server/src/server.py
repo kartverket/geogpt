@@ -230,8 +230,8 @@ def get_wms_info():
 
 def run_flask():
     """Run Flask in a separate thread"""
-    host = CONFIG.get("host", "localhost")
-    http_port = CONFIG.get("http_port", 5000)
+    host = CONFIG.get("server", {}).get("host", "0.0.0.0") # Bind to all interfaces
+    http_port = CONFIG.get("server", {}).get("http_port", 5000)
     app.run(host=host, port=http_port, debug=False, use_reloader=False)
 
 async def main() -> None:
@@ -239,8 +239,8 @@ async def main() -> None:
     Initialize and run both the WebSocket server and Flask app
     """
     server = ChatServer()
-    host = CONFIG.get("host", "localhost")
-    ws_port = CONFIG.get("port", 8080)
+    host = CONFIG.get("server", {}).get("host", "0.0.0.0") # Bind to all interfaces
+    ws_port = CONFIG.get("server", {}).get("port", 8080)
 
     # Start WebSocket server
     ws_server = await websockets.serve(
