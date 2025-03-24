@@ -343,10 +343,12 @@ useEffect(() => {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const host = window.location.hostname; 
   const port = "8080"; 
+
   
   const wsUrl = `${protocol}//${host}:${port}`;
   const socket = new WebSocket(wsUrl);
   setWs(socket);
+
 
     socket.onopen = () => {
       // Trigger an initial search on connection
