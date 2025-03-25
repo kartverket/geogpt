@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import L from "leaflet";
 import {
   Search,
   ChevronLeft,
@@ -62,6 +61,7 @@ interface KartkatalogTabProps {
   onReplaceIframe: (wmsUrl: string) => void;
   onDatasetDownload: (dataset: SearchResult) => void;
   ws: WebSocket | null;
+  trackedDatasets: string[];
 }
 
 export function KartkatalogTab({
@@ -69,6 +69,7 @@ export function KartkatalogTab({
   onReplaceIframe,
   onDatasetDownload,
   ws,
+  trackedDatasets,
 }: KartkatalogTabProps) {
   const [isExpanded, setIsExpanded] = React.useState(false);
   const [searchInput, setSearchInput] = React.useState("");
@@ -92,11 +93,15 @@ export function KartkatalogTab({
   // Create a ref for the main panel container
   const panelRef = React.useRef<HTMLDivElement>(null);
 
+  // Use client-side only import for Leaflet
   React.useEffect(() => {
-    if (panelRef.current) {
+    if (typeof window === "undefined" || !panelRef.current) return;
+
+    // Import Leaflet dynamically
+    import("leaflet").then((L) => {
       // This will prevent the scroll (wheel) events on the panel from propagating to the map.
-      L.DomEvent.disableScrollPropagation(panelRef.current);
-    }
+      L.DomEvent.disableScrollPropagation(panelRef.current!);
+    });
   }, []);
 
   React.useEffect(() => {
@@ -246,18 +251,18 @@ export function KartkatalogTab({
 
   return (
     <TooltipProvider delayDuration={100}>
-      <div className="fixed right-[18px] top-1/4 flex items-start ">
+      <div className="fixed right-[18px] top-1/4 flex items-start">
         {/* Main Panel */}
         <div
           ref={panelRef}
           className={cn(
-            "bg-white shadow-[-1px_1px_3px_0_rgba(0,0,0,0.24)] transition-all duration-300 transform rounded-l rounded-br",
-            isExpanded ? "w-[300px] translate-x-0" : "w-0 translate-x-full",
+            "bg-white shadow-[-1px_1px_3px_0_rgba(0,0,0,0.24)] transition-all duration-300 transform rounded-br",
+            isExpanded ? "w-[325px] translate-x-0" : "w-0 translate-x-full",
             className
           )}
           style={{ overflow: "hidden" }}
         >
-          <div className="min-w-[300px] bg-white font-['Helvetica_Neue',_Arial,_sans-serif]">
+          <div className="min-w-[300px] ">
             {/* Header and search form */}
             <div className="border-b">
               <div className="px-4 py-3 bg-white">
@@ -271,7 +276,7 @@ export function KartkatalogTab({
                   <div className="flex gap-2">
                     <Input
                       placeholder="Søk etter datasett..."
-                      className="flex-1 h-9 text-sm border-gray-300 rounded-[2px]"
+                      className="flex-1 h-9 text-sm border-gray-300 rounded-omar"
                       value={searchInput}
                       onChange={(e) => setSearchInput(e.target.value)}
                       disabled={isLoading}
@@ -280,7 +285,7 @@ export function KartkatalogTab({
                       type="submit"
                       size="sm"
                       variant="secondary"
-                      className="bg-[#F5F5F5] hover:bg-gray-200 text-gray-700 h-9 border rounded-[2px]"
+                      className="bg-[#F5F5F5] hover:bg-gray-200 text-gray-700 h-9 border rounded-omar"
                       disabled={isLoading}
                     >
                       {isLoading ? (
@@ -303,7 +308,7 @@ export function KartkatalogTab({
                   <Button
                     onClick={handleBulkDownload}
                     size="sm"
-                    className="bg-[#404041] hover:bg-[#5c5c5d] text-white rounded-[2px] text-sm"
+                    className="bg-color-gn-secondary hover:bg-color-gn-secondarylight text-white rounded-omar text-sm"
                   >
                     <Download className="h-4 w-4 mr-2" />
                     Last ned valgte
@@ -351,7 +356,7 @@ export function KartkatalogTab({
                                 )}/${result.uuid}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-[15px] text-gray-900 hover:text-gray-600 mb-2 max-w-max underline underline-offset-4 flex items-center gap-1"
+                                className="text-[15px] text-color-kv-secondary hover:text-color-gn-lightblue mb-2 max-w-max underline underline-offset-4 flex items-center gap-1"
                               >
                                 {result.title || "Dataset"}
                                 <ExternalLink className="h-4 w-4" />
@@ -381,7 +386,7 @@ export function KartkatalogTab({
                                   result.wmsUrl &&
                                   onReplaceIframe(result.wmsUrl)
                                 }
-                                className="px-3 py-1.5 text-sm bg-[#FF8B65] hover:bg-[#FE642F] text-white rounded-[2px] transition-colors flex items-center gap-1"
+                                className="px-3 py-1.5 text-sm bg-color-gn-primary hover:bg-color-gn-primarylight text-white rounded-omar transition-colors flex items-center gap-1"
                               >
                                 <Eye className="h-4 w-4" /> Vis
                               </button>
@@ -390,7 +395,7 @@ export function KartkatalogTab({
                                 <TooltipTrigger asChild>
                                   <button
                                     disabled
-                                    className="px-3 py-1.5 text-sm bg-gray-100 text-gray-400 rounded-[2px] cursor-pointer flex items-center gap-1"
+                                    className="px-3 py-1.5 text-sm bg-gray-100 text-gray-400 rounded-omar cursor-pointer flex items-center gap-1"
                                   >
                                     <XCircle className="h-4 w-4" />{" "}
                                     Utilgjengelig
@@ -404,7 +409,7 @@ export function KartkatalogTab({
                             {result.restricted && (
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <button className="px-3 py-1.5 text-sm bg-red-100 text-red-600 rounded-[2px] flex items-center gap-1">
+                                  <button className="px-3 py-1.5 text-sm bg-red-100 text-red-600 rounded-omar flex items-center gap-1">
                                     <LockKeyhole className="h-4 w-4" /> Låst
                                   </button>
                                 </TooltipTrigger>
@@ -415,8 +420,8 @@ export function KartkatalogTab({
                             )}
                             {result.downloadUrl && (
                               <button
-                                onClick={() => onDatasetDownload(result)} // Modified this line
-                                className="px-3 py-1.5 text-sm bg-[#404041] hover:bg-[#5c5c5d] text-white rounded-[2px] transition-colors flex items-center gap-1"
+                                onClick={() => onDatasetDownload(result)}
+                                className="px-3 py-1.5 text-sm bg-color-gn-secondary hover:bg-color-gn-secondarylight text-white rounded-omar transition-colors flex items-center gap-1"
                               >
                                 <Download className="h-4 w-4" /> Last ned
                               </button>
@@ -427,7 +432,7 @@ export function KartkatalogTab({
                           <Checkbox
                             checked={selectedDatasets.has(result.uuid)}
                             onCheckedChange={() => handleSelectDataset(result)}
-                            className="mt-6 w-5 h-5 rounded-[2px]"
+                            className="mt-6 w-5 h-5 rounded-omar"
                           />
                         )}
                       </div>
@@ -442,15 +447,15 @@ export function KartkatalogTab({
         {/* Tab Button */}
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className={`flex items-center bg-[#FE642F] hover:bg-[#f35a30] text-white px-2 py-6 ${
-            isExpanded ? "rounded-r-[2px] border-l-2" : "rounded-[2px]"
+          className={`flex items-center bg-color-gn-primary hover:bg-color-gn-primarylight text-white px-2 py-4 ${
+            isExpanded ? "rounded-r-omar border-l-2" : "rounded-omar"
           } -ml-px`}
         >
-          <div className="flex flex-col items-center gap-3">
+          <div className="flex flex-col items-center gap-2">
             <Layers className="h-7 w-7" />
             <div className="flex flex-col">
               {[..."KARTKATALOGEN"].map((letter, index) => (
-                <span key={index} className="text-md font-medium">
+                <span key={index} className="text-xs font-medium">
                   {letter}
                 </span>
               ))}
@@ -486,12 +491,12 @@ export function KartkatalogTab({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-[2px]">
+            <AlertDialogCancel className="rounded-omar">
               Avbryt
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={initiateDownloads}
-              className="rounded-[2px]"
+              className="rounded-omar"
             >
               Start nedlasting
             </AlertDialogAction>
