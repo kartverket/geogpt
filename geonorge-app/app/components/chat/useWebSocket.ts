@@ -1,36 +1,44 @@
-import { useState, useEffect, useCallback } from 'react';
-import { ChatMessage, WebSocketMessage, SearchResult } from './types';
+import { useState, useEffect, useCallback } from "react";
+import { ChatMessage, WebSocketMessage, SearchResult } from "./types";
 
 export const useWebSocket = () => {
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [uuidToFind, setUuidToFind] = useState<string>('');
-  const [specificObject, setSpecificObject] = useState<SearchResult | null>(null);
-  const [datasetName, setDatasetName] = useState<string>('');
-  const [geographicalAreas, setGeographicalAreas] = useState<Array<{type: string; name: string; code: string}>>([]);
-  const [projections, setProjections] = useState<Array<{name: string; code: string}>>([]);
+  const [uuidToFind, setUuidToFind] = useState<string>("");
+  const [specificObject, setSpecificObject] = useState<SearchResult | null>(
+    null
+  );
+  const [datasetName, setDatasetName] = useState<string>("");
+  const [geographicalAreas, setGeographicalAreas] = useState<
+    Array<{ type: string; name: string; code: string }>
+  >([]);
+  const [projections, setProjections] = useState<
+    Array<{ name: string; code: string }>
+  >([]);
   const [formats, setFormats] = useState<string[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [reconnectAttempt, setReconnectAttempt] = useState(0);
 
   const connectWebSocket = useCallback(() => {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const host = window.location.hostname; // This will work in all environments
     const port = "8080"; // Your WebSocket port
-  
+
     const wsUrl = `${protocol}//${host}:${port}`;
     const socket = new WebSocket(wsUrl);
     setWs(socket);
-    
+
     socket.onopen = () => {
       setIsConnected(true);
       setReconnectAttempt(0);
       // Send an initial message when the connection opens
-      socket.send(JSON.stringify({
-        action: "searchFormSubmit",
-        payload: "",
-      }));
+      socket.send(
+        JSON.stringify({
+          action: "searchFormSubmit",
+          payload: "",
+        })
+      );
     };
 
     socket.onclose = () => {
@@ -38,7 +46,7 @@ export const useWebSocket = () => {
       // Attempt to reconnect after 2 seconds
       setTimeout(() => {
         if (reconnectAttempt < 5) {
-          setReconnectAttempt(prev => prev + 1);
+          setReconnectAttempt((prev) => prev + 1);
           connectWebSocket();
         }
       }, 2000);
@@ -69,12 +77,14 @@ export const useWebSocket = () => {
     };
   }, []);
 
-  const dedupeAreas = (areas: Array<{type: string; name: string; code: string}>) => {
-    return Array.from(new Map(areas.map(area => [area.code, area])).values());
+  const dedupeAreas = (
+    areas: Array<{ type: string; name: string; code: string }>
+  ) => {
+    return Array.from(new Map(areas.map((area) => [area.code, area])).values());
   };
 
-  const dedupeProjections = (projs: Array<{name: string; code: string}>) => {
-    return Array.from(new Map(projs.map(proj => [proj.code, proj])).values());
+  const dedupeProjections = (projs: Array<{ name: string; code: string }>) => {
+    return Array.from(new Map(projs.map((proj) => [proj.code, proj])).values());
   };
 
   const dedupeFormats = (fmts: string[]) => {
@@ -90,7 +100,11 @@ export const useWebSocket = () => {
         if (payload.isNewMessage && !payload.payload) break;
         setMessages((prev) => {
           const lastMsg = prev[prev.length - 1];
-          if (!lastMsg || lastMsg.type !== "streaming" || payload.isNewMessage) {
+          if (
+            !lastMsg ||
+            lastMsg.type !== "streaming" ||
+            payload.isNewMessage
+          ) {
             return [
               ...prev,
               {
@@ -145,13 +159,13 @@ export const useWebSocket = () => {
         if (payload && Array.isArray(payload)) {
           const firstUuid = payload[0].uuid;
           setUuidToFind(firstUuid);
-      
+
           const datasetObject = payload.find(
             (item: SearchResult) => item.uuid === firstUuid
           );
-      
+
           setSpecificObject(datasetObject || null);
-      
+
           if (datasetObject) {
             setMessages((prev) => {
               const lastIndex = prev.length - 1;
@@ -173,16 +187,16 @@ export const useWebSocket = () => {
               }
               return prev;
             });
-            
+
             setDatasetName(datasetObject.title || "");
-      
+
             const rawGeoAreas = datasetObject.downloadFormats.map((fmt) => ({
               type: fmt.type,
               name: fmt.name,
               code: fmt.code,
             }));
             setGeographicalAreas(dedupeAreas(rawGeoAreas));
-      
+
             const rawProjections = datasetObject.downloadFormats.flatMap(
               (fmt) =>
                 fmt.projections
@@ -193,7 +207,7 @@ export const useWebSocket = () => {
                   : []
             );
             setProjections(dedupeProjections(rawProjections));
-      
+
             const rawFormats = datasetObject.downloadFormats.flatMap((fmt) =>
               fmt.formats ? fmt.formats.map((format) => format.name) : []
             );
@@ -201,7 +215,6 @@ export const useWebSocket = () => {
           }
         }
         break;
-
     }
   };
 
@@ -213,6 +226,10 @@ export const useWebSocket = () => {
       }
       return;
     }
+
+    // Set isStreaming to true immediately when sending
+    setIsStreaming(true);
+
     ws.send(JSON.stringify({ action: "chatFormSubmit", payload: message }));
     setMessages((prev) => [
       ...prev,

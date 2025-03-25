@@ -23,6 +23,7 @@ import {
   Trash2,
   X,
   Wrench,
+  Check,
 } from "lucide-react";
 
 // UI Components
@@ -47,6 +48,7 @@ interface LayerChangeFunctions {
   revertToBaseMap: () => void;
   changeToGraattKart: () => void;
   changeToRasterKart: () => void;
+  changeToSjoKart: () => void;
 }
 
 interface TrackedDataset {
@@ -58,7 +60,6 @@ interface TrackedDataset {
   titleMatch?: boolean; // Added for search highlighting
 }
 
-
 export function AppSidebar({
   availableLayers = [],
   trackedDatasets = [],
@@ -69,7 +70,11 @@ export function AppSidebar({
 }: React.ComponentProps<typeof Sidebar> & {
   availableLayers?: WMSLayer[];
   trackedDatasets?: TrackedDataset[];
-  onLayerChangeWithDataset?: (datasetId: string, layerName: string, isChecked: boolean) => void;
+  onLayerChangeWithDataset?: (
+    datasetId: string,
+    layerName: string,
+    isChecked: boolean
+  ) => void;
   onRemoveDataset?: (datasetId: string) => void;
   onChangeBaseLayer?: LayerChangeFunctions;
 }) {
@@ -81,7 +86,10 @@ export function AppSidebar({
   const [selectedBaseMap, setSelectedBaseMap] = useState<string>("landskart");
   const [isBaseMapSectionVisible, setIsBaseMapSectionVisible] = useState(true);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
-  const [expandedDatasets, setExpandedDatasets] = React.useState<Record<string, boolean>>({});
+  const [expandedDatasets, setExpandedDatasets] = React.useState<
+    Record<string, boolean>
+  >({});
+  const [currentThemeIndex, setCurrentThemeIndex] = useState(0);
 
   // Add refs to track scroll positions
   const datasetScrollContainerRef = useRef<HTMLDivElement | null>(null);
@@ -92,7 +100,8 @@ export function AppSidebar({
   const handleToggleDatasetExpansion = (datasetId: string) => {
     // Save the main container scroll position
     if (datasetScrollContainerRef.current) {
-      mainScrollPositionRef.current = datasetScrollContainerRef.current.scrollTop;
+      mainScrollPositionRef.current =
+        datasetScrollContainerRef.current.scrollTop;
     }
 
     // If dataset is expanded, save its scroll position before collapsing
@@ -100,51 +109,54 @@ export function AppSidebar({
       const datasetElement = datasetScrollContainerRef.current.querySelector(
         `[data-dataset-id="${datasetId}"]`
       );
-      
+
       if (datasetElement) {
-        const scrollContainer = datasetElement.querySelector('.dataset-layer-container') as HTMLElement;
+        const scrollContainer = datasetElement.querySelector(
+          ".dataset-layer-container"
+        ) as HTMLElement;
         if (scrollContainer) {
-          datasetScrollPositionRef.current[datasetId] = scrollContainer.scrollTop;
+          datasetScrollPositionRef.current[datasetId] =
+            scrollContainer.scrollTop;
         }
       }
     }
-    
+
     // Toggle the dataset expansion
-    setExpandedDatasets(prev => ({
+    setExpandedDatasets((prev) => ({
       ...prev,
-      [datasetId]: !prev[datasetId]
+      [datasetId]: !prev[datasetId],
     }));
   };
 
   // Filter layers based on search
-  const filteredLayers = useMemo(() => 
-    availableLayers.filter((layer) =>
-      layer.title.toLowerCase().includes(layerSearch.toLowerCase())
-    ),
+  const filteredLayers = useMemo(
+    () =>
+      availableLayers.filter((layer) =>
+        layer.title.toLowerCase().includes(layerSearch.toLowerCase())
+      ),
     [availableLayers, layerSearch]
   );
 
-  // Filter datasets based on search 
+  // Filter datasets based on search
   const filteredDatasets = useMemo(() => {
     if (!layerSearch.trim()) return trackedDatasets;
 
     const searchTerm = layerSearch.toLowerCase().trim();
-    
+
     return trackedDatasets
-      .map(dataset => {
-        const filteredLayers = dataset.availableLayers.filter(layer =>
+      .map((dataset) => {
+        const filteredLayers = dataset.availableLayers.filter((layer) =>
           layer.title.toLowerCase().includes(searchTerm)
         );
-        
+
         return {
           ...dataset,
           titleMatch: false,
           availableLayers: filteredLayers,
         };
       })
-      .filter(dataset => dataset.availableLayers.length > 0);
+      .filter((dataset) => dataset.availableLayers.length > 0);
   }, [trackedDatasets, layerSearch]);
-
 
   const cn = (...classes: string[]) => {
     return classes.filter(Boolean).join(" ");
@@ -297,31 +309,41 @@ export function AppSidebar({
   // Deselect all layers across all datasets
   const deselectAllLayersGlobally = () => {
     if (!onLayerChangeWithDataset) return;
-    trackedDatasets.forEach(dataset => {
-      dataset.selectedLayers.forEach(layerName => {
+    trackedDatasets.forEach((dataset) => {
+      dataset.selectedLayers.forEach((layerName) => {
         onLayerChangeWithDataset(dataset.id, layerName, false);
       });
     });
   };
-  
+
   // Check if any layers are selected in any dataset
-  const hasSelectedLayers = trackedDatasets.some(dataset => dataset.selectedLayers.length > 0);
+  const hasSelectedLayers = trackedDatasets.some(
+    (dataset) => dataset.selectedLayers.length > 0
+  );
 
   // Handle checkbox change with scroll position preservation
-  const handleLayerChange = (datasetId: string, layerName: string, checked: boolean) => {
+  const handleLayerChange = (
+    datasetId: string,
+    layerName: string,
+    checked: boolean
+  ) => {
     if (datasetScrollContainerRef.current) {
-      mainScrollPositionRef.current = datasetScrollContainerRef.current.scrollTop;
+      mainScrollPositionRef.current =
+        datasetScrollContainerRef.current.scrollTop;
     }
-    
+
     // Store current scroll position for the specific dataset container
     if (datasetScrollContainerRef.current) {
       const datasetElement = datasetScrollContainerRef.current.querySelector(
         `[data-dataset-id="${datasetId}"]`
       );
       if (datasetElement) {
-        const scrollContainer = datasetElement.querySelector('.dataset-layer-container') as HTMLElement;
+        const scrollContainer = datasetElement.querySelector(
+          ".dataset-layer-container"
+        ) as HTMLElement;
         if (scrollContainer) {
-          datasetScrollPositionRef.current[datasetId] = scrollContainer.scrollTop;
+          datasetScrollPositionRef.current[datasetId] =
+            scrollContainer.scrollTop;
         }
       }
     }
@@ -334,29 +356,38 @@ export function AppSidebar({
   useEffect(() => {
     if (datasetScrollContainerRef.current) {
       // Restore the main container scroll position
-      datasetScrollContainerRef.current.scrollTop = mainScrollPositionRef.current;
-      
+      datasetScrollContainerRef.current.scrollTop =
+        mainScrollPositionRef.current;
+
       // Restore individual dataset scroll positions
-      Object.keys(expandedDatasets).forEach(datasetId => {
-        if (expandedDatasets[datasetId] && datasetScrollPositionRef.current[datasetId] !== undefined) {
-          const datasetElement = datasetScrollContainerRef.current?.querySelector(
-            `[data-dataset-id="${datasetId}"]`
-          );
+      Object.keys(expandedDatasets).forEach((datasetId) => {
+        if (
+          expandedDatasets[datasetId] &&
+          datasetScrollPositionRef.current[datasetId] !== undefined
+        ) {
+          const datasetElement =
+            datasetScrollContainerRef.current?.querySelector(
+              `[data-dataset-id="${datasetId}"]`
+            );
           if (datasetElement) {
-            const scrollContainer = datasetElement.querySelector('.dataset-layer-container') as HTMLElement;
+            const scrollContainer = datasetElement.querySelector(
+              ".dataset-layer-container"
+            ) as HTMLElement;
             if (scrollContainer) {
-              scrollContainer.scrollTop = datasetScrollPositionRef.current[datasetId];
+              scrollContainer.scrollTop =
+                datasetScrollPositionRef.current[datasetId];
             }
           }
         }
       });
     }
-  }, [trackedDatasets, expandedDatasets]); 
+  }, [trackedDatasets, expandedDatasets]);
 
   // Save main scroll position when removing datasets
   const handleRemoveDataset = (datasetId: string) => {
     if (datasetScrollContainerRef.current) {
-      mainScrollPositionRef.current = datasetScrollContainerRef.current.scrollTop;
+      mainScrollPositionRef.current =
+        datasetScrollContainerRef.current.scrollTop;
     }
     if (onRemoveDataset) {
       onRemoveDataset(datasetId);
@@ -366,10 +397,39 @@ export function AppSidebar({
   // Save main scroll position when deselecting all layers
   const handleDeselectAllLayers = () => {
     if (datasetScrollContainerRef.current) {
-      mainScrollPositionRef.current = datasetScrollContainerRef.current.scrollTop;
+      mainScrollPositionRef.current =
+        datasetScrollContainerRef.current.scrollTop;
     }
     deselectAllLayersGlobally();
   };
+
+  // Define the map themes
+  const mapThemes = [
+    {
+      id: "landskart",
+      name: t("landscape_map") || "Topografisk",
+      image: "https://norgeskart.no/assets/img/land.png",
+      onClick: onChangeBaseLayer?.revertToBaseMap,
+    },
+    {
+      id: "graatone",
+      name: t("grayscale_map") || "Grått kart",
+      image: "https://norgeskart.no/assets/img/grey.png",
+      onClick: onChangeBaseLayer?.changeToGraattKart,
+    },
+    {
+      id: "rasterkart",
+      name: t("raster_map") || "Rasterkart",
+      image: "https://norgeskart.no/assets/img/raster.png",
+      onClick: onChangeBaseLayer?.changeToRasterKart,
+    },
+    {
+      id: "sjokart",
+      name: t("sea_map") || "Sjøkart",
+      image: "https://norgeskart.no/assets/img/dummy.png",
+      onClick: onChangeBaseLayer?.changeToSjoKart,
+    },
+  ];
 
   return (
     <Sidebar
@@ -399,85 +459,42 @@ export function AppSidebar({
             }
           >
             {onChangeBaseLayer && (
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  className={cn(
-                    "flex flex-col items-center p-2 rounded-md border transition-colors",
-                    selectedBaseMap === "landskart"
-                      ? "border-color-gn-primary bg-color-gn-primary/5 ring-1 ring-color-gn-primary/30"
-                      : "border-gray-200 bg-white hover:border-gray-300"
-                  )}
-                  onClick={() => {
-                    setSelectedBaseMap("landskart");
-                    onChangeBaseLayer.revertToBaseMap();
-                  }}
-                >
-                  <div className="w-full h-16 mb-2 rounded overflow-hidden bg-gray-100 flex items-center justify-center">
-                    <Image
-                      src="https://norgeskart.no/assets/img/land.png"
-                      alt="Raster map preview"
-                      className="w-full h-full object-cover"
-                      width={100}
-                      height={64}
-                      unoptimized
-                    />
+              <div className="grid grid-cols-2 gap-2">
+                {mapThemes.map((theme) => (
+                  <div
+                    key={theme.id}
+                    className={cn(
+                      "flex flex-col items-center p-2 rounded-md border transition-colors cursor-pointer relative",
+                      selectedBaseMap === theme.id
+                        ? "border-color-gn-primary bg-color-gn-primary/5 ring-1 ring-color-gn-primary/30"
+                        : "border-gray-200 bg-white hover:border-gray-300"
+                    )}
+                    onClick={() => {
+                      if (theme.onClick) theme.onClick();
+                      setSelectedBaseMap(theme.id);
+                    }}
+                  >
+                    <div className="w-full h-20 mb-2 rounded overflow-hidden bg-gray-100 flex items-center justify-center">
+                      <Image
+                        src={theme.image}
+                        alt={theme.name}
+                        className="w-full h-full object-cover"
+                        width={100}
+                        height={80}
+                        unoptimized
+                      />
+                    </div>
+                    <span className="text-xs font-medium text-center">
+                      {theme.name}
+                    </span>
+
+                    {selectedBaseMap === theme.id && (
+                      <div className="absolute top-1 right-1 bg-color-gn-primary rounded-full p-0.5">
+                        <Check className="h-3 w-3 text-white" />
+                      </div>
+                    )}
                   </div>
-                  <span className="text-xs font-medium text-center">
-                    {t("landscape_map")}
-                  </span>
-                </button>
-                <button
-                  className={cn(
-                    "flex flex-col items-center p-2 rounded-md border transition-colors",
-                    selectedBaseMap === "graatone"
-                      ? "border-color-gn-primary bg-color-gn-primary/5 ring-1 ring-color-gn-primary/30"
-                      : "border-gray-200 bg-white hover:border-gray-300"
-                  )}
-                  onClick={() => {
-                    setSelectedBaseMap("graatone");
-                    onChangeBaseLayer.changeToGraattKart();
-                  }}
-                >
-                  <div className="w-full h-16 mb-2 rounded overflow-hidden bg-gray-100 flex items-center justify-center">
-                    <Image
-                      src="https://norgeskart.no/assets/img/grey.png"
-                      alt="Raster map preview"
-                      className="w-full h-full object-cover"
-                      width={100}
-                      height={64}
-                      unoptimized
-                    />
-                  </div>
-                  <span className="text-xs font-medium text-center">
-                    {t("grayscale_map")}
-                  </span>
-                </button>
-                <button
-                  className={cn(
-                    "flex flex-col items-center p-2 rounded-md border transition-colors",
-                    selectedBaseMap === "rasterkart"
-                      ? "border-color-gn-primary bg-color-gn-primary/5 ring-1 ring-color-gn-primary/30"
-                      : "border-gray-200 bg-white hover:border-gray-300"
-                  )}
-                  onClick={() => {
-                    setSelectedBaseMap("rasterkart");
-                    onChangeBaseLayer.changeToRasterKart();
-                  }}
-                >
-                  <div className="w-full h-16 mb-2 rounded overflow-hidden bg-gray-100 flex items-center justify-center">
-                    <Image
-                      src="https://norgeskart.no/assets/img/raster.png"
-                      alt="Raster map preview"
-                      className="w-full h-full object-cover"
-                      width={100}
-                      height={64}
-                      unoptimized
-                    />
-                  </div>
-                  <span className="text-xs font-medium text-center">
-                    {t("raster_map")}
-                  </span>
-                </button>
+                ))}
               </div>
             )}
           </Section>
@@ -512,9 +529,11 @@ export function AppSidebar({
               {trackedDatasets.length > 0 && (
                 <div className="mb-4">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="font-medium text-sm text-gray-700">{t("active_datasets")}</span>
+                    <span className="font-medium text-sm text-gray-700">
+                      {t("active_datasets")}
+                    </span>
                     {hasSelectedLayers && (
-                      <button 
+                      <button
                         onClick={handleDeselectAllLayers}
                         className="flex items-center gap-1 text-xs px-2 py-1 bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors"
                       >
@@ -523,21 +542,23 @@ export function AppSidebar({
                       </button>
                     )}
                   </div>
-                  
-                  <div 
-                    className="space-y-2 max-h-[30vh] overflow-y-auto" 
+
+                  <div
+                    className="space-y-2 max-h-[30vh] overflow-y-auto"
                     ref={datasetScrollContainerRef}
                     id="datasets-scroll-container"
                   >
                     {filteredDatasets.map((dataset) => (
-                      <div 
-                        key={dataset.id} 
+                      <div
+                        key={dataset.id}
                         className="border border-gray-200 rounded-md bg-white overflow-hidden"
                         data-dataset-id={dataset.id}
                       >
-                        <div 
+                        <div
                           className="flex items-center justify-between p-2.5 bg-gray-50 cursor-pointer border-b border-gray-100"
-                          onClick={() => handleToggleDatasetExpansion(dataset.id)}
+                          onClick={() =>
+                            handleToggleDatasetExpansion(dataset.id)
+                          }
                         >
                           <div className="flex items-center gap-2">
                             <div className="bg-color-gn-primary/10 rounded-md p-1.5 flex items-center justify-center">
@@ -547,12 +568,13 @@ export function AppSidebar({
                               {dataset.title}
                             </span>
                             <span className="text-xs bg-color-gn-primary/10 text-color-gn-primary px-1.5 py-0.5 rounded">
-                              {dataset.selectedLayers.length}/{dataset.availableLayers.length}
+                              {dataset.selectedLayers.length}/
+                              {dataset.availableLayers.length}
                             </span>
                           </div>
                           <div className="flex items-center gap-1.5">
                             {onRemoveDataset && (
-                              <button 
+                              <button
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleRemoveDataset(dataset.id);
@@ -563,34 +585,42 @@ export function AppSidebar({
                                 <X className="h-4 w-4" />
                               </button>
                             )}
-                            {expandedDatasets[dataset.id] ? 
-                              <ChevronUp className="h-4 w-4 text-gray-500" /> : 
+                            {expandedDatasets[dataset.id] ? (
+                              <ChevronUp className="h-4 w-4 text-gray-500" />
+                            ) : (
                               <ChevronDown className="h-4 w-4 text-gray-500" />
-                            }
+                            )}
                           </div>
                         </div>
-                        
+
                         {expandedDatasets[dataset.id] && (
-                          <div 
-                            className="max-h-[20vh] overflow-y-auto dataset-layer-container"
-                          >
+                          <div className="max-h-[20vh] overflow-y-auto dataset-layer-container">
                             {dataset.availableLayers.map((layer) => (
-                              <div 
+                              <div
                                 key={`${dataset.id}-${layer.name}`}
                                 className="flex items-center gap-2.5 p-2.5 hover:bg-gray-50 transition-colors border-t border-gray-100 first:border-t-0"
                               >
                                 <Checkbox
-                                  checked={dataset.selectedLayers.includes(layer.name)}
+                                  checked={dataset.selectedLayers.includes(
+                                    layer.name
+                                  )}
                                   id={`${dataset.id}-${layer.name}`}
                                   onCheckedChange={(checked) => {
-                                    handleLayerChange(dataset.id, layer.name, checked as boolean);
+                                    handleLayerChange(
+                                      dataset.id,
+                                      layer.name,
+                                      checked as boolean
+                                    );
                                   }}
                                   className="h-4 w-4 border-gray-300 rounded"
                                 />
                                 <label
                                   htmlFor={`${dataset.id}-${layer.name}`}
                                   className={`text-sm cursor-pointer flex-1 truncate text-gray-700 ${
-                                    layerSearch && layer.title.toLowerCase().includes(layerSearch.toLowerCase())
+                                    layerSearch &&
+                                    layer.title
+                                      .toLowerCase()
+                                      .includes(layerSearch.toLowerCase())
                                   }`}
                                 >
                                   {layer.title}
@@ -604,15 +634,17 @@ export function AppSidebar({
                   </div>
                 </div>
               )}
-              
+
               {/* Show a message when no layers or datasets match the search */}
-              {filteredLayers.length === 0 && filteredDatasets.length === 0 && layerSearch.trim() !== "" && (
-                <div className="p-4 text-center border border-gray-200 bg-white rounded-md">
-                  <p className="text-sm text-gray-500">
-                    {t("no_layers_found")}
-                  </p>
-                </div>
-              )}
+              {filteredLayers.length === 0 &&
+                filteredDatasets.length === 0 &&
+                layerSearch.trim() !== "" && (
+                  <div className="p-4 text-center border border-gray-200 bg-white rounded-md">
+                    <p className="text-sm text-gray-500">
+                      {t("no_layers_found")}
+                    </p>
+                  </div>
+                )}
             </div>
           </Section>
           <Section
