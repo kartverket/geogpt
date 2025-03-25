@@ -8,20 +8,9 @@ import GeoNorgeLogo from "@/app/components/GeoNorgeLogo";
 
 // Icons
 import {
-  Map,
   PenTool,
   Share2,
   LineChart,
-  HelpCircle,
-  Layers2,
-  Mail,
-  Shield,
-  Search,
-  ChevronDown,
-  ChevronUp,
-  Trash2,
-  X,
-  Wrench,
 } from "lucide-react";
 
 import {
@@ -30,13 +19,8 @@ import {
   SidebarHeader,
 } from "@/components/ui/sidebar";
 
-import { Section } from "@/components/sidebar_components/Section";
-import { ActionItem } from "@/components/sidebar_components/ActionItem";
-import { BaseMapSelector } from "@/components/sidebar_components/BaseMapSelector";
-import { DatasetList } from "@/components/sidebar_components/DatasetList";
 import { SidebarFooter } from "@/components/sidebar_components/SidebarFooter";
-import { SearchInput } from "@/components/sidebar_components/SearchInput";
-import { DeselectAllButton } from "@/components/sidebar_components/DeselectAllButton";
+import { Temakart } from "@/components/sidebar_components/Temakart";
 
 // Translation
 import { Language } from "@/i18n/translations";
@@ -145,33 +129,7 @@ export function AppSidebar({
         url: "#",
         icon: LineChart,
       },
-    ],
-    footer: [
-      {
-        title: t("tips_and_tricks"),
-        url: "#",
-        icon: HelpCircle,
-      },
-      {
-        title: t("contact_us"),
-        url: "#",
-        icon: Mail,
-      },
-      {
-        title: t("privacy"),
-        url: "#",
-        icon: Shield,
-      },
-    ],
-  };
-
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setLayerSearch(e.target.value);
-    if (searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
+    ]
   };
 
   React.useEffect(() => {
@@ -240,86 +198,33 @@ export function AppSidebar({
         <GeoNorgeLogo className="h-auto w-40 mx-auto" />
       </SidebarHeader>
       <SidebarContent className="p-4 flex-grow overflow-y-auto">
-        <div className="space-y-4">
-          <Section
-            id="basemap"
-            collapsible={true}
-            title={t("background_map")}
-            icon={Map}
-            isOpen={isBaseMapSectionVisible}
-            onToggle={() =>
-              setIsBaseMapSectionVisible(!isBaseMapSectionVisible)
-            }
-          >
-            <BaseMapSelector
-                selectedBaseMap={selectedBaseMap}
-                onChangeBaseLayer={onChangeBaseLayer!}
-                t={t}
-                setSelectedBaseMap={setSelectedBaseMap}
-            />
-          </Section>
-          <Section
-            id="layers"
-            title={t("theme_maps")}
-            icon={Layers2}
-            collapsible={true}
-            isOpen={isLayerSectionVisible}
-            onToggle={() => setIsLayerSectionVisible(!isLayerSectionVisible)}
-          >
-            <div className="space-y-3">
-              <SearchInput layerSearch={layerSearch} setLayerSearch={setLayerSearch} t={t} />
-
-              {/* Add tracked datasets section */}
-              {trackedDatasets.length > 0 && (
-                <div className="mb-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="font-medium text-sm text-gray-700">{t("active_datasets")}</span>
-                    <DeselectAllButton hasSelectedLayers={hasSelectedLayers} handleDeselectAllLayers={handleDeselectAllLayers} t={t} />
-                  </div>
-                  <DatasetList
-                      trackedDatasets={trackedDatasets}
-                      expandedDatasets={expandedDatasets}
-                      datasetScrollContainerRef={datasetScrollContainerRef}
-                      datasetScrollPositionRef={datasetScrollPositionRef}
-                      mainScrollPositionRef={mainScrollPositionRef}
-                      onLayerChangeWithDataset={onLayerChangeWithDataset}
-                      onRemoveDataset={onRemoveDataset}
-                      setExpandedDatasets={setExpandedDatasets}
-                      t={t}
-                  />
-                </div>
-              )}
-              
-              {/* Show a message when no layers or datasets match the search */}
-              {filteredLayers.length === 0 && filteredDatasets.length === 0 && layerSearch.trim() !== "" && (
-                <div className="p-4 text-center border border-gray-200 bg-white rounded-md">
-                  <p className="text-sm text-gray-500">
-                    {t("no_layers_found")}
-                  </p>
-                </div>
-              )}
-            </div>
-          </Section>
-          <Section
-            id="actions"
-            title={t("tool")}
-            icon={Wrench}
-            collapsible={true}
-            isOpen={isActionSectionVisible}
-            onToggle={() => setIsActionSectionVisible(!isActionSectionVisible)}
-          >
-            <div className="space-y-1">
-              {data.actions.map((action, index) => (
-                <ActionItem
-                  key={index}
-                  icon={action.icon}
-                  title={action.title}
-                  url={action.url}
-                />
-              ))}
-            </div>
-          </Section>
-        </div>
+        <Temakart
+            t={t}
+            layerSearch={layerSearch}
+            setLayerSearch={setLayerSearch}
+            filteredLayers={filteredLayers}
+            filteredDatasets={filteredDatasets}
+            trackedDatasets={trackedDatasets}
+            expandedDatasets={expandedDatasets}
+            setExpandedDatasets={setExpandedDatasets}
+            datasetScrollContainerRef={datasetScrollContainerRef}
+            datasetScrollPositionRef={datasetScrollPositionRef}
+            mainScrollPositionRef={mainScrollPositionRef}
+            hasSelectedLayers={hasSelectedLayers}
+            handleDeselectAllLayers={handleDeselectAllLayers}
+            onLayerChangeWithDataset={onLayerChangeWithDataset}
+            onRemoveDataset={onRemoveDataset}
+            onChangeBaseLayer={onChangeBaseLayer}
+            selectedBaseMap={selectedBaseMap}
+            setSelectedBaseMap={setSelectedBaseMap}
+            isBaseMapSectionVisible={isBaseMapSectionVisible}
+            isLayerSectionVisible={isLayerSectionVisible}
+            isActionSectionVisible={isActionSectionVisible}
+            setIsBaseMapSectionVisible={setIsBaseMapSectionVisible}
+            setIsLayerSectionVisible={setIsLayerSectionVisible}
+            setIsActionSectionVisible={setIsActionSectionVisible}
+            data={data}
+        />
       </SidebarContent>
       <SidebarFooter language={language} handleLanguageChange={handleLanguageChange} t={t} />
     </Sidebar>

@@ -1,11 +1,12 @@
 import * as React from "react";
 import { HelpCircle, Mail, Shield } from "lucide-react";
 import { LanguageSelector } from "@/components/sidebar_components/LanguageSelector";
+import {Language, TranslationKey} from "@/i18n/translations";
 
 interface SidebarFooterProps {
-    language: String;
-    handleLanguageChange: (lang: string) => void;
-    t: (key: string) => string;
+    language: Language;
+    handleLanguageChange: (lang: Language) => void;
+    t: (key: TranslationKey) => string;
 }
 
 export const SidebarFooter: React.FC<SidebarFooterProps> = ({ language, handleLanguageChange, t }) => {

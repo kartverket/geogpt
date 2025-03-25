@@ -1,6 +1,7 @@
 import * as React from "react";
-import { ChevronDown, ChevronUp, Layers2, Trash2, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Layers2, X } from "lucide-react";
 import { Checkbox } from ".././ui/checkbox";
+import {TranslationKey} from "@/i18n/translations";
 
 interface WMSLayer {
     name: string;
@@ -17,13 +18,13 @@ interface TrackedDataset {
 interface DatasetListProps {
     trackedDatasets: TrackedDataset[];
     expandedDatasets: Record<string, boolean>;
-    datasetScrollContainerRef: React.RefObject<HTMLDivElement>;
+    datasetScrollContainerRef: React.RefObject<HTMLDivElement | null>
     datasetScrollPositionRef: React.MutableRefObject<Record<string, number>>;
     mainScrollPositionRef: React.MutableRefObject<number>;
     onLayerChangeWithDataset?: (datasetId: string, layerName: string, isChecked: boolean) => void;
     onRemoveDataset?: (datasetId: string) => void;
     setExpandedDatasets: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
-    t: (key: string) => string;
+    t: (key: TranslationKey) => string;
 }
 
 export const DatasetList: React.FC<DatasetListProps> = ({
