@@ -1,10 +1,11 @@
 import * as React from "react";
 import { Search } from "lucide-react";
+import {TranslationKey} from "@/i18n/translations";
 
 interface SearchInputProps {
     layerSearch: string;
     setLayerSearch: (value: string) => void;
-    t: (key: string) => string;
+    t: (key: TranslationKey) => string;
 }
 
 export const SearchInput: React.FC<SearchInputProps> = ({ layerSearch, setLayerSearch, t }) => {

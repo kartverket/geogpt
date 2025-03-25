@@ -1,6 +1,7 @@
 import * as React from "react";
 import Image from "next/image";
 import { BaseMapButton } from "@/components/sidebar_components/BaseMapButton";
+import {TranslationKey} from "@/i18n/translations";
 
 interface BaseMapSelectorProps {
     selectedBaseMap: string;
@@ -9,7 +10,7 @@ interface BaseMapSelectorProps {
         changeToGraattKart: () => void;
         changeToRasterKart: () => void;
     };
-    t: (key: string) => string;
+    t: (key: TranslationKey) => string;
     setSelectedBaseMap: (map: string) => void;
 }
 

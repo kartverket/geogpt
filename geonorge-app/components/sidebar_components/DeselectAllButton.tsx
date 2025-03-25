@@ -1,10 +1,11 @@
 import * as React from "react";
 import { Trash2 } from "lucide-react";
+import {TranslationKey} from "@/i18n/translations";
 
 interface DeselectAllButtonProps {
     hasSelectedLayers: boolean;
     handleDeselectAllLayers: () => void;
-    t: (key: string) => string;
+    t: (key: TranslationKey) => string;
 }
 
 export const DeselectAllButton: React.FC<DeselectAllButtonProps> = ({ hasSelectedLayers, handleDeselectAllLayers, t }) => {
