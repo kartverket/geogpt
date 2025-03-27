@@ -17,6 +17,7 @@ export default {
           "gn-primary": "#fe5000",
           "gn-primarylight": "#ff7e4d",
           "gn-secondary": "#404041",
+          "gn-secondarylight": "#5c5c5d",
           "kv-primary": "#00973d",
           "kv-secondary": "#00509c",
           "gn-lightblue": "#3767c7",
@@ -82,6 +83,7 @@ export default {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        omar: "2px",
       },
       keyframes: {
         "typing-dot-bounce": {
