@@ -35,6 +35,7 @@ interface LayerChangeFunctions {
   revertToBaseMap: () => void;
   changeToGraattKart: () => void;
   changeToRasterKart: () => void;
+  changeToSjoKart: () => void;
 }
 
 interface TrackedDataset {
@@ -56,7 +57,11 @@ export function AppSidebar({
 }: React.ComponentProps<typeof Sidebar> & {
   availableLayers?: WMSLayer[];
   trackedDatasets?: TrackedDataset[];
-  onLayerChangeWithDataset?: (datasetId: string, layerName: string, isChecked: boolean) => void;
+  onLayerChangeWithDataset?: (
+    datasetId: string,
+    layerName: string,
+    isChecked: boolean
+  ) => void;
   onRemoveDataset?: (datasetId: string) => void;
   onChangeBaseLayer?: LayerChangeFunctions;
 }) {
@@ -67,7 +72,10 @@ export function AppSidebar({
   const [selectedBaseMap, setSelectedBaseMap] = useState<string>("landskart");
   const [isBaseMapSectionVisible, setIsBaseMapSectionVisible] = useState(true);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
-  const [expandedDatasets, setExpandedDatasets] = React.useState<Record<string, boolean>>({});
+  const [expandedDatasets, setExpandedDatasets] = React.useState<
+    Record<string, boolean>
+  >({});
+  const [currentThemeIndex, setCurrentThemeIndex] = useState(0);
 
   // Add refs to track scroll positions
   const datasetScrollContainerRef = useRef<HTMLDivElement | null>(null);
@@ -75,34 +83,34 @@ export function AppSidebar({
   const mainScrollPositionRef = useRef<number>(0);
 
   // Filter layers based on search
-  const filteredLayers = useMemo(() => 
-    availableLayers.filter((layer) =>
-      layer.title.toLowerCase().includes(layerSearch.toLowerCase())
-    ),
+  const filteredLayers = useMemo(
+    () =>
+      availableLayers.filter((layer) =>
+        layer.title.toLowerCase().includes(layerSearch.toLowerCase())
+      ),
     [availableLayers, layerSearch]
   );
 
-  // Filter datasets based on search 
+  // Filter datasets based on search
   const filteredDatasets = useMemo(() => {
     if (!layerSearch.trim()) return trackedDatasets;
 
     const searchTerm = layerSearch.toLowerCase().trim();
-    
+
     return trackedDatasets
-      .map(dataset => {
-        const filteredLayers = dataset.availableLayers.filter(layer =>
+      .map((dataset) => {
+        const filteredLayers = dataset.availableLayers.filter((layer) =>
           layer.title.toLowerCase().includes(searchTerm)
         );
-        
+
         return {
           ...dataset,
           titleMatch: false,
           availableLayers: filteredLayers,
         };
       })
-      .filter(dataset => dataset.availableLayers.length > 0);
+      .filter((dataset) => dataset.availableLayers.length > 0);
   }, [trackedDatasets, layerSearch]);
-
 
   const cn = (...classes: string[]) => {
     return classes.filter(Boolean).join(" ");
@@ -141,13 +149,13 @@ export function AppSidebar({
   // Deselect all layers across all datasets
   const deselectAllLayersGlobally = () => {
     if (!onLayerChangeWithDataset) return;
-    trackedDatasets.forEach(dataset => {
-      dataset.selectedLayers.forEach(layerName => {
+    trackedDatasets.forEach((dataset) => {
+      dataset.selectedLayers.forEach((layerName) => {
         onLayerChangeWithDataset(dataset.id, layerName, false);
       });
     });
   };
-  
+
   // Check if any layers are selected in any dataset
   const hasSelectedLayers = trackedDatasets.some(dataset => dataset.selectedLayers.length > 0);
 
@@ -155,18 +163,26 @@ export function AppSidebar({
   useEffect(() => {
     if (datasetScrollContainerRef.current) {
       // Restore the main container scroll position
-      datasetScrollContainerRef.current.scrollTop = mainScrollPositionRef.current;
-      
+      datasetScrollContainerRef.current.scrollTop =
+        mainScrollPositionRef.current;
+
       // Restore individual dataset scroll positions
-      Object.keys(expandedDatasets).forEach(datasetId => {
-        if (expandedDatasets[datasetId] && datasetScrollPositionRef.current[datasetId] !== undefined) {
-          const datasetElement = datasetScrollContainerRef.current?.querySelector(
-            `[data-dataset-id="${datasetId}"]`
-          );
+      Object.keys(expandedDatasets).forEach((datasetId) => {
+        if (
+          expandedDatasets[datasetId] &&
+          datasetScrollPositionRef.current[datasetId] !== undefined
+        ) {
+          const datasetElement =
+            datasetScrollContainerRef.current?.querySelector(
+              `[data-dataset-id="${datasetId}"]`
+            );
           if (datasetElement) {
-            const scrollContainer = datasetElement.querySelector('.dataset-layer-container') as HTMLElement;
+            const scrollContainer = datasetElement.querySelector(
+              ".dataset-layer-container"
+            ) as HTMLElement;
             if (scrollContainer) {
-              scrollContainer.scrollTop = datasetScrollPositionRef.current[datasetId];
+              scrollContainer.scrollTop =
+                datasetScrollPositionRef.current[datasetId];
             }
           }
         }
@@ -177,10 +193,39 @@ export function AppSidebar({
   // Save main scroll position when deselecting all layers
   const handleDeselectAllLayers = () => {
     if (datasetScrollContainerRef.current) {
-      mainScrollPositionRef.current = datasetScrollContainerRef.current.scrollTop;
+      mainScrollPositionRef.current =
+        datasetScrollContainerRef.current.scrollTop;
     }
     deselectAllLayersGlobally();
   };
+
+  // Define the map themes
+  const mapThemes = [
+    {
+      id: "landskart",
+      name: t("landscape_map") || "Topografisk",
+      image: "https://norgeskart.no/assets/img/land.png",
+      onClick: onChangeBaseLayer?.revertToBaseMap,
+    },
+    {
+      id: "graatone",
+      name: t("grayscale_map") || "Grått kart",
+      image: "https://norgeskart.no/assets/img/grey.png",
+      onClick: onChangeBaseLayer?.changeToGraattKart,
+    },
+    {
+      id: "rasterkart",
+      name: t("raster_map") || "Rasterkart",
+      image: "https://norgeskart.no/assets/img/raster.png",
+      onClick: onChangeBaseLayer?.changeToRasterKart,
+    },
+    {
+      id: "sjokart",
+      name: t("sea_map") || "Sjøkart",
+      image: "https://norgeskart.no/assets/img/dummy.png",
+      onClick: onChangeBaseLayer?.changeToSjoKart,
+    },
+  ];
 
   return (
     <Sidebar

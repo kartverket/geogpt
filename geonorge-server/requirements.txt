@@ -1,0 +1,13 @@
+pandas
+openai
+python-dotenv
+requests
+psycopg2
+pgvector
+aiohttp
+websockets
+flask
+flask-cors
+langchain
+langgraph
+langchain-openai
