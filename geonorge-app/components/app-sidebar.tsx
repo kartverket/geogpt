@@ -7,11 +7,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import GeoNorgeLogo from "@/app/components/GeoNorgeLogo";
 
 // Icons
-import {
-  PenTool,
-  Share2,
-  LineChart,
-} from "lucide-react";
+import { PenTool, Share2, LineChart } from "lucide-react";
 
 import {
   Sidebar,
@@ -44,7 +40,7 @@ interface TrackedDataset {
   wmsUrl: string;
   availableLayers: WMSLayer[];
   selectedLayers: string[];
-  titleMatch?: boolean; // Added for search highlighting
+  titleMatch?: boolean;
 }
 
 export function AppSidebar({
@@ -75,7 +71,6 @@ export function AppSidebar({
   const [expandedDatasets, setExpandedDatasets] = React.useState<
     Record<string, boolean>
   >({});
-  const [currentThemeIndex, setCurrentThemeIndex] = useState(0);
 
   // Add refs to track scroll positions
   const datasetScrollContainerRef = useRef<HTMLDivElement | null>(null);
@@ -99,17 +94,31 @@ export function AppSidebar({
 
     return trackedDatasets
       .map((dataset) => {
+        // Check if dataset title matches
+        const datasetTitleMatch = dataset.title
+          .toLowerCase()
+          .includes(searchTerm);
+
+        // Filter layers that match search term
         const filteredLayers = dataset.availableLayers.filter((layer) =>
           layer.title.toLowerCase().includes(searchTerm)
         );
 
-        return {
-          ...dataset,
-          titleMatch: false,
-          availableLayers: filteredLayers,
-        };
+        // Include dataset if its title matches OR it has matching layers
+        if (datasetTitleMatch || filteredLayers.length > 0) {
+          return {
+            ...dataset,
+            titleMatch: datasetTitleMatch,
+            availableLayers: datasetTitleMatch
+              ? dataset.availableLayers
+              : filteredLayers,
+          };
+        }
+        return null;
       })
-      .filter((dataset) => dataset.availableLayers.length > 0);
+      .filter(
+        (dataset): dataset is NonNullable<typeof dataset> => dataset !== null
+      );
   }, [trackedDatasets, layerSearch]);
 
   const cn = (...classes: string[]) => {
@@ -137,7 +146,7 @@ export function AppSidebar({
         url: "#",
         icon: LineChart,
       },
-    ]
+    ],
   };
 
   React.useEffect(() => {
@@ -157,7 +166,9 @@ export function AppSidebar({
   };
 
   // Check if any layers are selected in any dataset
-  const hasSelectedLayers = trackedDatasets.some(dataset => dataset.selectedLayers.length > 0);
+  const hasSelectedLayers = trackedDatasets.some(
+    (dataset) => dataset.selectedLayers.length > 0
+  );
 
   // Restore scroll positions after render
   useEffect(() => {
@@ -199,34 +210,6 @@ export function AppSidebar({
     deselectAllLayersGlobally();
   };
 
-  // Define the map themes
-  const mapThemes = [
-    {
-      id: "landskart",
-      name: t("landscape_map") || "Topografisk",
-      image: "https://norgeskart.no/assets/img/land.png",
-      onClick: onChangeBaseLayer?.revertToBaseMap,
-    },
-    {
-      id: "graatone",
-      name: t("grayscale_map") || "Grått kart",
-      image: "https://norgeskart.no/assets/img/grey.png",
-      onClick: onChangeBaseLayer?.changeToGraattKart,
-    },
-    {
-      id: "rasterkart",
-      name: t("raster_map") || "Rasterkart",
-      image: "https://norgeskart.no/assets/img/raster.png",
-      onClick: onChangeBaseLayer?.changeToRasterKart,
-    },
-    {
-      id: "sjokart",
-      name: t("sea_map") || "Sjøkart",
-      image: "https://norgeskart.no/assets/img/dummy.png",
-      onClick: onChangeBaseLayer?.changeToSjoKart,
-    },
-  ];
-
   return (
     <Sidebar
       variant="inset"
@@ -244,34 +227,38 @@ export function AppSidebar({
       </SidebarHeader>
       <SidebarContent className="p-4 flex-grow overflow-y-auto">
         <Temakart
-            t={t}
-            layerSearch={layerSearch}
-            setLayerSearch={setLayerSearch}
-            filteredLayers={filteredLayers}
-            filteredDatasets={filteredDatasets}
-            trackedDatasets={trackedDatasets}
-            expandedDatasets={expandedDatasets}
-            setExpandedDatasets={setExpandedDatasets}
-            datasetScrollContainerRef={datasetScrollContainerRef}
-            datasetScrollPositionRef={datasetScrollPositionRef}
-            mainScrollPositionRef={mainScrollPositionRef}
-            hasSelectedLayers={hasSelectedLayers}
-            handleDeselectAllLayers={handleDeselectAllLayers}
-            onLayerChangeWithDataset={onLayerChangeWithDataset}
-            onRemoveDataset={onRemoveDataset}
-            onChangeBaseLayer={onChangeBaseLayer}
-            selectedBaseMap={selectedBaseMap}
-            setSelectedBaseMap={setSelectedBaseMap}
-            isBaseMapSectionVisible={isBaseMapSectionVisible}
-            isLayerSectionVisible={isLayerSectionVisible}
-            isActionSectionVisible={isActionSectionVisible}
-            setIsBaseMapSectionVisible={setIsBaseMapSectionVisible}
-            setIsLayerSectionVisible={setIsLayerSectionVisible}
-            setIsActionSectionVisible={setIsActionSectionVisible}
-            data={data}
+          t={t}
+          layerSearch={layerSearch}
+          setLayerSearch={setLayerSearch}
+          filteredLayers={filteredLayers}
+          filteredDatasets={filteredDatasets}
+          trackedDatasets={trackedDatasets}
+          expandedDatasets={expandedDatasets}
+          setExpandedDatasets={setExpandedDatasets}
+          datasetScrollContainerRef={datasetScrollContainerRef}
+          datasetScrollPositionRef={datasetScrollPositionRef}
+          mainScrollPositionRef={mainScrollPositionRef}
+          hasSelectedLayers={hasSelectedLayers}
+          handleDeselectAllLayers={handleDeselectAllLayers}
+          onLayerChangeWithDataset={onLayerChangeWithDataset}
+          onRemoveDataset={onRemoveDataset}
+          onChangeBaseLayer={onChangeBaseLayer}
+          selectedBaseMap={selectedBaseMap}
+          setSelectedBaseMap={setSelectedBaseMap}
+          isBaseMapSectionVisible={isBaseMapSectionVisible}
+          isLayerSectionVisible={isLayerSectionVisible}
+          isActionSectionVisible={isActionSectionVisible}
+          setIsBaseMapSectionVisible={setIsBaseMapSectionVisible}
+          setIsLayerSectionVisible={setIsLayerSectionVisible}
+          setIsActionSectionVisible={setIsActionSectionVisible}
+          data={data}
         />
       </SidebarContent>
-      <SidebarFooter language={language} handleLanguageChange={handleLanguageChange} t={t} />
+      <SidebarFooter
+        language={language}
+        handleLanguageChange={handleLanguageChange}
+        t={t}
+      />
     </Sidebar>
   );
 }
