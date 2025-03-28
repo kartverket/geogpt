@@ -25,13 +25,13 @@ const StepNavigationButtons: React.FC<StepNavigationButtonsProps> = ({
     <div className="flex justify-between mt-6">
       {step === 0 ? (
         <div className="flex justify-between w-full">
-          <Button variant="outline" onClick={handleClose}>
+          <Button variant="standard" onClick={handleClose}>
             Avbryt
           </Button>
           <div className="flex gap-2">
-            <Button variant="next" onClick={nextStep}>
+            <Button variant="continue" onClick={nextStep}>
               <Edit />
-              Tilpass
+              Endre
             </Button>
             <Button
               variant="download"
@@ -44,27 +44,24 @@ const StepNavigationButtons: React.FC<StepNavigationButtonsProps> = ({
         </div>
       ) : step === 1 ? (
         <div className="flex justify-between w-full">
-          <Button variant="outline" onClick={prevStep}>
+          <Button variant="standard" onClick={prevStep}>
             <ArrowLeft />
             Tilbake
           </Button>
-          <Button variant="next" onClick={nextStep}>
+          <Button variant="continue" onClick={nextStep}>
             Neste
             <ArrowRight />
           </Button>
         </div>
       ) : (
         <div className="flex justify-between w-full">
-          <Button variant="outline" onClick={prevStep}>
+          <Button variant="standard" onClick={prevStep}>
             <ArrowLeft />
             Tilbake
           </Button>
-          <Button
-            variant="download"
-            onClick={handleConfirmSelectionWithLoading}
-          >
-            <Download />
-            Last ned datasett
+          <Button variant="continue" onClick={nextStep}>
+            Oversikt
+            <ArrowRight />
           </Button>
         </div>
       )}

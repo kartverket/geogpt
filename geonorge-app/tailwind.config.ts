@@ -14,7 +14,7 @@ export default {
       },
       colors: {
         color: {
-          "gn-primary": "#fe5000",
+          "gn-primary": "#fe642f",
           "gn-primarylight": "#ff7e4d",
           "gn-secondary": "#404041",
           "gn-secondarylight": "#5c5c5d",
