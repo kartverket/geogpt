@@ -1,0 +1,12 @@
+{
+  "2025-03-18": {
+    "prompt_tokens": 27938,
+    "completion_tokens": 1658,
+    "total_tokens": 29596,
+    "embedding_tokens": 1200,
+    "requests": {
+      "llm_calls": 120,
+      "embedding_calls": 101
+    }
+  }
+}

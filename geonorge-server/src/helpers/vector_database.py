@@ -44,10 +44,9 @@ def _rag_vector_search(vector_array):
                     abstract, 
                     image, 
                     metadatacreationdate,
-                    (combined_text_vector <-> %s::vector) * 0.7 + 
-                    (title_vector <-> %s::vector) * 0.3 AS distance 
+                    combined_text_vector <-> %s::vector AS distance 
                 FROM text_embedding_3_large 
-                ORDER BY distance LIMIT 10
+                ORDER BY combined_text_vector <-> %s::vector LIMIT 10
                 """,
                 (vector_array, vector_array)
             )

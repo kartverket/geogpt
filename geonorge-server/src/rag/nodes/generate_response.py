@@ -38,9 +38,13 @@ async def generate_response(state: Dict) -> Dict:
     websocket = active_websockets.get(websocket_id)
     print(f"Retrieved websocket from active_websockets: {websocket is not None}")
 
+    # Define intents that don't require context from the vector database
+    context_free_intents = ["system_info", "clarification", "download_request"]
+    is_context_free_intent = current_state.current_intent in context_free_intents
+    
     # Check if we're dealing with a no results case
     no_results = False
-    if current_state.context and "jeg fant ingen relevante datasett" in current_state.context:
+    if not is_context_free_intent and current_state.context and "jeg fant ingen relevante datasett" in current_state.context:
         no_results = True
         response_template = NO_RESULTS_TEMPLATE
     else:
@@ -68,14 +72,26 @@ async def generate_response(state: Dict) -> Dict:
 
     # Stream the response to the user
     response_chunks = []
-    await send_websocket_message("chatStream", {"payload": "", "isNewMessage": True}, websocket)
+    await send_websocket_message("chatStream", {"isNewMessage": True}, websocket)
 
-    async for chunk in (prompt | llm).astream({
-        "input": current_state.messages[-1]["content"],
-        "chat_history": current_state.chat_history,
-        "context": current_state.context,
-        "follow_up_context": str(current_state.follow_up_context)
-    }):
+    # For context-free intents, we don't need to pass context
+    if is_context_free_intent:
+        stream_input = {
+            "input": current_state.messages[-1]["content"],
+            "chat_history": current_state.chat_history,
+            "context": "",  # Empty context for context-free intents
+            "follow_up_context": ""
+        }
+        print(f"Generating response for {current_state.current_intent} intent without context")
+    else:
+        stream_input = {
+            "input": current_state.messages[-1]["content"],
+            "chat_history": current_state.chat_history,
+            "context": current_state.context,
+            "follow_up_context": str(current_state.follow_up_context)
+        }
+
+    async for chunk in (prompt | llm).astream(stream_input):
         if hasattr(chunk, 'content'):
             response_chunks.append(chunk.content)
             await send_websocket_message("chatStream", {"payload": chunk.content}, websocket)

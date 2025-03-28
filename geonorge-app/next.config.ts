@@ -1,4 +1,4 @@
-/** @type {import('next').NextConfig} */
+/**  @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
     remotePatterns: [
@@ -18,6 +18,16 @@ const nextConfig = {
         pathname: "/**",
       },
       {
+        protocol: "http",
+        hostname: "www.geonorge.no",
+        pathname: "/**",
+      },
+      {
+        protocol: "http",
+        hostname: "www.geonorge.no:80",
+        pathname: "/**",
+      },
+      {
         protocol: "https",
         hostname: "editor.geonorge.no",
         pathname: "/**",
@@ -30,6 +40,16 @@ const nextConfig = {
       {
         protocol: "https",
         hostname: "norgeskart.no",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "**",
+        pathname: "/**",
+      },
+      {
+        protocol: "http",
+        hostname: "**",
         pathname: "/**",
       },
     ],

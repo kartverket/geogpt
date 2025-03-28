@@ -200,7 +200,7 @@ const Sidebar = React.forwardRef<
       <div
         ref={ref}
         className={cn(
-          "fixed top-0 left-0 h-full z-50 bg-white transition-transform duration-300",
+          "fixed top-0 left-0 h-full z-20 bg-white transition-transform duration-300",
           state === "collapsed" && "-translate-x-full",
           className
         )}

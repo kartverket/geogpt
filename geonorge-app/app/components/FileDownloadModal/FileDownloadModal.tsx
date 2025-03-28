@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 
 // Utils
+import { fixNorwegianEncoding } from "./utils/fixNbEncoding";
 import { groupedGoals, userGroups } from "./utils/selectionData";
 import {
   capitalizeFirstLetter,
@@ -32,25 +33,100 @@ import {
   PopoverTrigger,
   PopoverContent,
 } from "@/components/ui/popover";
-import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 
 // Icons or images
-import GeoNorgeLogo from "../GeoNorgeLogo";
-import { ArrowDownAZ, Info, X } from "lucide-react";
+import GeoNorgeLogo from "@/components/ui/GeoNorgeLogo";
+import { ArrowDownAZ, Info, X, CheckCircle2 } from "lucide-react";
 
-interface FileDownloadModalProps {
-  isOpen: boolean;
-  handleClose: () => void;
-  handleConfirmSelection: () => void;
-  handleStandardDownload: () => void;
-  geographicalAreas: { type: string; name: string; code: string }[];
-  projections: { name: string; code: string }[];
-  formats: string[];
-  datasetName: string;
-  onAreaChange: (selectedAreaCode: string) => void;
-  metadataUuid: string;
-}
+// Custom ProgressSteps component
+const ProgressSteps = ({
+  currentStep,
+  isEditing,
+  onStepClick,
+}: {
+  currentStep: number;
+  isEditing: boolean;
+  onStepClick: (step: number) => void;
+}) => {
+  const steps = [
+    { index: 0, label: "Område" },
+    { index: 1, label: "Brukergruppe" },
+    { index: 2, label: "Oversikt" },
+  ];
+
+  // Determine active step for display purposes
+  const activeStep = isEditing ? currentStep : 2;
+
+  return (
+    <div className="my-5">
+      <div className="flex items-center justify-between">
+        {steps.map((step, i) => (
+          <React.Fragment key={step.index}>
+            {/* Step Circle */}
+            <div
+              className="relative flex flex-col items-center group cursor-pointer"
+              onClick={() => onStepClick(step.index)}
+            >
+              <div
+                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300
+                  ${
+                    i < activeStep || (!isEditing && i === 2)
+                      ? "bg-color-kv-primary text-white"
+                      : i === activeStep
+                      ? "bg-color-kv-secondary text-white ring-2 ring-color-kv-secondary ring-offset-2"
+                      : "bg-gray-200 text-gray-500"
+                  }`}
+              >
+                {i < activeStep || (!isEditing && i === 2) ? (
+                  <CheckCircle2 size={16} />
+                ) : (
+                  <span className="text-sm font-medium">{i + 1}</span>
+                )}
+              </div>
+
+              {/* Step Label */}
+              <span
+                className={`absolute -bottom-7 text-xs font-medium transition-colors
+                  ${
+                    i === activeStep
+                      ? "text-color-kv-secondary"
+                      : i < activeStep || (!isEditing && i === 2)
+                      ? "text-color-kv-secondary"
+                      : "text-gray-500"
+                  }`}
+              >
+                {step.label}
+              </span>
+
+              {/* Tooltip for clickable steps */}
+              <div
+                className="absolute -bottom-12 left-1/2 transform -translate-x-1/2 opacity-0 
+                          group-hover:opacity-100 transition-opacity text-xs bg-gray-800 text-white 
+                          py-1 px-2 rounded pointer-events-none"
+              >
+                Velg {step.label.toLowerCase()}
+              </div>
+            </div>
+
+            {/* Connecting Line */}
+            {i < steps.length - 1 && (
+              <div className="flex-1 mx-2 h-[2px] relative">
+                <div className="absolute inset-0 bg-gray-200"></div>
+                <div
+                  className={`absolute inset-0 bg-color-kv-primary transition-all duration-500 origin-left`}
+                  style={{
+                    transform: i < activeStep ? "scaleX(1)" : "scaleX(0)",
+                  }}
+                ></div>
+              </div>
+            )}
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 // Render a tooltip with a help icon
 const renderTooltip = (helpLink: string, label: string) => (
@@ -84,7 +160,7 @@ const SummaryItem = ({ label, value }: { label: string; value: string }) => (
         value ? "bg-color-gn-lightblue text-white" : "bg-gray-200 text-gray-500"
       } ml-2 px-3 py-1 text-xs rounded-lg`}
     >
-      {value || "Ikke valgt"}
+      {fixNorwegianEncoding(value) || "Ikke valgt"}
     </Badge>
   </div>
 );
@@ -101,7 +177,6 @@ const SelectionPopover = ({
   placeholder,
   grouped = false,
   isDisabled = false,
-  hasError = false,
 }: {
   label: string;
   helpLink?: string;
@@ -113,7 +188,6 @@ const SelectionPopover = ({
   placeholder: string;
   grouped?: boolean;
   isDisabled?: boolean;
-  hasError?: boolean;
 }) => {
   // Autofill the selected value if there is only one item in the list
   useEffect(() => {
@@ -148,11 +222,10 @@ const SelectionPopover = ({
           <Button
             variant="outline"
             className={`w-full justify-start text-left 
-              ${isDisabled ? "opacity-60 cursor-not-allowed" : ""} 
-              ${hasError ? "" : ""}`}
+              ${isDisabled ? "opacity-60 cursor-not-allowed" : ""}`}
             disabled={isDisabled}
           >
-            {selectedValue || placeholder}
+            {fixNorwegianEncoding(selectedValue) || placeholder}
 
             {isDisabled ? (
               <span className="ml-auto text-color-kv-secondary text-xs italic">
@@ -165,7 +238,7 @@ const SelectionPopover = ({
             )}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-full min-w-[var(--radix-popper-anchor-width)] p-0">
+        <PopoverContent className="w-full min-w-[var(--radix-popover-anchor-width)] p-0">
           <Command>
             <CommandInput placeholder={`Søk etter ${label.toLowerCase()}`} />
             <CommandList>
@@ -183,7 +256,7 @@ const SelectionPopover = ({
                             setOpen(false);
                           }}
                         >
-                          {item.name}
+                          {fixNorwegianEncoding(item.name)}
                         </CommandItem>
                       ))}
                   </CommandGroup>
@@ -207,7 +280,7 @@ const SelectionPopover = ({
                             setOpen(false);
                           }}
                         >
-                          {item.name}
+                          {fixNorwegianEncoding(item.name)}
                         </CommandItem>
                       ))}
                     </CommandGroup>
@@ -223,7 +296,7 @@ const SelectionPopover = ({
                         setOpen(false);
                       }}
                     >
-                      {item.name}
+                      {fixNorwegianEncoding(item.name)}
                     </CommandItem>
                   ))}
                 </CommandGroup>
@@ -232,15 +305,6 @@ const SelectionPopover = ({
           </Command>
         </PopoverContent>
       </Popover>
-      {hasError && (
-        <p className="text-xs text-color-gn-primary mt-1 animate-fadeIn">
-          {label.includes("Geo")
-            ? "Du må velge et geografisk område"
-            : label.includes("Proj")
-            ? "Du må velge en projeksjon"
-            : "Du må velge et format"}
-        </p>
-      )}
     </div>
   );
 };
@@ -256,8 +320,7 @@ const renderSelectionPopover = (
   placeholder: string,
   grouped = false,
   helpLink?: string,
-  isDisabled = false,
-  hasError = false
+  isDisabled = false
 ) => (
   <SelectionPopover
     label={label}
@@ -270,16 +333,15 @@ const renderSelectionPopover = (
     placeholder={placeholder}
     grouped={grouped}
     isDisabled={isDisabled}
-    hasError={hasError}
   />
 );
 
-// Update step labels to remove user group step
-const stepLabels = [
-  "Standard nedlasting",
-  "1. Velg område",
-  "2. Bekreft og last ned",
-];
+// Simplify how we track steps
+const STEPS = {
+  INITIAL_OVERVIEW: 0,
+  AREA: 1,
+  USER_GROUP: 2,
+};
 
 // FileDownloadModal component
 const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
@@ -298,8 +360,8 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
   const [selectedFmt, setSelectedFmt] = useState<string>("");
   const [selectedGroup, setSelectedGroup] = useState<string>("");
   const [selectedGoal, setSelectedGoal] = useState<string>("");
-  const [step, setStep] = useState<number>(0);
-  const [manualStepChange, setManualStepChange] = useState<boolean>(false);
+  const [step, setStep] = useState<number>(STEPS.INITIAL_OVERVIEW);
+  const [isEditing, setIsEditing] = useState<boolean>(false);
 
   const [openLocation, setOpenLocation] = useState<boolean>(false);
   const [openProj, setOpenProj] = useState<boolean>(false);
@@ -307,45 +369,93 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
   const [openGroup, setOpenGroup] = useState<boolean>(false);
   const [openGoal, setOpenGoal] = useState<boolean>(false);
 
-  const [validationErrors, setValidationErrors] = useState<{
-    location?: boolean;
-    projection?: boolean;
-    format?: boolean;
-  }>({});
+  // Keep track of available options based on current selection
+  const [availableProjections, setAvailableProjections] = useState<
+    typeof projections
+  >([]);
+  const [availableFormats, setAvailableFormats] = useState<string[]>([]);
 
-  // Clear location error when location is selected
-  useEffect(() => {
-    if (selectedLocation && validationErrors.location) {
-      setValidationErrors((prev) => ({ ...prev, location: false }));
-    }
-  }, [selectedLocation, validationErrors.location]);
+  const initialLoadRef = useRef<boolean>(false);
 
-  // Clear projection error when projection is selected
+  // Reset modal state and pre-fill default values when modal opens
   useEffect(() => {
-    if (selectedProj && validationErrors.projection) {
-      setValidationErrors((prev) => ({ ...prev, projection: false }));
-    }
-  }, [selectedProj, validationErrors.projection]);
+    if (isOpen && !initialLoadRef.current) {
+      initialLoadRef.current = true;
 
-  // Clear format error when format is selected
-  useEffect(() => {
-    if (selectedFmt && validationErrors.format) {
-      setValidationErrors((prev) => ({ ...prev, format: false }));
-    }
-  }, [selectedFmt, validationErrors.format]);
+      // Set default values from first element of each array
+      if (geographicalAreas.length > 0) {
+        const defaultArea = geographicalAreas[0];
+        setSelectedLocation(defaultArea.name);
+        onAreaChange(defaultArea.code);
 
-  // Reset modal state when new modal is opened
-  useEffect(() => {
-    if (isOpen) {
-      setSelectedLocation("");
-      setSelectedProj("");
-      setSelectedFmt("");
-      setSelectedGroup("");
-      setSelectedGoal("");
-      setStep(0);
-      setManualStepChange(false);
+        // Update available projections based on this area
+        // This will be updated in the API response handler
+        setAvailableProjections(projections);
+
+        if (projections.length > 0) {
+          setSelectedProj(projections[0].name);
+
+          // Update available formats based on the selected projection
+          setAvailableFormats(formats);
+
+          if (formats.length > 0) {
+            setSelectedFmt(formats[0]);
+          }
+        }
+      }
+
+      // Set default values for brukergruppe and formål
+      if (userGroups.length > 0) {
+        setSelectedGroup(userGroups[0].name);
+      }
+
+      if (groupedGoals.length > 0) {
+        setSelectedGoal(groupedGoals[0].name);
+      }
+
+      // Reset to overview
+      setStep(STEPS.INITIAL_OVERVIEW);
+      setIsEditing(false);
+    } else if (!isOpen) {
+      initialLoadRef.current = false;
     }
-  }, [isOpen]);
+  }, [isOpen, geographicalAreas, projections, formats, onAreaChange]);
+
+  // Handle area change - update projections and formats
+  const handleAreaChange = (areaName: string, areaCode: string) => {
+    setSelectedLocation(areaName);
+    onAreaChange(areaCode); // This will trigger API call to get updated projections
+
+    // Reset projection and format since they depend on the area
+    setSelectedProj("");
+    setSelectedFmt("");
+  };
+
+  // Effect to watch for projection and format changes from API
+  useEffect(() => {
+    if (selectedLocation) {
+      // Update available projections when the API returns new data
+      setAvailableProjections(projections);
+
+      // Auto-select first projection if available
+      if (projections.length > 0 && !selectedProj) {
+        setSelectedProj(projections[0].name);
+      }
+    }
+  }, [projections, selectedLocation, selectedProj]);
+
+  // Effect to update formats when projection changes
+  useEffect(() => {
+    if (selectedProj) {
+      // Update available formats based on selected projection
+      setAvailableFormats(formats);
+
+      // Auto-select first format if available
+      if (formats.length > 0 && !selectedFmt) {
+        setSelectedFmt(formats[0]);
+      }
+    }
+  }, [formats, selectedProj, selectedFmt]);
 
   const uniqueGeographicalAreas = sortGeographicalAreas(
     Array.from(
@@ -353,81 +463,79 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
     ).map((area) => JSON.parse(area))
   );
 
-  // AUTO-FILL: If there is only one geographical area, select it automatically.
-  useEffect(() => {
-    if (uniqueGeographicalAreas.length === 1 && !selectedLocation) {
-      setSelectedLocation(uniqueGeographicalAreas[0].name);
-      onAreaChange(uniqueGeographicalAreas[0].code);
-      setOpenLocation(false);
-    }
-  }, [uniqueGeographicalAreas, selectedLocation, onAreaChange]);
-
   const uniqueProjections = Array.from(
-    new Set(projections.map((proj) => JSON.stringify(proj)))
+    new Set(availableProjections.map((proj) => JSON.stringify(proj)))
   ).map((proj) => JSON.parse(proj));
 
   const uniqueFormats = Array.from(
-    new Set(formats.map((format) => JSON.stringify({ name: format })))
+    new Set(availableFormats.map((format) => JSON.stringify({ name: format })))
   ).map((format) => JSON.parse(format));
 
-  const nextStep = () => {
-    if (step === 1) {
-      // Check for validation errors
-      const errors = {
-        location: !selectedLocation,
-        projection: !selectedProj,
-        format: !selectedFmt,
-      };
+  // Function to handle step navigation via clicking on step labels
+  const handleStepClick = (targetStep: number) => {
+    // Convert between component's step indices and our STEPS constants
+    const stepMapping = [STEPS.AREA, STEPS.USER_GROUP, STEPS.INITIAL_OVERVIEW];
+    const mappedStep = stepMapping[targetStep];
 
-      // If any errors, set them and add visual feedback
-      if (errors.location || errors.projection || errors.format) {
-        setValidationErrors(errors);
-        return;
+    // Allow free navigation between all steps including overview
+    if (isEditing) {
+      if (mappedStep === STEPS.INITIAL_OVERVIEW) {
+        completeEditing(); // Go to overview and exit editing mode
+      } else {
+        setStep(mappedStep); // Navigate to selected step while maintaining editing mode
       }
-      // Clear errors if all fields are valid
-      setValidationErrors({});
+    } else if (!isEditing && mappedStep === STEPS.INITIAL_OVERVIEW) {
+      // Already on overview, nothing to do
+      setStep(STEPS.INITIAL_OVERVIEW);
+    } else if (!isEditing) {
+      // If on overview and clicking a step other than overview, start editing at that step
+      setIsEditing(true);
+      setStep(mappedStep);
+    }
+  };
+
+  // Start the editing process
+  const startEditing = () => {
+    setIsEditing(true);
+    setStep(STEPS.AREA);
+  };
+
+  // Complete the editing process - go back to initial overview
+  const completeEditing = () => {
+    setIsEditing(false);
+    setStep(STEPS.INITIAL_OVERVIEW);
+  };
+
+  const nextStep = () => {
+    if (step === STEPS.INITIAL_OVERVIEW && !isEditing) {
+      // Start editing when clicking "Endre" on initial overview
+      startEditing();
+      return;
     }
 
-    setManualStepChange(true);
-    setStep((prev) => Math.min(prev + 1, 2));
+    if (step === STEPS.AREA) {
+      // Go to user group step
+      setStep(STEPS.USER_GROUP);
+    } else if (step === STEPS.USER_GROUP) {
+      // Complete editing and go back to overview
+      completeEditing();
+    }
   };
 
   const prevStep = () => {
-    setManualStepChange(true);
-    setStep((prev) => Math.max(prev - 1, 0));
+    if (step === STEPS.AREA) {
+      // If at first edit step, go back to initial overview
+      completeEditing();
+    } else if (step === STEPS.USER_GROUP) {
+      // Go back to area step without validation (since area -> user group is optional)
+      setStep(STEPS.AREA);
+    }
   };
-
-  // Auto-step progression
-  useEffect(() => {
-    if (!manualStepChange) {
-      if (step === 1 && selectedLocation && selectedProj && selectedFmt) {
-        setStep(2);
-      } else if (step === 0 && selectedGroup && selectedGoal) {
-        setStep(1);
-      }
-    }
-  }, [
-    step,
-    selectedGroup,
-    selectedGoal,
-    selectedLocation,
-    selectedProj,
-    selectedFmt,
-    manualStepChange,
-  ]);
-
-  // Once step 2 is reached, set manual step change to true
-  useEffect(() => {
-    if (step === 2) {
-      setManualStepChange(true);
-    }
-  }, [step]);
 
   const handleDownload = async () => {
     try {
-      // Check if any selections have been made, if not use standard download
-      // CHANGE LOGIC LATER -> USE USER INPUT VALUES AND FILL IN MISSING VALUES WITH DEFAULT VALUES
-      if (!selectedLocation || !selectedProj || !selectedFmt) {
+      // Use default values if nothing is selected
+      if (!selectedProj || !selectedFmt) {
         handleStandardDownload();
         handleClose();
         return;
@@ -496,17 +604,29 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
     await handleDownload();
   };
 
-  if (!isOpen) return null;
+  // Calculate progress based on step - keeping this for future reference
+  const calculateProgress = () => {
+    if (!isEditing) {
+      return 100; // Initial overview
+    }
 
-  // Update progress calculation for 3 steps instead of 4
-  const progressValue = (step / 2) * 100;
+    switch (step) {
+      case STEPS.AREA:
+        return 50; // First of two steps
+      case STEPS.USER_GROUP:
+        return 100; // Second of two steps
+      default:
+        return 0;
+    }
+  };
+
+  if (!isOpen) return null;
 
   return (
     <TooltipProvider delayDuration={100}>
       <div
         className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-[50]"
         onClick={(e) => {
-          // Stop propagation and only close if the backdrop was clicked
           e.stopPropagation();
           if (e.target === e.currentTarget) {
             handleClose();
@@ -515,18 +635,19 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
       >
         <div
           className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl 
-  relative min-h-[300px] sm:min-h-[400px] md:min-h-[450px] lg:min-h-[500px] xl:min-h-[550px]
-  sm:h-auto md:h-auto lg:h-auto xl:h-auto 
-  sm:w-[70%] md:w-[60%] lg:w-[50%] xl:w-[40%] 
-  flex flex-col justify-between"
+          relative min-h-[300px] sm:min-h-[400px] md:min-h-[450px] lg:min-h-[500px] xl:min-h-[550px]
+          sm:h-auto md:h-auto lg:h-auto xl:h-auto 
+          sm:w-[70%] md:w-[60%] lg:w-[50%] xl:w-[40%] 
+          flex flex-col justify-between"
         >
+          {/* Close button */}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={handleClose}
-                className="absolute top-2 right-2 px-4 text-gray-600 hover:text-gray-800"
+                className="absolute top-2 right-2 text-color-gn-secondary hover:bg-gray-100"
                 aria-label="Lukk"
               >
                 <X />
@@ -536,65 +657,54 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
               <p>Lukk</p>
             </TooltipContent>
           </Tooltip>
+
+          {/* Logo and Header */}
           <div className="flex items-center justify-start mb-4">
             <GeoNorgeLogo className="w-32 h-auto" />
           </div>
+
           <h2 className="text-1xl font-semibold text-color-gn-secondary mb-3">
-            Filnedlastning - {step === 2 ? "Nedlastning" : "Bestilling"}
-            <p className="text-2xl text-color-kv-secondary mt-1 font-medium">
-              {datasetName}
-            </p>
+            Filnedlastning -{" "}
+            {step === STEPS.INITIAL_OVERVIEW ? "Oversikt" : "Brukergruppe"}
           </h2>
 
+          {/* Dataset name below title */}
+          <p className="text-2xl text-color-kv-secondary mb-4 font-medium">
+            {datasetName}
+          </p>
+
           <Separator />
-          <Progress
-            value={progressValue}
-            className="my-4"
-            bgColor={"bg-color-kv-primary"}
+
+          {/* Replace Progress bar with new ProgressSteps component */}
+          <ProgressSteps
+            currentStep={
+              step === STEPS.AREA ? 0 : step === STEPS.USER_GROUP ? 1 : 2
+            }
+            isEditing={isEditing}
+            onStepClick={handleStepClick}
           />
-          <div className="flex justify-between text-sm text-gray-600">
-            {stepLabels.map((label, index) => (
-              <span
-                key={index}
-                className={`${
-                  step === index ? "text-color-kv-secondary font-semibold" : ""
-                } cursor-pointer`}
-                onClick={() => setStep(index)}
-              >
-                {label}
-              </span>
-            ))}
-          </div>
-          <div className="flex-1 overflow-y-auto">
-            {/* Steg 0: Velg brukergruppe og formål */}
-            {step === 0 && (
-              <div className="space-y-4 mt-4">
-                <Separator />
-                {renderSelectionPopover(
-                  "Brukergruppe",
-                  selectedGroup,
-                  setSelectedGroup,
-                  openGroup,
-                  setOpenGroup,
-                  userGroups,
-                  "Velg brukergruppe..."
-                )}
-                {renderSelectionPopover(
-                  "Formål",
-                  selectedGoal,
-                  setSelectedGoal,
-                  openGoal,
-                  setOpenGoal,
-                  groupedGoals,
-                  "Velg formål...",
-                  true
-                )}
+
+          <div className="flex-1 overflow-y-auto mt-4">
+            {/* Initial Overview Screen */}
+            {step === STEPS.INITIAL_OVERVIEW && (
+              <div className="space-y-4">
+                <p className="text-xl font-semibold text-color-gn-secondary">
+                  Oversikt - bekreft og last ned
+                </p>
+                <SummaryItem
+                  label="Geografisk område"
+                  value={selectedLocation}
+                />
+                <SummaryItem label="Projeksjon" value={selectedProj} />
+                <SummaryItem label="Format" value={selectedFmt} />
+                <SummaryItem label="Brukergruppe" value={selectedGroup} />
+                <SummaryItem label="Formål" value={selectedGoal} />
               </div>
             )}
-            {/* Steg 1: Velg område, projeksjon og format */}
-            {step === 1 && (
-              <div className="space-y-4 mt-4">
-                <Separator />
+
+            {/* Area selection (step 1) */}
+            {step === STEPS.AREA && (
+              <div className="space-y-4">
                 <div>
                   <div className="flex items-center mb-2 gap-1 text-sm text-color-gn-secondary">
                     <p className="font-semibold">Geografisk område</p>
@@ -607,10 +717,11 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
-                        className={`w-full justify-start text-left ${validationErrors.location}`}
+                        className="w-full justify-start text-left"
                         aria-labelledby="geo-area-label"
                       >
-                        {selectedLocation || "Velg område..."}
+                        {fixNorwegianEncoding(selectedLocation) ||
+                          "Velg område..."}
                         <ArrowDownAZ className="ml-auto" />
                       </Button>
                     </PopoverTrigger>
@@ -636,12 +747,11 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
                                 <CommandItem
                                   key={item.name}
                                   onSelect={() => {
-                                    setSelectedLocation(item.name);
+                                    handleAreaChange(item.name, item.code);
                                     setOpenLocation(false);
-                                    onAreaChange(item.code);
                                   }}
                                 >
-                                  {item.name}
+                                  {fixNorwegianEncoding(item.name)}
                                 </CommandItem>
                               ))}
                             </CommandGroup>
@@ -650,11 +760,6 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
                       </Command>
                     </PopoverContent>
                   </Popover>
-                  {validationErrors.location && (
-                    <p className="text-xs text-color-gn-primary mt-1 animate-fadeIn">
-                      Du må velge et geografisk område
-                    </p>
-                  )}
                 </div>
 
                 {renderSelectionPopover(
@@ -667,8 +772,7 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
                   "Velg projeksjon...",
                   false,
                   "https://www.geonorge.no/aktuelt/om-geonorge/slik-bruker-du-geonorge/kartprojeksjoner-og-koordinatsystemer/",
-                  !selectedLocation,
-                  validationErrors.projection
+                  !selectedLocation || uniqueProjections.length === 0
                 )}
 
                 {renderSelectionPopover(
@@ -681,30 +785,39 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
                   "Velg format...",
                   false,
                   "https://www.geonorge.no/aktuelt/om-geonorge/slik-bruker-du-geonorge/formater/",
-                  !selectedLocation || !selectedProj,
-                  validationErrors.projection
+                  !selectedLocation ||
+                    !selectedProj ||
+                    uniqueFormats.length === 0
                 )}
               </div>
             )}
 
-            {/* Steg 2: Oversikt Items */}
-            {step === 2 && (
-              <div className="space-y-4 mt-4">
-                <Separator />
-                <p className="text-xl font-semibold text-color-gn-secondary">
-                  Oversikt - bekreft og last ned
-                </p>
-                <SummaryItem
-                  label="Geografisk område"
-                  value={selectedLocation}
-                />
-                <SummaryItem label="Projeksjon" value={selectedProj} />
-                <SummaryItem label="Format" value={selectedFmt} />
-                <SummaryItem label="Brukergruppe" value={selectedGroup} />
-                <SummaryItem label="Formål" value={selectedGoal} />
+            {/* User Group selection (step 2) */}
+            {step === STEPS.USER_GROUP && (
+              <div className="space-y-4">
+                {renderSelectionPopover(
+                  "Brukergruppe",
+                  selectedGroup,
+                  setSelectedGroup,
+                  openGroup,
+                  setOpenGroup,
+                  userGroups,
+                  "Velg brukergruppe..."
+                )}
+                {renderSelectionPopover(
+                  "Formål",
+                  selectedGoal,
+                  setSelectedGoal,
+                  openGoal,
+                  setOpenGoal,
+                  groupedGoals,
+                  "Velg formål...",
+                  true
+                )}
               </div>
             )}
           </div>
+
           <StepNavigationButtons
             step={step}
             nextStep={nextStep}

@@ -11,3 +11,4 @@ flask-cors
 langchain
 langgraph
 langchain-openai
+nest_asyncio

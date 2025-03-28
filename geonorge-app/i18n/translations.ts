@@ -18,7 +18,27 @@ export type TranslationKey =
   | "landscape_map"
   | "grayscale_map"
   | "raster_map"
-  | "sea_map";
+  | "sea_map"
+  | "no_datasets_selected"
+  | "no_layers_available"
+  | "layers"
+  | "reset_tour_title"
+  | "tour_reset_message"
+  | "reset_tour_button"
+  | "back_button"
+  | "tour_reset_toast_message"
+  | "privacy_and_cookies"
+  | "privacy_description"
+  | "privacy_link_text"
+  | "feedback_question"
+  | "feedback_description"
+  | "phone_label"
+  | "email_label"
+  | "feedback_form"
+  | "close_button"
+  | "feature_not_available"
+  | "remove_dataset_tooltip"
+  | "expand_collapse_tooltip";
 
 export const translations: Record<Language, Record<TranslationKey, string>> = {
   nb: {
@@ -40,6 +60,33 @@ export const translations: Record<Language, Record<TranslationKey, string>> = {
     grayscale_map: "Gråtone",
     raster_map: "Rasterkart",
     sea_map: "Sjøkart",
+
+    no_datasets_selected: "Ingen datasett er valgt",
+    no_layers_available: "Ingen lag tilgjengelig",
+    layers: "Lag",
+
+    reset_tour_title: "Tilbakestill omvisning",
+    tour_reset_message:
+      "Klikk på knappen under for å starte omvisningen på nytt.",
+    reset_tour_button: "Tilbakestill omvisning",
+    back_button: "Tilbake",
+    tour_reset_toast_message:
+      "Omvisningen er tilbakestilt! Last inn siden på nytt for å se den igjen.",
+
+    privacy_and_cookies: "Personvern og cookies",
+    privacy_description: "Les hvordan vi tar vare på personopplysninger i",
+    privacy_link_text: "Kartverkets personvernerklæring",
+
+    feedback_question: "Synspunkter eller feil?",
+    feedback_description:
+      "Har du ris, ros eller tips vedrørende geonorge.no, er vi takknemlige for innspill. Du kan kontakte oss på følgende måter:",
+    phone_label: "Telefon:",
+    email_label: "E-post:",
+    feedback_form: "Gå til tilbakemeldingsskjema",
+    close_button: "Lukk",
+    feature_not_available: "Denne funksjonen er ikke tilgjengelig ennå",
+    remove_dataset_tooltip: "Fjern datasett",
+    expand_collapse_tooltip: "Åpne/Lukk",
   },
   nn: {
     background_map: "Bakgrunnskart",
@@ -60,11 +107,38 @@ export const translations: Record<Language, Record<TranslationKey, string>> = {
     grayscale_map: "Gråtone",
     raster_map: "Rasterkart",
     sea_map: "Sjøkart",
+
+    no_datasets_selected: "Ingen datasett er valde",
+    no_layers_available: "Ingen lag tilgjengelege",
+    layers: "Lag",
+
+    reset_tour_title: "Tilbakestill omvising",
+    tour_reset_message:
+      "Klikk på knappen under for å starte omvisinga på nytt.",
+    reset_tour_button: "Tilbakestill omvising",
+    back_button: "Tilbake",
+    tour_reset_toast_message:
+      "Omvisinga er tilbakestilt! Last inn sida på nytt for å sjå ho igjen.",
+
+    privacy_and_cookies: "Personvern og cookies",
+    privacy_description: "Les korleis vi tek vare på personopplysningar i",
+    privacy_link_text: "Kartverket si personvernerklæring",
+
+    feedback_question: "Synspunkt eller feil?",
+    feedback_description:
+      "Har du ris, ros eller tips vedkomande geonorge.no, er vi takksame for innspel. Du kan kontakte oss på følgjande måtar:",
+    phone_label: "Telefon:",
+    email_label: "E-post:",
+    feedback_form: "Gå til tilbakemeldingsskjema",
+    close_button: "Lukk",
+    feature_not_available: "Denne funksjonen er ikkje tilgjengeleg enno",
+    remove_dataset_tooltip: "Fjern datasett",
+    expand_collapse_tooltip: "Opne/Lukk",
   },
   en: {
     background_map: "Background Map",
     theme_maps: "Thematic Maps",
-    active_datasets: "Active daatasets",
+    active_datasets: "Active datasets",
     deselect_all: "Deselect all layers",
     remove_dataset: "Remove dataset",
     search_layers: "Search for layers...",
@@ -80,5 +154,31 @@ export const translations: Record<Language, Record<TranslationKey, string>> = {
     grayscale_map: "Grayscale",
     raster_map: "Raster map",
     sea_map: "Sea map",
+
+    no_datasets_selected: "No datasets selected",
+    no_layers_available: "No layers available",
+    layers: "Layers",
+
+    reset_tour_title: "Reset Tour",
+    tour_reset_message:
+      "Click the button below to restart the application tour.",
+    reset_tour_button: "Reset Tour",
+    back_button: "Back",
+    tour_reset_toast_message: "Tour reset! Reload the page to see it again.",
+
+    privacy_and_cookies: "Privacy and cookies",
+    privacy_description: "Read how we handle personal information in",
+    privacy_link_text: "Kartverket's privacy statement",
+
+    feedback_question: "Comments or errors?",
+    feedback_description:
+      "If you have feedback or tips regarding geonorge.no, we appreciate your input. You can contact us in the following ways:",
+    phone_label: "Phone:",
+    email_label: "Email:",
+    feedback_form: "Go to feedback form",
+    close_button: "Close",
+    feature_not_available: "This feature is not available yet",
+    remove_dataset_tooltip: "Remove dataset",
+    expand_collapse_tooltip: "Expand/Collapse",
   },
 };

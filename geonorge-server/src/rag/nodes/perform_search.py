@@ -4,6 +4,7 @@ Search node for the RAG workflow.
 from typing import Dict
 from ..models import ConversationState
 from retrieval import GeoNorgeVectorRetriever
+from langchain_core.documents import Document
 
 
 # Initialize retriever
@@ -24,6 +25,19 @@ async def perform_search(state: Dict) -> Dict:
         Updated conversation state with search results
     """
     current_state = ConversationState(**state)
+    
+    # First check if the transformed query is INVALID_QUERY
+    if current_state.transformed_query and "INVALID_QUERY" in current_state.transformed_query:
+        print("Skipping vector database search because query was marked as invalid")
+        # Create a fallback document
+        invalid_document = Document(
+            page_content="Beklager, jeg kan bare svare på spørsmål om geografiske data, kart og Geonorges tjenester. Kan du omformulere spørsmålet ditt til å handle om dette?",
+            metadata={"invalid_query": True}
+        )
+        current_state.context = invalid_document.page_content
+        current_state.metadata_context = []
+        return current_state.to_dict()
+    
     documents, vdb_response = await retriever.get_relevant_documents(
         current_state.messages[-1]["content"]
     )
