@@ -5,6 +5,7 @@ export const useWebSocket = () => {
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [uuidToFind, setUuidToFind] = useState<string>("");
   const [specificObject, setSpecificObject] = useState<SearchResult | null>(
     null
@@ -19,6 +20,14 @@ export const useWebSocket = () => {
   const [formats, setFormats] = useState<string[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [reconnectAttempt, setReconnectAttempt] = useState(0);
+  const [mapUpdates, setMapUpdates] = useState<{
+    center?: [number, number];
+    zoom?: number;
+    layers?: string[];
+    markers?: Array<{ lat: number; lng: number; label: string }>;
+    findMyLocation?: boolean;
+    addMarker?: boolean;
+  }>({});
 
   const connectWebSocket = useCallback(() => {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -52,8 +61,18 @@ export const useWebSocket = () => {
       }, 2000);
     };
 
-    socket.onerror = (error) => {
-      console.error(error);
+    socket.onerror = (event) => {
+      console.error("WebSocket error occurred:", event);
+      setIsConnected(false);
+      setMessages((prev) => [
+        ...prev,
+        {
+          title: "Connection Error",
+          type: "text",
+          content:
+            "System: Connection error. Please check your network connection.",
+        },
+      ]);
     };
 
     socket.onmessage = (event) => {
@@ -93,7 +112,8 @@ export const useWebSocket = () => {
 
   const handleServerMessage = (data: WebSocketMessage) => {
     const { action, payload } = data;
-
+    console.log("Received payload:", payload);
+    console.log("Action:", action);
     switch (action) {
       case "chatStream":
         setIsStreaming(true);
@@ -139,6 +159,10 @@ export const useWebSocket = () => {
             },
           ];
         });
+        break;
+
+      case "searchVdbResults":
+        setSearchResults(payload);
         break;
 
       case "insertImage":
@@ -215,6 +239,11 @@ export const useWebSocket = () => {
           }
         }
         break;
+
+      case "mapUpdate":
+        console.log("Received map update:", payload);
+        setMapUpdates(payload);
+        break;
     }
   };
 
@@ -243,9 +272,11 @@ export const useWebSocket = () => {
 
   return {
     ws,
+    setWs,
     messages,
     isStreaming,
     sendMessage,
+    searchResults,
     uuidToFind,
     specificObject,
     datasetName,
@@ -253,5 +284,6 @@ export const useWebSocket = () => {
     projections,
     formats,
     isConnected,
+    mapUpdates,
   };
 };

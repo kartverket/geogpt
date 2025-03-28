@@ -1,11 +1,16 @@
 "use client";
 
-import DemoV2 from "./dashboard/page";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import Demo from "./components/demo";
+import { GeoNorgeTour } from "./components/GeoNorgeTour";
+import { VersionDisplay } from "./components/VersionDisplay";
 
 export default function Home() {
   return (
-    <div className="relative h-screen w-full">
-      <DemoV2 />
-    </div>
+    <SidebarProvider>
+      <Demo />
+      <GeoNorgeTour />
+      <VersionDisplay />
+    </SidebarProvider>
   );
 }

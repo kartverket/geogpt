@@ -1,25 +1,17 @@
 export interface ChatMessage {
   title: string;
-  type: "text" | "image" | "streaming";
+  type: string;
   content?: string;
   imageUrl?: string;
-  downloadUrl?: string | null;
-  wmsUrl?: string | null;
+  downloadUrl?: string;
+  wmsUrl?: string;
+  downloadFormats?: Array<any>;
   uuid?: string;
-  downloadFormats?: {
-    type: string;
-    name: string;
-    code: string;
-    projections?: { name: string; code: string }[];
-    formats?: { name: string }[];
-  }[];
 }
-
 
 export interface WebSocketMessage {
   action: string;
-  payload?: any;
-  isNewMessage?: boolean;
+  payload: any;
 }
 
 export interface WMSLayer {
@@ -33,7 +25,6 @@ export type MessageType = {
   isNewMessage?: boolean;
 };
 
-
 export interface Address {
   adressetekst: string;
   poststed?: string;
@@ -46,6 +37,8 @@ export interface Address {
 export interface SearchResult {
   uuid: string;
   title?: string;
+  wmsUrl?: string;
+  restricted?: boolean;
   downloadUrl?: string | null;
   downloadFormats?: Array<{
     type: string;
@@ -54,4 +47,12 @@ export interface SearchResult {
     projections?: Array<{ name: string; code: string }>;
     formats?: Array<{ name: string }>;
   }>;
+}
+export interface MapUpdate {
+  center?: [number, number];
+  zoom?: number;
+  layers?: string[];
+  markers?: Array<{ lat: number; lng: number; label: string }>;
+  findMyLocation?: boolean;
+  addMarker?: boolean;
 }
