@@ -31,7 +31,7 @@ const StepNavigationButtons: React.FC<StepNavigationButtonsProps> = ({
           <div className="flex gap-2">
             <Button variant="next" onClick={nextStep}>
               <Edit />
-              Tilpass
+              Endre
             </Button>
             <Button
               variant="download"
@@ -59,12 +59,9 @@ const StepNavigationButtons: React.FC<StepNavigationButtonsProps> = ({
             <ArrowLeft />
             Tilbake
           </Button>
-          <Button
-            variant="download"
-            onClick={handleConfirmSelectionWithLoading}
-          >
-            <Download />
-            Last ned datasett
+          <Button variant="next" onClick={nextStep}>
+            Oversikt
+            <ArrowRight />
           </Button>
         </div>
       )}

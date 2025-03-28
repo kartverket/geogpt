@@ -352,7 +352,7 @@ const MapWrapper: React.FC<MapWrapperProps> = ({
     /* Shared button styles for zoom and location */
     .zoom-button,
     .location-button {
-      background-color: #fe5000 !important;
+      background-color: #ff7e4d !important;
       color: white !important;
       border: none !important;
       width: 44px !important;

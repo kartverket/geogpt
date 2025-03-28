@@ -43,6 +43,7 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
+import { useWebSocket } from "@/app/components/chat";
 
 interface SearchResult {
   uuid: string;
@@ -73,8 +74,8 @@ export function KartkatalogTab({
 }: KartkatalogTabProps) {
   const [isExpanded, setIsExpanded] = React.useState(false);
   const [searchInput, setSearchInput] = React.useState("");
-  const [searchResults, setSearchResults] = React.useState<SearchResult[]>([]);
-  const [isLoading, setIsLoading] = React.useState(false);
+  /*   const [searchResults, setSearchResults] = React.useState<SearchResult[]>([]);
+   */ const [isLoading, setIsLoading] = React.useState(false);
   const [hasSearched, setHasSearched] = React.useState(false);
   const [selectedDatasets, setSelectedDatasets] = React.useState<Set<string>>(
     new Set()
@@ -104,12 +105,13 @@ export function KartkatalogTab({
     });
   }, []);
 
+  const { searchResults } = useWebSocket();
+
   React.useEffect(() => {
     if (ws) {
       const handleMessage = (event: MessageEvent) => {
         const data = JSON.parse(event.data);
         if (data.action === "searchVdbResults") {
-          setSearchResults(data.payload);
           setIsLoading(false);
           setHasSearched(true);
         }
@@ -447,7 +449,7 @@ export function KartkatalogTab({
         {/* Tab Button */}
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className={`flex items-center bg-color-gn-primary hover:bg-color-gn-primarylight text-white px-2 py-4 ${
+          className={`flex items-center bg-color-gn-primary hover:bg-color-gn-primarylight text-white px-2 py-4 text-sm 2xl:text-lg ${
             isExpanded ? "rounded-r-omar border-l-2" : "rounded-omar"
           } -ml-px`}
         >
@@ -455,7 +457,7 @@ export function KartkatalogTab({
             <Layers className="h-7 w-7" />
             <div className="flex flex-col">
               {[..."KARTKATALOGEN"].map((letter, index) => (
-                <span key={index} className="text-xs font-medium">
+                <span key={index} className="font-medium">
                   {letter}
                 </span>
               ))}
