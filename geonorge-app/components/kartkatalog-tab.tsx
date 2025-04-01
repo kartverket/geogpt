@@ -112,10 +112,12 @@ export function KartkatalogTab({
 
   const { searchResults: contextSearchResults } = useWebSocket();
 
-  const searchResults =
-    localSearchResults.length > 0
+  // Use useMemo to stabilize the reference to searchResults
+  const searchResults = React.useMemo(() => {
+    return localSearchResults.length > 0
       ? localSearchResults
       : contextSearchResults || [];
+  }, [localSearchResults, contextSearchResults]);
 
   React.useEffect(() => {
     if (ws) {
@@ -151,6 +153,16 @@ export function KartkatalogTab({
       })
     );
   };
+
+  // Add this just before the return statement in KartkatalogTab component
+  React.useEffect(() => {
+    console.log("Search Results Data:", searchResults);
+    console.log(
+      "WMS URLs available:",
+      searchResults.filter((r) => r.wmsUrl && r.wmsUrl !== "None").length
+    );
+    console.log("Total results:", searchResults.length);
+  }, [searchResults]);
 
   // Select/deselect dataset
   const handleSelectDataset = (dataset: SearchResult) => {
@@ -342,13 +354,13 @@ export function KartkatalogTab({
                       type="submit"
                       size="sm"
                       variant="secondary"
-                      className="bg-color-gn-primary hover:bg-color-gn-primary text-white h-10 rounded-lg transition-colors"
+                      className="bg-white border border-gray-300 hover:bg-white text-color-gn-secondary h-10 rounded-lg transition-colors"
                       disabled={isLoading}
                     >
                       {isLoading ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
-                        "Søk"
+                        <Search className="h-4 w-4" />
                       )}
                     </Button>
                   </div>
@@ -470,7 +482,7 @@ export function KartkatalogTab({
                                   result.wmsUrl &&
                                   onReplaceIframe(result.wmsUrl)
                                 }
-                                className="px-3 py-1.5 text-sm bg-white border hover:bg-white text-color-kv-primary rounded-lg transition-all hover:shadow-md flex items-center gap-1"
+                                className="px-3 py-1.5 text-sm bg-white border shadow-md hover:bg-white text-color-kv-primary rounded-lg transition-all flex items-center gap-1"
                               >
                                 <Eye className="h-4 w-4" /> Vis på kart
                               </button>
@@ -479,15 +491,15 @@ export function KartkatalogTab({
                                 <TooltipTrigger asChild>
                                   <button
                                     disabled
-                                    className="px-3 py-1.5 text-sm bg-red-500 text-white rounded-lg cursor-not-allowed opacity-80 flex items-center gap-1"
+                                    className="px-3 py-1.5 text-sm bg-white border shadow-md hover:bg-white text-red-500 rounded-lg transition-all flex items-center gap-1"
                                   >
                                     <XCircle className="h-4 w-4" />
                                     Utilgjengelig
                                   </button>
                                 </TooltipTrigger>
-                                <TooltipContent className="bg-white text-gray-800 border shadow-lg rounded-lg">
+                                <TooltipContent className="px-3 py-1.5 text-sm bg-white border shadow-md hover:bg-white text-gray-800 rounded-lg transition-all flex items-center gap-1">
                                   <p>
-                                    Dette datasettet kan ikke vises som kart.
+                                    Dette datasettet kan ikke vises på kart.
                                   </p>
                                 </TooltipContent>
                               </Tooltip>
@@ -495,11 +507,11 @@ export function KartkatalogTab({
                             {result.restricted && (
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <button className="px-3 py-1.5 text-sm bg-amber-100 text-amber-700 rounded-lg flex items-center gap-1 border border-amber-200">
+                                  <button className="px-3 py-1.5 text-sm bg-white border shadow-md hover:bg-white text-amber-700 rounded-lg transition-all flex items-center gap-1">
                                     <LockKeyhole className="h-4 w-4" /> Låst
                                   </button>
                                 </TooltipTrigger>
-                                <TooltipContent className="bg-white text-gray-800 border shadow-lg rounded-lg">
+                                <TooltipContent className="px-3 py-1.5 text-sm bg-white border shadow-md hover:bg-white text-gray-800 rounded-lg transition-all flex items-center gap-1">
                                   <p>Datasettet er låst og krever tilgang.</p>
                                 </TooltipContent>
                               </Tooltip>
@@ -507,7 +519,7 @@ export function KartkatalogTab({
                             {result.downloadUrl && (
                               <button
                                 onClick={() => onDatasetDownload(result)}
-                                className="px-3 py-1.5 text-sm bg-color-gn-lightblue  text-white rounded-lg transition-all hover:shadow-md flex items-center gap-1"
+                                className="px-3 py-1.5 text-sm bg-white border shadow-md hover:bg-white text-color-gn-secondary rounded-lg transition-all flex items-center gap-1"
                               >
                                 <Download className="h-4 w-4" /> Last ned
                               </button>
