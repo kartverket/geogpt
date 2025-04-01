@@ -15,7 +15,6 @@ export interface ChatMessage {
   }[];
 }
 
-
 export interface WebSocketMessage {
   action: string;
   payload?: any;
@@ -33,7 +32,6 @@ export type MessageType = {
   isNewMessage?: boolean;
 };
 
-
 export interface Address {
   adressetekst: string;
   poststed?: string;
@@ -46,6 +44,8 @@ export interface Address {
 export interface SearchResult {
   uuid: string;
   title?: string;
+  wmsUrl?: string;
+  restricted?: boolean;
   downloadUrl?: string | null;
   downloadFormats?: Array<{
     type: string;

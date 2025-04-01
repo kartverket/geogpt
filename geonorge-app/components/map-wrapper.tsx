@@ -362,7 +362,7 @@ const MapWrapper: React.FC<MapWrapperProps> = ({
       align-items: center !important;
       justify-content: center !important;
       padding: 0 !important;
-      border-radius: 2px !important;
+      border-radius: 8px !important;
       margin-bottom: 8px !important; 
       position: relative !important;
       font-size: 16px !important; 
