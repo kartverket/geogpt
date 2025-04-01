@@ -1,6 +1,9 @@
 "use client";
 
 import * as React from "react";
+
+
+// Icons
 import {
   Search,
   ChevronLeft,
@@ -470,7 +473,7 @@ export function KartkatalogTab({
                                 }
                                 className="px-3 py-1.5 text-sm bg-color-gn-primary hover:bg-color-gn-primarylight text-white rounded-lg transition-all hover:shadow-md flex items-center gap-1"
                               >
-                                <Eye className="h-4 w-4" /> Vis kart
+                                <Eye className="h-4 w-4" /> Vis på kart
                               </button>
                             ) : (
                               <Tooltip>
