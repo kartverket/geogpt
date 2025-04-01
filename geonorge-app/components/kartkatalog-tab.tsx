@@ -2,7 +2,6 @@
 
 import * as React from "react";
 
-
 // Icons
 import {
   Search,
@@ -471,7 +470,7 @@ export function KartkatalogTab({
                                   result.wmsUrl &&
                                   onReplaceIframe(result.wmsUrl)
                                 }
-                                className="px-3 py-1.5 text-sm bg-color-gn-primary hover:bg-color-gn-primarylight text-white rounded-lg transition-all hover:shadow-md flex items-center gap-1"
+                                className="px-3 py-1.5 text-sm bg-white border hover:bg-white text-color-kv-primary rounded-lg transition-all hover:shadow-md flex items-center gap-1"
                               >
                                 <Eye className="h-4 w-4" /> Vis på kart
                               </button>

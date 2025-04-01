@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, FormEvent } from "react";
-import { LogOut, MessageSquare } from "lucide-react";
+import { LogOut, MessageSquare, X } from "lucide-react";
 import dynamic from "next/dynamic";
 
 // Chat imports
@@ -23,6 +23,12 @@ import {
   PopoverTrigger,
   PopoverContent,
 } from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -608,14 +614,46 @@ const DemoV3 = () => {
 
             {/* Chat popover */}
             <Popover {...chatPopoverProps}>
-              <PopoverTrigger asChild>
-                <Button
-                  className="fixed bottom-6 right-10 bg-color-gn-primary hover:bg-color-gn-primarylight rounded-full p-0 h-16 w-16 flex items-center justify-center shadow-lg z-[1000]"
-                  variant="default"
-                >
-                  <MessageSquare className="h-auto w-auto" />
-                </Button>
-              </PopoverTrigger>
+              <TooltipProvider delayDuration={100}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <PopoverTrigger asChild>
+                      <Button
+                        className="fixed bottom-6 right-8 bg-color-gn-primary hover:bg-color-gn-primarylight rounded-full p-0 h-16 w-16 flex items-center justify-center shadow-lg z-[1000]"
+                        variant="default"
+                      >
+                        <div
+                          className={`transition-transform duration-300 ${
+                            isPopoverOpen ? "rotate-90" : ""
+                          }`}
+                        >
+                          {isPopoverOpen ? (
+                            <X className="h-auto w-auto" />
+                          ) : (
+                            <MessageSquare className="h-auto w-auto" />
+                          )}
+                        </div>
+                      </Button>
+                    </PopoverTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    className="px-4 py-2 z-10 text-sm font-semibold bg-white text-color-gn-secondary shadow-md rounded-lg border border-gray-100"
+                    side="left"
+                    sideOffset={16}
+                    align="center"
+                  >
+                    <span className="flex items-center gap-2.5">
+                      {isPopoverOpen ? (
+                        <span className="whitespace-nowrap">Lukk chat</span>
+                      ) : (
+                        <span className="whitespace-nowrap">
+                          Trenger du hjelp med noe?
+                        </span>
+                      )}
+                    </span>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               <PopoverContent
                 side="top"
                 align="end"

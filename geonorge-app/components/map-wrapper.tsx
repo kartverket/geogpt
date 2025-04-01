@@ -31,6 +31,32 @@ interface Address {
   };
 }
 
+// Custom hook to handle Leaflet scroll propagation
+function useLeafletScrollPropagation<T extends HTMLElement>() {
+  const elementRef = useRef<T>(null);
+
+  useEffect(() => {
+    const currentRef = elementRef.current;
+    if (typeof window === "undefined" || !currentRef) return;
+
+    // We need to make sure L is defined before using it
+    const disableScrollPropagation = () => {
+      L.DomEvent.disableScrollPropagation(currentRef);
+    };
+
+    // Execute immediately if L is already available
+    if (L && L.DomEvent) {
+      disableScrollPropagation();
+    }
+
+    return () => {
+      // No cleanup needed here
+    };
+  }, []);
+
+  return elementRef;
+}
+
 function LocationButton({
   setUserMarker,
 }: {
@@ -38,18 +64,7 @@ function LocationButton({
 }) {
   const map = useMap();
   const [isLocating, setIsLocating] = useState(false);
-  const buttonRef = useRef<HTMLDivElement>(null);
-
-  // Use client-side only import for Leaflet to prevent scroll propagation
-  useEffect(() => {
-    if (typeof window === "undefined" || !buttonRef.current) return;
-
-    // Import Leaflet dynamically
-    import("leaflet").then((L) => {
-      // This will prevent the scroll (wheel) events on the button from propagating to the map
-      L.DomEvent.disableScrollPropagation(buttonRef.current!);
-    });
-  }, []);
+  const buttonRef = useLeafletScrollPropagation<HTMLDivElement>();
 
   const handleClick = () => {
     setIsLocating(true);
@@ -96,18 +111,7 @@ function LocationButton({
 
 function ZoomControl() {
   const map = useMap();
-  const controlRef = useRef<HTMLDivElement>(null);
-
-  // Use client-side only import for Leaflet to prevent scroll propagation
-  useEffect(() => {
-    if (typeof window === "undefined" || !controlRef.current) return;
-
-    // Import Leaflet dynamically
-    import("leaflet").then((L) => {
-      // This will prevent the scroll (wheel) events on the control from propagating to the map
-      L.DomEvent.disableScrollPropagation(controlRef.current!);
-    });
-  }, []);
+  const controlRef = useLeafletScrollPropagation<HTMLDivElement>();
 
   return (
     <div className="leaflet-top leaflet-right mr-2" ref={controlRef}>
@@ -141,19 +145,8 @@ function AddressSearch({
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Address[]>([]);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const searchContainerRef = useLeafletScrollPropagation<HTMLDivElement>();
   const map = useMap();
-
-  // Use client-side only import for Leaflet to prevent scroll propagation
-  useEffect(() => {
-    if (typeof window === "undefined" || !searchContainerRef.current) return;
-
-    // Import Leaflet dynamically
-    import("leaflet").then((L) => {
-      // This will prevent the scroll (wheel) events on the search container from propagating to the map
-      L.DomEvent.disableScrollPropagation(searchContainerRef.current!);
-    });
-  }, []);
 
   // Address fetching
   useEffect(() => {
