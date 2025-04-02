@@ -258,6 +258,7 @@ export const useWebSocket = () => {
 
   return {
     ws,
+    setWs,
     messages,
     isStreaming,
     sendMessage,

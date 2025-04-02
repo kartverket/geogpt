@@ -4,7 +4,7 @@ import * as React from "react";
 import { useState, useMemo, useRef, useEffect } from "react";
 
 // Logo
-import GeoNorgeLogo from "@/app/components/GeoNorgeLogo";
+import GeoNorgeLogo from "@/components/ui/GeoNorgeLogo";
 
 // Icons
 import { PenTool, Share2, LineChart } from "lucide-react";
@@ -15,8 +15,8 @@ import {
   SidebarHeader,
 } from "@/components/ui/sidebar";
 
-import { SidebarFooter } from "@/components/sidebar_components/SidebarFooter";
-import { Temakart } from "@/components/sidebar_components/Temakart";
+import { SidebarFooter } from "@/app/components/sidebar_components/SidebarFooter";
+import { Temakart } from "@/app/components/sidebar_components/Temakart";
 
 // Translation
 import { Language } from "@/i18n/translations";

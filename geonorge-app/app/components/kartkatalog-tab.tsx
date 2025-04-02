@@ -47,7 +47,7 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
-import { useWebSocket } from "@/app/components/chat";
+import { useWebSocket } from "./chat_components";
 
 interface SearchResult {
   uuid: string;
@@ -290,7 +290,7 @@ export function KartkatalogTab({
       <h3 className="text-xl font-medium mb-2 text-color-gn-secondarylight">
         Velkommen til Kartkatalogen
       </h3>
-      <div className="flex items-center gap-2 bg-gray-50 px-4 py-2 rounded-full">
+      <div className="flex items-center gap-2 bg-gray-50 px-4 py-2 rounded-omar">
         <Loader2 className="h-4 w-4 text-color-gn-secondarylight animate-spin" />
         <span className="text-sm font-medium text-color-gn-secondarylight">
           Datasett lastes inn, vennligst vent...
@@ -301,7 +301,7 @@ export function KartkatalogTab({
 
   const NoResults = () => (
     <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
-      <div className="rounded-full bg-gray-100 p-4 mb-4">
+      <div className="rounded-omar bg-gray-100 p-4 mb-4">
         <Search className="h-8 w-8 text-gray-400" />
       </div>
       <h3 className="text-lg font-medium mb-2 text-gray-700">
@@ -322,8 +322,8 @@ export function KartkatalogTab({
           className={cn(
             "bg-white shadow-lg transition-all duration-300 transform",
             isExpanded
-              ? "w-[350px] translate-x-0 rounded-tl-lg rounded-bl-lg rounded-br-lg"
-              : "w-0 translate-x-full rounded-lg",
+              ? "w-[360px] translate-x-0 rounded-tl-sm rounded-bl-sm rounded-br-sm"
+              : "w-0 translate-x-full rounded-omar",
             className
           )}
           style={{ overflow: "hidden" }}
@@ -340,21 +340,18 @@ export function KartkatalogTab({
                 </div>
                 <form onSubmit={onSearchSubmit} className="mb-1">
                   <div className="flex gap-2">
-                    <div className="flex-1 relative">
-                      <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                      <Input
-                        placeholder="Søk etter datasett..."
-                        className="flex-1 h-10 text-sm border-gray-300 rounded-lg pl-9 "
-                        value={searchInput}
-                        onChange={(e) => setSearchInput(e.target.value)}
-                        disabled={isLoading}
-                      />
-                    </div>
+                    <Input
+                      placeholder="Søk etter datasett..."
+                      className="flex-1 h-10 text-sm border-gray-300 rounded-omar"
+                      value={searchInput}
+                      onChange={(e) => setSearchInput(e.target.value)}
+                      disabled={isLoading}
+                    />
                     <Button
                       type="submit"
                       size="sm"
                       variant="secondary"
-                      className="bg-white border border-gray-300 hover:bg-white text-color-gn-secondary h-10 rounded-lg transition-colors"
+                      className="bg-white border border-gray-300 hover:bg-white text-color-gn-secondary h-10 rounded-omar transition-colors"
                       disabled={isLoading}
                     >
                       {isLoading ? (
@@ -381,26 +378,26 @@ export function KartkatalogTab({
                           onClick={clearSelectedDatasets}
                           size="sm"
                           variant="outline"
-                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700 rounded-full border-gray-200"
+                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent className="bg-white text-gray-800 border shadow-lg rounded-lg">
+                      <TooltipContent className="bg-white text-gray-800 shadow-lg">
                         <p>Fjern alle</p>
                       </TooltipContent>
                     </Tooltip>
-                    <span className="text-sm font-medium text-gray-600">
+                    <span className="text-sm font-medium text-gray-700">
                       Datasett valgt
                     </span>
-                    <div className="bg-color-gn-lightblue text-white rounded-full h-6 w-6 flex items-center justify-center text-xs font-semibold">
+                    <div className="flex items-center justify-center font-semibold">
                       {selectedDatasets.size}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={handleBulkDownload}
-                      className="px-3 py-1.5 text-sm bg-color-gn-lightblue  text-white rounded-lg transition-all hover:shadow-md flex items-center gap-1"
+                      className="px-3 py-1.5 text-sm border shadow-sm bg-white hover:bg-gray-100 rounded-omar transition-all flex items-center gap-1"
                     >
                       <Download className="h-4 w-4 mr-1" />
                       Last ned
@@ -455,7 +452,7 @@ export function KartkatalogTab({
                             </HoverCardTrigger>
                             <HoverCardContent
                               side="left"
-                              className="w-80 p-4 rounded-lg border border-gray-200 shadow-lg"
+                              className="w-80 p-4 rounded-omar border border-gray-200 shadow-lg"
                             >
                               <div className="space-y-0">
                                 <h4 className="font-medium text-color-gn-lightblue">
@@ -482,7 +479,7 @@ export function KartkatalogTab({
                                   result.wmsUrl &&
                                   onReplaceIframe(result.wmsUrl)
                                 }
-                                className="px-3 py-1.5 text-sm bg-white border shadow-md hover:bg-white text-color-kv-primary rounded-lg transition-all flex items-center gap-1"
+                                className="px-3 py-1.5 text-sm bg-white border shadow-sm hover:bg-gray-100 text-color-kv-primary rounded-omar transition-all flex items-center gap-1 min-w-[140px] justify-center"
                               >
                                 <Eye className="h-4 w-4" /> Vis på kart
                               </button>
@@ -491,13 +488,13 @@ export function KartkatalogTab({
                                 <TooltipTrigger asChild>
                                   <button
                                     disabled
-                                    className="px-3 py-1.5 text-sm bg-white border shadow-md hover:bg-white text-red-500 rounded-lg transition-all flex items-center gap-1"
+                                    className="px-3 py-1.5 text-sm bg-gray-200 border shadow-sm text-gray-400 rounded-omar transition-all flex items-center gap-1 min-w-[140px] justify-center"
                                   >
                                     <XCircle className="h-4 w-4" />
                                     Utilgjengelig
                                   </button>
                                 </TooltipTrigger>
-                                <TooltipContent className="px-3 py-1.5 text-sm bg-white border shadow-md hover:bg-white text-gray-800 rounded-lg transition-all flex items-center gap-1">
+                                <TooltipContent className="px-3 py-1.5 text-sm bg-white border shadow-md hover:bg-white text-gray-800 rounded-omar transition-all flex items-center gap-1">
                                   <p>
                                     Dette datasettet kan ikke vises på kart.
                                   </p>
@@ -507,11 +504,11 @@ export function KartkatalogTab({
                             {result.restricted && (
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <button className="px-3 py-1.5 text-sm bg-white border shadow-md hover:bg-white text-amber-700 rounded-lg transition-all flex items-center gap-1">
+                                  <button className="px-3 py-1.5 text-sm bg-red-100 shadow-sm text-[#DC2626] rounded-omar transition-all flex items-center gap-1 min-w-[140px] justify-center">
                                     <LockKeyhole className="h-4 w-4" /> Låst
                                   </button>
                                 </TooltipTrigger>
-                                <TooltipContent className="px-3 py-1.5 text-sm bg-white border shadow-md hover:bg-white text-gray-800 rounded-lg transition-all flex items-center gap-1">
+                                <TooltipContent className="px-3 py-1.5 text-sm bg-white border shadow-md hover:bg-white text-gray-800 rounded-omar transition-all flex items-center gap-1">
                                   <p>Datasettet er låst og krever tilgang.</p>
                                 </TooltipContent>
                               </Tooltip>
@@ -519,7 +516,7 @@ export function KartkatalogTab({
                             {result.downloadUrl && (
                               <button
                                 onClick={() => onDatasetDownload(result)}
-                                className="px-3 py-1.5 text-sm bg-white border shadow-md hover:bg-white text-color-gn-secondary rounded-lg transition-all flex items-center gap-1"
+                                className="px-3 py-1.5 text-sm bg-white hover:bg-gray-100 border shadow-sm rounded-omar transition-all flex items-center gap-1 min-w-[140px] justify-center"
                               >
                                 <Download className="h-4 w-4" /> Last ned
                               </button>
@@ -530,7 +527,7 @@ export function KartkatalogTab({
                           <Checkbox
                             checked={selectedDatasets.has(result.uuid)}
                             onCheckedChange={() => handleSelectDataset(result)}
-                            className="mt-1 w-5 h-5 border border-color-gn-secondary data-[state=checked]:bg-color-gn-secondary"
+                            className="mt-7 w-5 h-5 border border-color-gn-secondary data-[state=checked]:bg-color-gn-secondary"
                           />
                         )}
                       </div>
@@ -546,7 +543,7 @@ export function KartkatalogTab({
         <button
           onClick={() => setIsExpanded(!isExpanded)}
           className={`flex items-center bg-color-gn-primary hover:bg-color-gn-primarylight text-white px-2 py-4 text-sm 2xl:text-lg transition-colors ${
-            isExpanded ? "rounded-r-lg border-l-2" : "rounded-lg"
+            isExpanded ? "rounded-r-omar border-l-2" : "rounded-omar"
           } -ml-px shadow-lg hover:shadow-xl`}
         >
           <div className="flex flex-col items-center gap-2">
@@ -572,10 +569,9 @@ export function KartkatalogTab({
         open={showDownloadDialog}
         onOpenChange={setShowDownloadDialog}
       >
-        <AlertDialogContent className="bg-white rounded-lg border border-gray-200 shadow-lg max-w-md">
+        <AlertDialogContent className="bg-white rounded-omar border border-gray-200 shadow-lg max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-xl text-color-kv-primary flex items-center gap-2">
-              <Download className="h-5 w-5" />
+            <AlertDialogTitle className="text-xl flex items-center">
               Last ned {selectedDatasets.size} datasett
             </AlertDialogTitle>
             <AlertDialogDescription className="text-gray-600">
@@ -584,12 +580,12 @@ export function KartkatalogTab({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-3">
-            <AlertDialogCancel className="rounded-lg border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors">
+            <AlertDialogCancel className="rounded-omar border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors">
               Avbryt
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={initiateDownloads}
-              className="rounded-lg bg-color-gn-lightblue hover:bg-color-gn-lightblue transition-colors"
+              className="rounded-omar  bg-color-gn-secondary hover:bg-color-gn-secondarylight transition-colors"
             >
               <Download className="h-4 w-4 mr-2" />
               Start nedlasting

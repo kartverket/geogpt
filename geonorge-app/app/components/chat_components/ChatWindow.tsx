@@ -4,7 +4,7 @@ import { ChatInput } from "./ChatInput";
 import { Button } from "@/components/ui/button";
 import { Maximize, X } from "lucide-react";
 import { ChatMessage as ChatMessageType } from "./types";
-import GeoNorgeIcon from "../GeoNorgeIcon";
+import GeoNorgeIcon from "../../../components/ui/GeoNorgeIcon";
 import { TypingIndicator } from "@/components/ui/typing-indicator";
 
 interface ChatWindowProps {
