@@ -5,6 +5,7 @@ export const useWebSocket = () => {
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [uuidToFind, setUuidToFind] = useState<string>("");
   const [specificObject, setSpecificObject] = useState<SearchResult | null>(
     null
@@ -52,8 +53,18 @@ export const useWebSocket = () => {
       }, 2000);
     };
 
-    socket.onerror = (error) => {
-      console.error(error);
+    socket.onerror = (event) => {
+      console.error("WebSocket error occurred:", event);
+      setIsConnected(false);
+      setMessages((prev) => [
+        ...prev,
+        {
+          title: "Connection Error",
+          type: "text",
+          content:
+            "System: Connection error. Please check your network connection.",
+        },
+      ]);
     };
 
     socket.onmessage = (event) => {
@@ -139,6 +150,10 @@ export const useWebSocket = () => {
             },
           ];
         });
+        break;
+
+      case "searchVdbResults":
+        setSearchResults(payload);
         break;
 
       case "insertImage":
@@ -243,9 +258,11 @@ export const useWebSocket = () => {
 
   return {
     ws,
+    setWs,
     messages,
     isStreaming,
     sendMessage,
+    searchResults,
     uuidToFind,
     specificObject,
     datasetName,

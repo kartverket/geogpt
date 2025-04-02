@@ -36,7 +36,7 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 
 // Icons or images
-import GeoNorgeLogo from "../GeoNorgeLogo";
+import GeoNorgeLogo from "../../../components/ui/GeoNorgeLogo";
 import { ArrowDownAZ, Info, X } from "lucide-react";
 
 interface FileDownloadModalProps {

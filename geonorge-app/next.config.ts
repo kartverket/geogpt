@@ -18,6 +18,16 @@ const nextConfig = {
         pathname: "/**",
       },
       {
+        protocol: "http",
+        hostname: "www.geonorge.no",
+        pathname: "/**",
+      },
+      {
+        protocol: "http",
+        hostname: "www.geonorge.no:80",
+        pathname: "/**",
+      },
+      {
         protocol: "https",
         hostname: "editor.geonorge.no",
         pathname: "/**",

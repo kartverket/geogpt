@@ -31,6 +31,57 @@ interface Address {
   };
 }
 
+// Enhanced hook to handle all Leaflet event propagation
+function useLeafletEventPropagation<T extends HTMLElement>() {
+  const elementRef = useRef<T>(null);
+
+  useEffect(() => {
+    const currentRef = elementRef.current;
+    if (typeof window === "undefined" || !currentRef) return;
+
+    // Handle all necessary event propagations
+    const handleEventPropagation = () => {
+      if (L && L.DomEvent) {
+        // Disable scroll propagation (zoom with mousewheel)
+        L.DomEvent.disableScrollPropagation(currentRef);
+
+        // Disable click propagation (prevents map clicks through controls)
+        L.DomEvent.disableClickPropagation(currentRef);
+
+        // Additional stopPropagation for specific events that might not be caught
+        const stopEvents = (e: Event) => {
+          e.stopPropagation();
+        };
+
+        // Add listeners for double click and drag events
+        currentRef.addEventListener("dblclick", stopEvents);
+        currentRef.addEventListener("mousedown", stopEvents);
+        currentRef.addEventListener("touchstart", stopEvents);
+      }
+    };
+
+    // Execute immediately if L is already available
+    handleEventPropagation();
+
+    return () => {
+      // Clean up event listeners if component unmounts
+      if (currentRef && L && L.DomEvent) {
+        currentRef.removeEventListener("dblclick", (e: Event) =>
+          e.stopPropagation()
+        );
+        currentRef.removeEventListener("mousedown", (e: Event) =>
+          e.stopPropagation()
+        );
+        currentRef.removeEventListener("touchstart", (e: Event) =>
+          e.stopPropagation()
+        );
+      }
+    };
+  }, []);
+
+  return elementRef;
+}
+
 function LocationButton({
   setUserMarker,
 }: {
@@ -38,6 +89,7 @@ function LocationButton({
 }) {
   const map = useMap();
   const [isLocating, setIsLocating] = useState(false);
+  const buttonRef = useLeafletEventPropagation<HTMLDivElement>();
 
   const handleClick = () => {
     setIsLocating(true);
@@ -61,7 +113,7 @@ function LocationButton({
   };
 
   return (
-    <div className="leaflet-top leaflet-right mr-2">
+    <div className="leaflet-top leaflet-right mr-2" ref={buttonRef}>
       <div className="leaflet-control">
         <button
           className="location-button"
@@ -84,9 +136,10 @@ function LocationButton({
 
 function ZoomControl() {
   const map = useMap();
+  const controlRef = useLeafletEventPropagation<HTMLDivElement>();
 
   return (
-    <div className="leaflet-top leaflet-right mr-2">
+    <div className="leaflet-top leaflet-right mr-2" ref={controlRef}>
       <div className="leaflet-control" style={{ marginTop: "64px" }}>
         <button
           className="zoom-button zoom-in"
@@ -117,6 +170,7 @@ function AddressSearch({
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Address[]>([]);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchContainerRef = useLeafletEventPropagation<HTMLDivElement>();
   const map = useMap();
 
   // Address fetching
@@ -172,7 +226,10 @@ function AddressSearch({
   };
 
   return (
-    <div className="absolute inset-x-0 top-4 z-[1000] flex justify-center mx-auto">
+    <div
+      className="absolute inset-x-0 top-4 z-[1000] flex justify-center mx-auto"
+      ref={searchContainerRef}
+    >
       <div className="w-96 flex">
         {/* Sidebar trigger */}
         <SidebarTrigger
@@ -240,6 +297,7 @@ function AddressSearch({
     </div>
   );
 }
+
 // Map controller component to handle map references and state access
 function MapController({
   onMapReady,
@@ -250,6 +308,16 @@ function MapController({
 
   useEffect(() => {
     onMapReady(map);
+
+    // Add a handler to prevent double-click zoom when interacting with controls
+    map.doubleClickZoom.disable();
+    const enableDoubleClickZoom = () => {
+      map.doubleClickZoom.enable();
+    };
+
+    return () => {
+      enableDoubleClickZoom();
+    };
   }, [map, onMapReady]);
 
   return null;
@@ -352,7 +420,7 @@ const MapWrapper: React.FC<MapWrapperProps> = ({
     /* Shared button styles for zoom and location */
     .zoom-button,
     .location-button {
-      background-color: #fe5000 !important;
+      background-color: #fe642f !important;
       color: white !important;
       border: none !important;
       width: 44px !important;
@@ -368,6 +436,8 @@ const MapWrapper: React.FC<MapWrapperProps> = ({
       font-size: 16px !important; 
       font-weight: bold !important;
       cursor: pointer !important;
+      user-select: none !important;
+      touch-action: none !important;
     }
   
     .location-button:disabled {
@@ -377,13 +447,18 @@ const MapWrapper: React.FC<MapWrapperProps> = ({
 
     /* Add this to control map background color */
     .leaflet-container {
-    background-color: #FAFAFA !important;
+      background-color: #FAFAFA !important;
     }
       
     /* Hover effects - only apply to non-disabled buttons */
     .zoom-button:hover,
     .location-button:not(:disabled):hover {
       background-color: #ff7e4d !important;
+    }
+
+    /* Prevent drag interactions from controls propagating to map */
+    .leaflet-control {
+      pointer-events: auto !important;
     }
     `;
     document.head.appendChild(styleElement);
