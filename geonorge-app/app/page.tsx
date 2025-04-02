@@ -1,11 +1,14 @@
 "use client";
 
-import DemoV2 from "./dashboard/page";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import Demo from "./components/demo";
 
 export default function Home() {
   return (
-    <div className="relative h-screen w-full">
-      <DemoV2 />
-    </div>
+    <SidebarProvider>
+      <div className="relative h-screen w-full">
+        <Demo />
+      </div>
+    </SidebarProvider>
   );
 }

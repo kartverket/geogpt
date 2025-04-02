@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, X } from "lucide-react"; // Fixed: Added X icon import
 import dynamic from "next/dynamic";
 
 // Custom Hooks
@@ -26,9 +26,15 @@ import {
   PopoverTrigger,
   PopoverContent,
 } from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@radix-ui/react-tooltip";
 
 // Dynamically import MapContainer to avoid SSR issues
-const MapWithNoSSR = dynamic(() => import("@/components/map-wrapper"), {
+const MapWithNoSSR = dynamic(() => import("@/app/components/map-wrapper"), {
   ssr: false,
 });
 
@@ -73,6 +79,8 @@ const DemoV3 = () => {
   // Use the WebSocket hook
   const { messages, isStreaming, sendMessage, ws } = useWebSocket();
 
+  const [showInitialTooltip, setShowInitialTooltip] = useState(false);
+
   // Use chat management hook
   const chatManagement = useChatManagement({
     messages,
@@ -102,6 +110,17 @@ const DemoV3 = () => {
     open: chatManagement.isPopoverOpen,
     onOpenChange: chatManagement.setIsPopoverOpen,
   };
+
+  // Show tooltip on mount for 30 seconds
+  useEffect(() => {
+    setShowInitialTooltip(true);
+
+    const timer = setTimeout(() => {
+      setShowInitialTooltip(false);
+    }, 15000);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <>
@@ -134,14 +153,46 @@ const DemoV3 = () => {
 
             {/* Chat popover */}
             <Popover {...chatPopoverProps}>
-              <PopoverTrigger asChild>
-                <Button
-                  className="fixed bottom-6 right-10 bg-color-gn-primary hover:bg-color-gn-primarylight rounded-full p-0 h-16 w-16 flex items-center justify-center shadow-lg z-[1000]"
-                  variant="default"
+              <TooltipProvider delayDuration={100}>
+                <Tooltip
+                  defaultOpen={showInitialTooltip}
+                  open={showInitialTooltip ? true : undefined}
                 >
-                  <MessageSquare className="h-auto w-auto" />
-                </Button>
-              </PopoverTrigger>
+                  <TooltipTrigger asChild>
+                    <PopoverTrigger asChild>
+                      <Button
+                        className="fixed bottom-6 right-8 bg-color-gn-primary hover:bg-color-gn-primarylight rounded-full p-0 h-16 w-16 flex items-center justify-center shadow-lg z-[1000]"
+                        variant="default"
+                        onMouseEnter={() => !showInitialTooltip && undefined}
+                      >
+                        <div
+                          className={`transition-transform duration-300 ${
+                            chatManagement.isPopoverOpen ? "rotate-90" : ""
+                          }`}
+                        >
+                          {chatManagement.isPopoverOpen ? (
+                            <X className="h-auto w-auto" />
+                          ) : (
+                            <MessageSquare className="h-auto w-auto" />
+                          )}
+                        </div>
+                      </Button>
+                    </PopoverTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    className="px-4 py-2 z-10 text-sm font-semibold bg-white text-color-gn-secondary shadow-md rounded-lg border border-gray-100"
+                    side="left"
+                    sideOffset={16}
+                    align="center"
+                  >
+                    <span className="flex items-center gap-3">
+                      <span className="whitespace-nowrap">
+                        Trenger du hjelp med noe?
+                      </span>
+                    </span>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               <PopoverContent
                 side="top"
                 align="end"

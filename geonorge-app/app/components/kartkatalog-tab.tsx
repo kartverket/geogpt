@@ -383,14 +383,14 @@ export function KartkatalogTab({
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent className="bg-white text-gray-800 shadow-lg">
+                      <TooltipContent className="bg-white text-color-gn-secondary shadow-lg">
                         <p>Fjern alle</p>
                       </TooltipContent>
                     </Tooltip>
-                    <span className="text-sm font-medium text-gray-700">
+                    <span className="text-sm font-medium text-color-gn-secondary">
                       Datasett valgt
                     </span>
-                    <div className="flex items-center justify-center font-semibold">
+                    <div className="flex items-center text-color-gn-secondarylight justify-center font-semibold">
                       {selectedDatasets.size}
                     </div>
                   </div>
@@ -444,7 +444,7 @@ export function KartkatalogTab({
                                 )}/${result.uuid}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-[16px] font-medium text-color-kv-secondary hover:text-color-gn-lightblue mb-2 max-w-max underline underline-offset-4 flex items-center gap-1 transition-colors"
+                                className="text-sm font-medium text-color-kv-secondary hover:text-color-gn-lightblue mb-2 max-w-max underline underline-offset-4 flex items-center gap-1 transition-colors"
                               >
                                 {result.title || "Dataset"}
                                 <ExternalLink className="h-4 w-4" />
@@ -527,7 +527,7 @@ export function KartkatalogTab({
                           <Checkbox
                             checked={selectedDatasets.has(result.uuid)}
                             onCheckedChange={() => handleSelectDataset(result)}
-                            className="mt-7 w-5 h-5 border border-color-gn-secondary data-[state=checked]:bg-color-gn-secondary"
+                            className="w-5 h-5 border border-color-gn-secondary data-[state=checked]:bg-color-gn-secondary"
                           />
                         )}
                       </div>
