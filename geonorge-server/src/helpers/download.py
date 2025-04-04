@@ -39,7 +39,7 @@ async def fetch_area_data(uuid: str) -> List[Dict[str, Any]]:
                 logger.error(f"Connection error for {uuid}: {str(e)}")
                 return []
             except asyncio.TimeoutError:
-                logger.error(f"Timeout while fetching area data for {uuid}")
+                # logger.error(f"Timeout while fetching area data for {uuid}")
                 return []
     except Exception as error:
         logger.error(f'Error fetching area data for {uuid}: {str(error)}')

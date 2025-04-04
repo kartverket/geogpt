@@ -11,7 +11,6 @@ from .dataset_utils import (
 
 from .document_grading import (
     evaluate_document_relevance,
-    prepare_documents_for_evaluation
 )
 
 from .templates import (

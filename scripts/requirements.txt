@@ -9,9 +9,10 @@ psycopg2-binary
 numpy
 PyPDF2
 tiktoken
-langchain
 flask
 flask-cors
 langchain
 langgraph
 langchain-openai
+langsmith
+nest_asyncio
