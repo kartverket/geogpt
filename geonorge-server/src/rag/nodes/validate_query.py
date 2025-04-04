@@ -12,20 +12,23 @@ retriever = GeoNorgeVectorRetriever()
 
 async def validate_query(state: Dict) -> Dict:
     """
-    Validate if the query is about geographic data.
+    Validate and transform a search-related query.
     
-    This node uses the query transformation function from the retriever to determine
-    if the query is related to geographic data or not. If the transformed query is
-    "INVALID_QUERY", it will be routed to the invalid query handler.
+    This node is only called for queries that have already been classified as search-related
+    by the intent analyzer. It transforms the query to be more effective for vector database searching.
+    If the transformed query is "INVALID_QUERY", it will be routed to the invalid query handler.
     
     Args:
         state: Current conversation state
         
     Returns:
-        Updated conversation state
+        Updated conversation state with transformed query
     """
     current_state = ConversationState(**state)
     query = current_state.messages[-1]["content"]
+    
+    print("\n=== Query Validation ===")
+    print(f"Original query (intent: {current_state.current_intent}): {query}")
     
     transformed_query = await retriever._transform_query(query)
     current_state.transformed_query = transformed_query

@@ -2,11 +2,11 @@
 Main entry points for the RAG workflow.
 """
 from typing import List, Dict, Any, Optional
-from .chain import EnhancedGeoNorgeRAGChain
+from .chain import GeoNorgeSupervisor
 from .utils.common import active_websockets
 
 # Initialize the enhanced RAG chain - use a single global instance
-enhanced_rag_chain = EnhancedGeoNorgeRAGChain()
+enhanced_rag_chain = GeoNorgeSupervisor()
 
 
 async def get_rag_response(
