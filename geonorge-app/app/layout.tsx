@@ -2,6 +2,8 @@
 import "./globals.css";
 import { Inter } from "next/font/google";
 import { LanguageProvider } from "@/i18n/LanguageContext";
+import { TourProvider } from "@/components/tour";
+import { Toaster } from "@/components/ui/sonner";
 
 // Load Inter font with specific weights
 const inter = Inter({
@@ -31,7 +33,12 @@ export default function RootLayout({
         <link rel="icon" href="https://kartkatalog.geonorge.no/favicon.ico" />
       </head>
       <body className="antialiased">
-        <LanguageProvider>{children}</LanguageProvider>
+        <LanguageProvider>
+          <TourProvider>
+            {children}
+            <Toaster position="bottom-center" />
+          </TourProvider>
+        </LanguageProvider>
       </body>
     </html>
   );
