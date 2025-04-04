@@ -7,6 +7,7 @@ import { DeselectAllButton } from "@/components/sidebar_components/DeselectAllBu
 import { DatasetList } from "@/components/sidebar_components/DatasetList";
 import { ActionItem } from "@/components/sidebar_components/ActionItem";
 import { TranslationKey } from "@/i18n/translations";
+import { TOUR_STEP_IDS } from "@/lib/tour-constants";
 
 interface Props {
   t: (key: TranslationKey) => string;
@@ -89,24 +90,25 @@ export const Temakart: React.FC<Props> = ({
 
   return (
     <div className="space-y-4">
-      <Section
-        id="basemap"
-        collapsible
-        title={t("background_map")}
-        icon={Map}
-        isOpen={isBaseMapSectionVisible}
-        onToggle={() => setIsBaseMapSectionVisible(!isBaseMapSectionVisible)}
-      >
-        {onChangeBaseLayer && (
-          <BaseMapSelector
-            selectedBaseMap={selectedBaseMap}
-            onChangeBaseLayer={onChangeBaseLayer}
-            t={t}
-            setSelectedBaseMap={setSelectedBaseMap}
-          />
-        )}
-      </Section>
-
+      <div id={TOUR_STEP_IDS.APP_SIDEBAR}>
+        <Section
+          id="basemap"
+          collapsible
+          title={t("background_map")}
+          icon={Map}
+          isOpen={isBaseMapSectionVisible}
+          onToggle={() => setIsBaseMapSectionVisible(!isBaseMapSectionVisible)}
+        >
+          {onChangeBaseLayer && (
+            <BaseMapSelector
+              selectedBaseMap={selectedBaseMap}
+              onChangeBaseLayer={onChangeBaseLayer}
+              t={t}
+              setSelectedBaseMap={setSelectedBaseMap}
+            />
+          )}
+        </Section>
+      </div>
       <Section
         id="layers"
         title={t("theme_maps")}

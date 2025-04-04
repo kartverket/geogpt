@@ -48,6 +48,8 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import { useWebSocket } from "./chat_components";
+import { TOUR_STEP_IDS } from "@/lib/tour-constants";
+import { useTour } from "@/components/tour";
 
 interface SearchResult {
   uuid: string;
@@ -74,7 +76,7 @@ export function KartkatalogTab({
   onDatasetDownload,
   ws,
 }: KartkatalogTabProps) {
-  const [isExpanded, setIsExpanded] = React.useState(false);
+  const [isExpanded, setIsExpanded] = React.useState(true);
   const [searchInput, setSearchInput] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
   const [hasSearched, setHasSearched] = React.useState(false);
@@ -97,6 +99,18 @@ export function KartkatalogTab({
 
   // Create a ref for the main panel container
   const panelRef = React.useRef<HTMLDivElement>(null);
+
+  const { currentStep, isTourCompleted, isActive } = useTour();
+  React.useEffect(() => {
+    if (isActive) {
+      if (!isActive) {
+        setIsExpanded(false);
+      }
+    }
+    if (isTourCompleted) {
+      setIsExpanded(false);
+    }
+  }, [currentStep, isTourCompleted]);
 
   // Use client-side only import for Leaflet
   React.useEffect(() => {
@@ -327,7 +341,7 @@ export function KartkatalogTab({
           )}
           style={{ overflow: "hidden" }}
         >
-          <div className="min-w-[350px]">
+          <div id={TOUR_STEP_IDS.KARTKATALOG_PANEL} className="min-w-[350px]">
             {/* Header and search form */}
             <div className="border-b bg-white">
               <div className="px-4 py-3">
@@ -544,6 +558,7 @@ export function KartkatalogTab({
           className={`flex items-center bg-color-gn-primary hover:bg-color-gn-primarylight text-white px-2 py-4 text-sm 2xl:text-lg transition-colors ${
             isExpanded ? "rounded-r-omar border-l-2" : "rounded-omar"
           } -ml-px shadow-lg hover:shadow-xl`}
+          id={TOUR_STEP_IDS.KARTKATALOG_TAB}
         >
           <div className="flex flex-col items-center gap-2">
             <Layers className="h-7 w-7" />
