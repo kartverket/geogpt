@@ -8,6 +8,7 @@ from ..utils.dataset_utils import (
     enrich_dataset_metadata,
     create_follow_up_context
 )
+from langchain_core.documents import Document
 
 
 async def find_datasets_from_message(current_state: ConversationState) -> Optional[Dict]:
@@ -176,6 +177,18 @@ async def get_dataset_info(state: Dict) -> Dict:
         Updated conversation state with dataset information
     """
     current_state = ConversationState(**state)
+    
+    # First check if the transformed query is INVALID_QUERY
+    if current_state.transformed_query and "INVALID_QUERY" in current_state.transformed_query:
+        print("Skipping dataset info retrieval because query was marked as invalid")
+        # Create a fallback document
+        invalid_document = Document(
+            page_content="Beklager, jeg kan bare svare på spørsmål om geografiske data, kart og Geonorges tjenester. Kan du omformulere spørsmålet ditt til å handle om dette?",
+            metadata={"invalid_query": True}
+        )
+        current_state.context = invalid_document.page_content
+        current_state.metadata_context = []
+        return current_state.to_dict()
     
     # Debug: Print the last_datasets contents
     print(f"DEBUG - last_datasets: {current_state.last_datasets}")

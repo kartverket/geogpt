@@ -11,6 +11,7 @@ import type { Map as LeafletMap } from "leaflet";
 import {
   MapContainer,
   Marker,
+  Popup,
   TileLayer,
   useMap,
   WMSTileLayer,
@@ -355,9 +356,11 @@ function DynamicWMSLayers({
 function DynamicMarkers({
   userMarker,
   searchMarker,
+  searchMarkers = [],
 }: {
   userMarker: any;
   searchMarker: any;
+  searchMarkers?: Array<{ lat: number; lng: number; label?: string }>;
 }) {
   return (
     <>
@@ -365,6 +368,15 @@ function DynamicMarkers({
       {searchMarker && (
         <Marker position={[searchMarker.lat, searchMarker.lng]} />
       )}
+      {searchMarkers &&
+        searchMarkers.map((marker, index) => (
+          <Marker
+            key={`search-marker-${index}`}
+            position={[marker.lat, marker.lng]}
+          >
+            {marker.label && <Popup>{marker.label}</Popup>}
+          </Marker>
+        ))}
     </>
   );
 }
@@ -377,6 +389,7 @@ interface MapWrapperProps {
   wmsLayer: Record<string, any>;
   userMarker: any;
   searchMarker: any;
+  searchMarkers?: Array<{ lat: number; lng: number; label?: string }>;
   setUserMarker: (marker: { lat: number; lng: number } | null) => void;
   setSearchMarker: (marker: { lat: number; lng: number } | null) => void;
   onMapReady: (map: LeafletMap) => void;
@@ -391,6 +404,7 @@ const MapWrapper: React.FC<MapWrapperProps> = ({
   wmsLayer,
   userMarker,
   searchMarker,
+  searchMarkers = [],
   setUserMarker,
   setSearchMarker,
   onMapReady,
@@ -498,7 +512,11 @@ const MapWrapper: React.FC<MapWrapperProps> = ({
       <DynamicWMSLayers trackedDatasets={trackedDatasets} wmsLayer={wmsLayer} />
 
       {/* Markers */}
-      <DynamicMarkers userMarker={userMarker} searchMarker={searchMarker} />
+      <DynamicMarkers
+        userMarker={userMarker}
+        searchMarker={searchMarker}
+        searchMarkers={searchMarkers}
+      />
 
       <LocationButton setUserMarker={setUserMarker} />
       <ZoomControl />
