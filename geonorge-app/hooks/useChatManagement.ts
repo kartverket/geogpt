@@ -1,13 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 import { SearchResult } from "@/app/components/chat_components/types";
-import { usePopoverBlocker } from './usePopoverBlocker';
+import { usePopoverBlocker } from "./usePopoverBlocker";
 
 interface ChatManagementProps {
   messages: any[];
   isStreaming: boolean;
   sendMessage: (message: string) => void;
   executeDatasetDownload: (dataset: SearchResult) => void;
-  replaceIframe: (wmsUrl: any, datasetTitle?: string) => void;
 }
 
 export const useChatManagement = ({
@@ -15,13 +14,12 @@ export const useChatManagement = ({
   isStreaming,
   sendMessage,
   executeDatasetDownload,
-  replaceIframe
 }: ChatManagementProps) => {
   const [chatInput, setChatInput] = useState<string>("");
-  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const [isPopoverOpen, setIsPopoverOpen] = useState(true);
   const [isFullScreen, setIsFullScreen] = useState(false);
-  
-  const popoverBlocker = usePopoverBlocker();
+
+  const popoverBlocker = usePopoverBlocker(true);
 
   // Handle keyboard events for fullscreen mode
   useEffect(() => {
