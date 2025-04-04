@@ -1,10 +1,17 @@
-from typing import List, Dict, Any, Tuple, Optional
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+"""
+Provides the vector retrieval capabilities for the GeoNorge RAG system.
+"""
+from typing import List, Dict, Tuple, Optional, Any
+import re
+import json
+
+from langchain_core.documents import Document
 from langchain.prompts import ChatPromptTemplate
 from langchain.schema import StrOutputParser
-from langchain_core.documents import Document
-from retrieval.rewrite_instructions import QUERY_REWRITE_PROMPT
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+
 from helpers.vector_database import get_vdb_response
+from .rewrite_instructions import QUERY_REWRITE_PROMPT
 from llm import LLMManager
 
 llm_manager = LLMManager()
@@ -24,8 +31,34 @@ class GeoNorgeVectorRetriever:
         )
 
     async def _transform_query(self, query: str) -> str:
-        """Transform the query to improve retrieval quality."""
+        """Transform the user query to get better search results."""
         print(f"\nOriginal query: {query}")
+        
+        # Safeguard against non-string inputs
+        if not isinstance(query, str):
+            print(f"WARNING: Non-string query received: {type(query)}")
+            # Try to extract text if it's a dict or list
+            if isinstance(query, dict) and "content" in query and isinstance(query["content"], str):
+                query = query["content"]
+            elif isinstance(query, list) and len(query) > 0:
+                # If it's a list, try to get the first string item or convert to string
+                for item in query:
+                    if isinstance(item, str):
+                        query = item
+                        break
+                else:
+                    # If no string found, convert the whole thing to string
+                    query = str(query)
+            else:
+                # Last resort: convert to string
+                query = str(query)
+                # If it looks like a JSON representation, use a fallback
+                if query.startswith('[') or query.startswith('{'):
+                    query = "Jeg trenger informasjon om geografiske data"
+            
+            print(f"Sanitized query: {query}")
+        
+        rewrite_llm = LLMManager().get_main_llm()
         
         prompt = ChatPromptTemplate.from_messages([
             ("system", QUERY_REWRITE_PROMPT),
@@ -99,30 +132,38 @@ class GeoNorgeVectorRetriever:
         )
 
     async def get_relevant_documents(self, query: str) -> Tuple[List[Document], Any]:
-        """Retrieve relevant documents based on the query."""
-        transformed_query = await self._transform_query(query)
-        print(f"Transformed Query: {transformed_query}")
-        
-        if transformed_query.strip() == "INVALID_QUERY":
-            return [Document(
-                page_content="Beklager, jeg kan bare svare på spørsmål om geografiske data, kart og Geonorges tjenester. Kan du omformulere spørsmålet ditt til å handle om dette?",
-                metadata={"invalid_query": True}
-            )], []
+        """Retrieve relevant documents from the Postgres pgvector database."""
+        try:
+            # # Transform the query to improve retrieval quality
+            # transformed_query = await self._transform_query(query)
             
-        print(f"\nSending query to vector database: '{transformed_query}'")
-        vdb_response = await get_vdb_response(transformed_query)
-        print(f"Vector DB returned {len(vdb_response)} results")
-        
-        # Group chunks from the same document by extracting base title
-        document_groups = self._group_documents_by_title(vdb_response)
-        
-        documents = []
-        for base_title, chunks in document_groups.items():
-            # Sort chunks by their indicator if they have one
-            chunks.sort(key=lambda x: int(x[1]) if x[1] and x[1].isdigit() else 0)
+            # print(f"Original query: {query}")
+            # print(f"Transformed query: {transformed_query}")
+            # print("---------------------")
             
-            # If there's only one chunk or no chunk indicators, process normally
-            if len(chunks) == 1 or all(c[1] is None for c in chunks):
+            # Query the vector database
+            vdb_response = await get_vdb_response(query)
+            print(f"Vector DB returned {len(vdb_response)} results")
+            
+            # Add debugging for vdb_response structure
+            if vdb_response and len(vdb_response) > 0:
+                print(f"DEBUG: Sample VDB response entry structure:")
+                sample_entry = vdb_response[0]
+                print(f"DEBUG: Entry type: {type(sample_entry)}, length: {len(sample_entry)}")
+                print(f"DEBUG: Entry fields: {sample_entry}")
+                # Check if image field exists and what it contains
+                if len(sample_entry) > 3:
+                    print(f"DEBUG: Image field (index 3): {sample_entry[3]}")
+            
+            
+            # Create Document objects from the results
+            documents = []
+            
+            # Group by title to collate multiple chunks from the same document
+            title_groups = self._group_documents_by_title(vdb_response)
+            
+            for title, chunks in title_groups.items():
+                # Process each document group
                 for row, _ in chunks:
                     metadata = self._extract_metadata(row)
                     source_url = self._create_source_url(row[1], row[0])
@@ -131,31 +172,21 @@ class GeoNorgeVectorRetriever:
                     documents.append(self._create_document(
                         row[1], description, metadata, source_url
                     ))
-            else:
-                # Combine chunks from the same document
-                combined_row = chunks[0][0]  # Use first chunk as base
-                combined_abstract = self._combine_abstracts(chunks)
-                
-                metadata = self._extract_metadata(combined_row)
-                metadata.update({
-                    "title": base_title,  # Use the base title without "Del X"
-                    "is_combined": True,
-                    "chunk_count": len(chunks)
-                })
-                
-                source_url = self._create_source_url(base_title, combined_row[0])
-                
-                documents.append(self._create_document(
-                    base_title, combined_abstract, metadata, source_url
-                ))
-        
-        if not documents:
-            documents.append(Document(
-                page_content="Beklager, jeg fant ingen relevante datasett for dette spørsmålet i Geonorge sin database. For å hjelpe deg finne passende datasett, trenger jeg mer spesifikk informasjon. Vennligst spesifiser detaljer som geografisk område, tidsperiode, eller mer spesifikke datatyper du er interessert i.",
-                metadata={"fallback": True, "no_results": True}
-            ))
             
-        return documents, vdb_response
+            if not documents:
+                documents.append(Document(
+                    page_content="Beklager, jeg fant ingen relevante datasett for dette spørsmålet i Geonorge sin database. For å hjelpe deg finne passende datasett, trenger jeg mer spesifikk informasjon. Vennligst spesifiser detaljer som geografisk område, tidsperiode, eller mer spesifikke datatyper du er interessert i.",
+                    metadata={"fallback": True, "no_results": True}
+                ))
+            
+            return documents, vdb_response
+            
+        except Exception as e:
+            print(f"ERROR in vector retrieval: {e}")
+            import traceback
+            traceback.print_exc()
+            # Return empty results
+            return [], []
         
     def _group_documents_by_title(self, vdb_response: List) -> Dict:
         """Group documents by their base title, handling chunked documents."""

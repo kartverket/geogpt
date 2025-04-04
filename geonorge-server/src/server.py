@@ -59,6 +59,13 @@ class ChatServer:
     async def handle_chat_form_submit(self, websocket: Any, user_question: str) -> None:
         messages = self.client_messages.get(websocket, [])
         try:
+            # Register the websocket directly with common.active_websockets
+            from rag.utils.common import active_websockets
+            websocket_id = str(id(websocket))
+            active_websockets[websocket_id] = websocket
+            print(f"DEBUG server: Directly registered websocket with ID {websocket_id} in common.active_websockets")
+            print(f"DEBUG server: Active websockets now: {list(active_websockets.keys())}")
+            
             vdb_response = await get_vdb_response(user_question)
             
             # Get only download formats for each dataset in vdb_response
@@ -66,7 +73,7 @@ class ChatServer:
             if vdb_response:
                 datasets_with_formats = await get_dataset_download_formats(vdb_response)
             
-            await send_websocket_message(Action.USER_MESSAGE.value, user_question, websocket)
+            # await send_websocket_message(Action.USER_MESSAGE.value, user_question, websocket)
 
             # Send RAG request with streaming
             full_rag_response = await get_rag_response(
@@ -79,7 +86,6 @@ class ChatServer:
             if datasets_with_formats:
                 await send_websocket_message(Action.CHAT_DATASETS.value, datasets_with_formats, websocket)
             
-            await send_websocket_action(Action.STREAM_COMPLETE.value, websocket)
     
             # Add messages to history with timestamp and exchange_id
             timestamp = datetime.datetime.now().isoformat()
@@ -100,7 +106,8 @@ class ChatServer:
                 }
             ])
             
-            await send_websocket_action(Action.FORMAT_MARKDOWN.value, websocket)
+            # Don't send formatMarkdown again - it's already sent by the RAG workflow
+            # await send_websocket_action("formatMarkdown", websocket)
     
         except Exception as error:
             logger.error("Server controller failed: %s", str(error))

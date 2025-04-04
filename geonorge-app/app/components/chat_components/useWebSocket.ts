@@ -20,6 +20,14 @@ export const useWebSocket = () => {
   const [formats, setFormats] = useState<string[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [reconnectAttempt, setReconnectAttempt] = useState(0);
+  const [mapUpdates, setMapUpdates] = useState<{
+    center?: [number, number];
+    zoom?: number;
+    layers?: string[];
+    markers?: Array<{ lat: number; lng: number; label: string }>;
+    findMyLocation?: boolean;
+    addMarker?: boolean;
+  }>({});
 
   const connectWebSocket = useCallback(() => {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -104,7 +112,8 @@ export const useWebSocket = () => {
 
   const handleServerMessage = (data: WebSocketMessage) => {
     const { action, payload } = data;
-
+    console.log("Received payload:", payload);
+    console.log("Action:", action);
     switch (action) {
       case "chatStream":
         setIsStreaming(true);
@@ -230,6 +239,11 @@ export const useWebSocket = () => {
           }
         }
         break;
+
+      case "mapUpdate":
+        console.log("Received map update:", payload);
+        setMapUpdates(payload);
+        break;
     }
   };
 
@@ -270,5 +284,6 @@ export const useWebSocket = () => {
     projections,
     formats,
     isConnected,
+    mapUpdates,
   };
 };
