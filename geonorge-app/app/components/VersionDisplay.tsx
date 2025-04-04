@@ -7,12 +7,14 @@ interface VersionDisplayProps {
 export const VersionDisplay: React.FC<VersionDisplayProps> = ({
   className = "",
 }) => {
-  const version = "GeoNorge v1.0.0";
+  const appName = "GeoGPT ";
+  const version = "v1.0.0-beta";
 
   return (
     <div
       className={`text-xs fixed bottom-0 right-3 text-color-gn-secondarylight ${className}`}
     >
+      {appName}
       {version}
     </div>
   );

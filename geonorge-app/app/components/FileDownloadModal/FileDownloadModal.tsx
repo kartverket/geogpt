@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 
 // Utils
+import { fixNorwegianEncoding } from "./utils/fixNbEncoding";
 import { groupedGoals, userGroups } from "./utils/selectionData";
 import {
   capitalizeFirstLetter,
@@ -35,7 +36,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 
 // Icons or images
-import GeoNorgeLogo from "@/components/ui/GeoNorgeLogo"
+import GeoNorgeLogo from "@/components/ui/GeoNorgeLogo";
 import { ArrowDownAZ, Info, X, CheckCircle2 } from "lucide-react";
 
 // Custom ProgressSteps component
@@ -159,7 +160,7 @@ const SummaryItem = ({ label, value }: { label: string; value: string }) => (
         value ? "bg-color-gn-lightblue text-white" : "bg-gray-200 text-gray-500"
       } ml-2 px-3 py-1 text-xs rounded-lg`}
     >
-      {value || "Ikke valgt"}
+      {fixNorwegianEncoding(value) || "Ikke valgt"}
     </Badge>
   </div>
 );
@@ -224,7 +225,7 @@ const SelectionPopover = ({
               ${isDisabled ? "opacity-60 cursor-not-allowed" : ""}`}
             disabled={isDisabled}
           >
-            {selectedValue || placeholder}
+            {fixNorwegianEncoding(selectedValue) || placeholder}
 
             {isDisabled ? (
               <span className="ml-auto text-color-kv-secondary text-xs italic">
@@ -255,7 +256,7 @@ const SelectionPopover = ({
                             setOpen(false);
                           }}
                         >
-                          {item.name}
+                          {fixNorwegianEncoding(item.name)}
                         </CommandItem>
                       ))}
                   </CommandGroup>
@@ -279,7 +280,7 @@ const SelectionPopover = ({
                             setOpen(false);
                           }}
                         >
-                          {item.name}
+                          {fixNorwegianEncoding(item.name)}
                         </CommandItem>
                       ))}
                     </CommandGroup>
@@ -295,7 +296,7 @@ const SelectionPopover = ({
                         setOpen(false);
                       }}
                     >
-                      {item.name}
+                      {fixNorwegianEncoding(item.name)}
                     </CommandItem>
                   ))}
                 </CommandGroup>
@@ -719,7 +720,8 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
                         className="w-full justify-start text-left"
                         aria-labelledby="geo-area-label"
                       >
-                        {selectedLocation || "Velg område..."}
+                        {fixNorwegianEncoding(selectedLocation) ||
+                          "Velg område..."}
                         <ArrowDownAZ className="ml-auto" />
                       </Button>
                     </PopoverTrigger>
@@ -749,7 +751,7 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
                                     setOpenLocation(false);
                                   }}
                                 >
-                                  {item.name}
+                                  {fixNorwegianEncoding(item.name)}
                                 </CommandItem>
                               ))}
                             </CommandGroup>
