@@ -6,6 +6,7 @@ import { Maximize, X } from "lucide-react";
 import { ChatMessage as ChatMessageType } from "./types";
 import GeoNorgeIcon from "../../../components/ui/GeoNorgeIcon";
 import { TypingIndicator } from "@/components/ui/typing-indicator";
+import { TOUR_STEP_IDS } from "@/lib/tour-constants";
 
 interface ChatWindowProps {
   messages: ChatMessageType[];
@@ -38,7 +39,10 @@ export const ChatWindow = ({
   }, [messages]);
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-lg shadow-lg">
+    <div
+      className="flex flex-col h-full bg-white rounded-lg shadow-lg"
+      id={TOUR_STEP_IDS.CHAT_INTERFACE}
+    >
       <div className="px-4 py-2 flex justify-between items-center border-b">
         <div className="flex items-center">
           <GeoNorgeIcon />

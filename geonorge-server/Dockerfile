@@ -12,7 +12,11 @@ RUN apt-get update && apt-get install -y \
 # Kopier kun requirements.txt først for caching
 COPY ../scripts/requirements.txt /app/requirements.txt
 
+# Upgrade packaging tools first
+RUN pip install --upgrade pip setuptools
+
 # Installer Python-avhengigheter
+RUN pip install wheel
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
 COPY geonorge-server/src /app/src

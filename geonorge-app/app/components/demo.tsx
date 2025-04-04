@@ -11,6 +11,7 @@ import { useBaseLayerManagement } from "@/hooks/useBaseLayerManagement";
 import { useDownloadManagement } from "@/hooks/useDownloadManagement";
 import { useChatManagement } from "@/hooks/useChatManagement";
 import { useMapState } from "@/hooks/useMapState";
+import { useTour } from "@/components/tour";
 
 import { AppSidebar } from "@/app/components/app-sidebar";
 import { KartkatalogTab } from "@/app/components/kartkatalog-tab";
@@ -81,6 +82,8 @@ const DemoV3 = () => {
     executeDatasetDownload,
     replaceIframe,
   });
+
+  const { currentStep } = useTour();
 
   // Handle map updates from WebSocket
   useEffect(() => {
@@ -184,12 +187,54 @@ const DemoV3 = () => {
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [isFileDownloadModalOpen, chatManagement]);
+  }, [isFileDownloadModalOpen]);
+  // VÆR FORSIKTIG MED Å BRUKE CHATMANAGEMENT, KAN LAGE INFINITE LOOP
+
+  // Effect to control popover open state based on tour step
+  useEffect(() => {
+    console.log("currentStep", currentStep);
+    console.log(
+      "chatManagement.blockPopoverClose",
+      chatManagement.blockPopoverClose
+    );
+    if (currentStep === 0 || currentStep === 1 || currentStep === 2) {
+      // Open popover for initial tour steps if not already open
+      if (!chatManagement.isPopoverOpen) {
+        chatManagement.setIsPopoverOpen(true);
+      }
+    } else if (currentStep === 3) {
+      // Explicitly close the popover when reaching step 3 (Kartkatalog)
+      if (chatManagement.isPopoverOpen) {
+        chatManagement.setIsPopoverOpen(false);
+      }
+    }
+  }, [
+    currentStep,
+    chatManagement.isPopoverOpen,
+    chatManagement.setIsPopoverOpen,
+  ]);
+
+  // Effect to control popover closing block based on tour step
+  useEffect(() => {
+    const shouldBeBlocked = currentStep !== -1;
+    if (chatManagement.blockPopoverClose !== shouldBeBlocked) {
+      chatManagement.setBlockPopoverClose(shouldBeBlocked);
+    }
+  }, [
+    currentStep,
+    chatManagement.blockPopoverClose,
+    chatManagement.setBlockPopoverClose,
+  ]);
 
   // Chat popover props
   const chatPopoverProps = {
     open: chatManagement.isPopoverOpen,
-    onOpenChange: chatManagement.setIsPopoverOpen,
+    onOpenChange: (open: boolean) => {
+      // Only allow state changes if not blocked
+      if (!chatManagement.blockPopoverClose) {
+        chatManagement.setIsPopoverOpen(open);
+      }
+    },
   };
 
   return (
@@ -214,7 +259,7 @@ const DemoV3 = () => {
             />
 
             {/* KartkatalogTab */}
-            <div className="fixed top-[25%] right-0 -translate-y-0 z-[401] max-h-[450px]">
+            <div className="fixed top-[25%] right-0 -translate-y-0 max-h-[450px]">
               <KartkatalogTab
                 onReplaceIframe={replaceIframe}
                 onDatasetDownload={executeDatasetDownload}
@@ -269,20 +314,19 @@ const DemoV3 = () => {
           />
         )}
 
-        <div className="z-40">
-          <AppSidebar
-            availableLayers={availableLayers ?? []}
-            trackedDatasets={trackedDatasets}
-            onLayerChangeWithDataset={handleLayerChangeWithDataset}
-            onRemoveDataset={removeTrackedDataset}
-            onChangeBaseLayer={{
-              revertToBaseMap,
-              changeToGraattKart,
-              changeToRasterKart,
-              changeToSjoKart,
-            }}
-          />
-        </div>
+        <AppSidebar
+          availableLayers={availableLayers ?? []}
+          trackedDatasets={trackedDatasets}
+          onLayerChangeWithDataset={handleLayerChangeWithDataset}
+          onRemoveDataset={removeTrackedDataset}
+          onChangeBaseLayer={{
+            revertToBaseMap,
+            changeToGraattKart,
+            changeToRasterKart,
+            changeToSjoKart,
+          }}
+          className="z-40"
+        />
 
         <FileDownloadModal
           isOpen={isFileDownloadModalOpen}

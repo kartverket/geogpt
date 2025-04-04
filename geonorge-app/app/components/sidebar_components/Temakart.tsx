@@ -7,7 +7,7 @@ import { DeselectAllButton } from "@/app/components/sidebar_components/DeselectA
 import { DatasetList } from "@/app/components/sidebar_components/DatasetList";
 import { ActionItem } from "@/app/components/sidebar_components/ActionItem";
 import { TranslationKey } from "@/i18n/translations";
-
+import { TOUR_STEP_IDS } from "@/lib/tour-constants";
 interface Props {
   t: (key: TranslationKey) => string;
   layerSearch: string;
@@ -106,45 +106,83 @@ export const Temakart: React.FC<Props> = ({
           />
         )}
       </Section>
+      <div id={TOUR_STEP_IDS.APP_SIDEBAR}>
+        <Section
+          id="layers"
+          title={t("theme_maps")}
+          icon={Layers2}
+          collapsible
+          isOpen={isLayerSectionVisible}
+          onToggle={() => setIsLayerSectionVisible(!isLayerSectionVisible)}
+        >
+          <div className="space-y-3">
+            <SearchInput
+              layerSearch={layerSearch}
+              setLayerSearch={setLayerSearch}
+              t={t}
+            />
 
-      <Section
-        id="layers"
-        title={t("theme_maps")}
-        icon={Layers2}
-        collapsible
-        isOpen={isLayerSectionVisible}
-        onToggle={() => setIsLayerSectionVisible(!isLayerSectionVisible)}
-      >
-        <div className="space-y-3">
-          <SearchInput
-            layerSearch={layerSearch}
-            setLayerSearch={setLayerSearch}
-            t={t}
-          />
+            {/* Display search results when searching */}
+            {isSearching ? (
+              <div className="space-y-4">
+                {/* Show filtered datasets results */}
+                {filteredDatasets.length > 0 && (
+                  <div className="mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-medium text-sm text-gray-700 ml-1">
+                        {t("active_datasets")}
+                      </span>
+                    </div>
+                    <DatasetList
+                      trackedDatasets={filteredDatasets}
+                      expandedDatasets={{
+                        ...expandedDatasets,
+                        ...filteredDatasets.reduce(
+                          (acc, dataset) => ({
+                            ...acc,
+                            [dataset.id]: true, // Auto-expand search results
+                          }),
+                          {}
+                        ),
+                      }}
+                      datasetScrollContainerRef={datasetScrollContainerRef}
+                      datasetScrollPositionRef={datasetScrollPositionRef}
+                      mainScrollPositionRef={mainScrollPositionRef}
+                      onLayerChangeWithDataset={onLayerChangeWithDataset}
+                      onRemoveDataset={onRemoveDataset}
+                      setExpandedDatasets={setExpandedDatasets}
+                      t={t}
+                      highlightSearchTerm={layerSearch}
+                    />
+                  </div>
+                )}
 
-          {/* Display search results when searching */}
-          {isSearching ? (
-            <div className="space-y-4">
-              {/* Show filtered datasets results */}
-              {filteredDatasets.length > 0 && (
+                {/* Show "no results found" when appropriate */}
+                {filteredDatasets.length === 0 && (
+                  <div className="p-4 text-center border border-gray-200 bg-white rounded-omar">
+                    <p className="text-sm text-gray-500">
+                      {t("no_layers_found")}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Show regular active datasets when not searching */
+              trackedDatasets.length > 0 && (
                 <div className="mb-4">
                   <div className="flex justify-between items-center mb-2">
                     <span className="font-medium text-sm text-gray-700 ml-1">
                       {t("active_datasets")}
                     </span>
+                    <DeselectAllButton
+                      hasSelectedLayers={hasSelectedLayers}
+                      handleDeselectAllLayers={handleDeselectAllLayers}
+                      t={t}
+                    />
                   </div>
                   <DatasetList
-                    trackedDatasets={filteredDatasets}
-                    expandedDatasets={{
-                      ...expandedDatasets,
-                      ...filteredDatasets.reduce(
-                        (acc, dataset) => ({
-                          ...acc,
-                          [dataset.id]: true, // Auto-expand search results
-                        }),
-                        {}
-                      ),
-                    }}
+                    trackedDatasets={trackedDatasets}
+                    expandedDatasets={expandedDatasets}
                     datasetScrollContainerRef={datasetScrollContainerRef}
                     datasetScrollPositionRef={datasetScrollPositionRef}
                     mainScrollPositionRef={mainScrollPositionRef}
@@ -152,50 +190,13 @@ export const Temakart: React.FC<Props> = ({
                     onRemoveDataset={onRemoveDataset}
                     setExpandedDatasets={setExpandedDatasets}
                     t={t}
-                    highlightSearchTerm={layerSearch}
                   />
                 </div>
-              )}
-
-              {/* Show "no results found" when appropriate */}
-              {filteredDatasets.length === 0 && (
-                <div className="p-4 text-center border border-gray-200 bg-white rounded-omar">
-                  <p className="text-sm text-gray-500">
-                    {t("no_layers_found")}
-                  </p>
-                </div>
-              )}
-            </div>
-          ) : (
-            /* Show regular active datasets when not searching */
-            trackedDatasets.length > 0 && (
-              <div className="mb-4">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="font-medium text-sm text-gray-700 ml-1">
-                    {t("active_datasets")}
-                  </span>
-                  <DeselectAllButton
-                    hasSelectedLayers={hasSelectedLayers}
-                    handleDeselectAllLayers={handleDeselectAllLayers}
-                    t={t}
-                  />
-                </div>
-                <DatasetList
-                  trackedDatasets={trackedDatasets}
-                  expandedDatasets={expandedDatasets}
-                  datasetScrollContainerRef={datasetScrollContainerRef}
-                  datasetScrollPositionRef={datasetScrollPositionRef}
-                  mainScrollPositionRef={mainScrollPositionRef}
-                  onLayerChangeWithDataset={onLayerChangeWithDataset}
-                  onRemoveDataset={onRemoveDataset}
-                  setExpandedDatasets={setExpandedDatasets}
-                  t={t}
-                />
-              </div>
-            )
-          )}
-        </div>
-      </Section>
+              )
+            )}
+          </div>
+        </Section>
+      </div>
 
       <Section
         id="actions"
