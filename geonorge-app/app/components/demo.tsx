@@ -71,7 +71,7 @@ const DemoV3 = () => {
   const [modalOpen, setModalOpen] = useState(false);
 
   // Use the WebSocket hook
-  const { messages, isStreaming, sendMessage, ws } = useWebSocket();
+  const { messages, isStreaming, sendMessage, ws, mapUpdates } = useWebSocket();
 
   // Use chat management hook
   const chatManagement = useChatManagement({
@@ -81,6 +81,95 @@ const DemoV3 = () => {
     executeDatasetDownload,
     replaceIframe,
   });
+
+  // Handle map updates from WebSocket
+  useEffect(() => {
+    if (mapUpdates) {
+      console.log("Processing map updates:", mapUpdates);
+
+      // Handle center coordinates update
+      if (mapUpdates.center) {
+        mapState.setMap?.((prevMap: any) => {
+          if (prevMap) {
+            prevMap.setView(
+              mapUpdates.center as [number, number],
+              mapUpdates.zoom || prevMap.getZoom()
+            );
+          }
+          return prevMap;
+        });
+      }
+
+      // Handle zoom level update (if no center was provided)
+      if (mapUpdates.zoom && !mapUpdates.center) {
+        mapState.setMap?.((prevMap: any) => {
+          if (prevMap) {
+            prevMap.setZoom(mapUpdates.zoom as number);
+          }
+          return prevMap;
+        });
+      }
+
+      // Handle markers update
+      if ("markers" in mapUpdates) {
+        // First, clear existing markers
+        mapState.clearSearchMarkers();
+
+        // If there are markers in the update, add them
+        if (mapUpdates.markers && mapUpdates.markers.length > 0) {
+          // Add all markers from the update
+          mapUpdates.markers.forEach((marker) => {
+            mapState.addSearchMarker({
+              lat: marker.lat,
+              lng: marker.lng,
+              label: marker.label,
+            });
+          });
+
+          // If there's only one marker, we can also set it as the searchMarker for backward compatibility
+          if (mapUpdates.markers.length === 1) {
+            const marker = mapUpdates.markers[0];
+            mapState.setSearchMarker({
+              lat: marker.lat,
+              lng: marker.lng,
+            });
+          }
+        } else {
+          // If markers array is empty, also clear the single searchMarker
+          mapState.setSearchMarker(null);
+        }
+      }
+
+      // Handle find my location request
+      if (mapUpdates.findMyLocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const { latitude, longitude } = position.coords;
+            mapState.setUserMarker({ lat: latitude, lng: longitude });
+
+            mapState.setMap?.((prevMap: any) => {
+              if (prevMap) {
+                prevMap.setView([latitude, longitude], mapUpdates.zoom || 14);
+              }
+              return prevMap;
+            });
+
+            if (mapUpdates.addMarker) {
+              // Add a marker at user's location if requested
+              mapState.addSearchMarker({
+                lat: latitude,
+                lng: longitude,
+                label: "Min posisjon",
+              });
+            }
+          },
+          (error) => {
+            console.warn("Could not get location:", error);
+          }
+        );
+      }
+    }
+  }, [mapUpdates]);
 
   // Manage interactions between modal and popover
   useEffect(() => {
@@ -117,6 +206,7 @@ const DemoV3 = () => {
               wmsLayer={mapState.wmsLayer}
               userMarker={mapState.userMarker}
               searchMarker={mapState.searchMarker}
+              searchMarkers={mapState.searchMarkers}
               setUserMarker={mapState.setUserMarker}
               setSearchMarker={mapState.setSearchMarker}
               onMapReady={mapState.handleMapReady}

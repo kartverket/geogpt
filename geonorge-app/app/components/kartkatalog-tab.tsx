@@ -66,7 +66,6 @@ interface KartkatalogTabProps {
   onReplaceIframe: (wmsUrl: string) => void;
   onDatasetDownload: (dataset: SearchResult) => void;
   ws: WebSocket | null;
-  trackedDatasets: string[];
 }
 
 export function KartkatalogTab({
