@@ -18,7 +18,11 @@ export type TranslationKey =
   | "landscape_map"
   | "grayscale_map"
   | "raster_map"
-  | "sea_map";
+  | "sea_map"
+  | "reset_tour_title"
+  | "tour_reset_message"
+  | "reset_tour_button"
+  | "back_button";
 
 export const translations: Record<Language, Record<TranslationKey, string>> = {
   nb: {
@@ -40,6 +44,11 @@ export const translations: Record<Language, Record<TranslationKey, string>> = {
     grayscale_map: "Gråtone",
     raster_map: "Rasterkart",
     sea_map: "Sjøkart",
+    reset_tour_title: "Tilbakestill omvisning",
+    tour_reset_message:
+      "Klikk på knappen under for å starte omvisningen på nytt.",
+    reset_tour_button: "Tilbakestill omvisning",
+    back_button: "Tilbake",
   },
   nn: {
     background_map: "Bakgrunnskart",
@@ -60,6 +69,11 @@ export const translations: Record<Language, Record<TranslationKey, string>> = {
     grayscale_map: "Gråtone",
     raster_map: "Rasterkart",
     sea_map: "Sjøkart",
+    reset_tour_title: "Tilbakestill omvising",
+    tour_reset_message:
+      "Klikk på knappen under for å starte omvisinga på nytt.",
+    reset_tour_button: "Tilbakestill omvising",
+    back_button: "Tilbake",
   },
   en: {
     background_map: "Background Map",
@@ -80,5 +94,10 @@ export const translations: Record<Language, Record<TranslationKey, string>> = {
     grayscale_map: "Grayscale",
     raster_map: "Raster map",
     sea_map: "Sea map",
+    reset_tour_title: "Reset Tour",
+    tour_reset_message:
+      "Click the button below to restart the application tour.",
+    reset_tour_button: "Reset Tour",
+    back_button: "Back",
   },
 };
