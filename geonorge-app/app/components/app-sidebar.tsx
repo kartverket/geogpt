@@ -17,6 +17,7 @@ import {
 
 import { SidebarFooter } from "@/app/components/sidebar_components/SidebarFooter";
 import { Temakart } from "@/app/components/sidebar_components/Temakart";
+import { ResetTourView } from "@/app/components/sidebar_components/ResetTourView";
 
 // Translation
 import { Language } from "@/i18n/translations";
@@ -71,6 +72,7 @@ export function AppSidebar({
   const [expandedDatasets, setExpandedDatasets] = React.useState<
     Record<string, boolean>
   >({});
+  const [showResetTourView, setShowResetTourView] = useState(false);
 
   // Add refs to track scroll positions
   const datasetScrollContainerRef = useRef<HTMLDivElement | null>(null);
@@ -210,6 +212,11 @@ export function AppSidebar({
     deselectAllLayersGlobally();
   };
 
+  // Handler to switch to the reset view
+  const handleShowResetTour = () => {
+    setShowResetTourView(true);
+  };
+
   return (
     <Sidebar
       variant="inset"
@@ -226,38 +233,43 @@ export function AppSidebar({
         <GeoNorgeLogo className="h-auto w-40 mx-auto" />
       </SidebarHeader>
       <SidebarContent className="p-4 flex-grow overflow-y-auto">
-        <Temakart
-          t={t}
-          layerSearch={layerSearch}
-          setLayerSearch={setLayerSearch}
-          filteredLayers={filteredLayers}
-          filteredDatasets={filteredDatasets}
-          trackedDatasets={trackedDatasets}
-          expandedDatasets={expandedDatasets}
-          setExpandedDatasets={setExpandedDatasets}
-          datasetScrollContainerRef={datasetScrollContainerRef}
-          datasetScrollPositionRef={datasetScrollPositionRef}
-          mainScrollPositionRef={mainScrollPositionRef}
-          hasSelectedLayers={hasSelectedLayers}
-          handleDeselectAllLayers={handleDeselectAllLayers}
-          onLayerChangeWithDataset={onLayerChangeWithDataset}
-          onRemoveDataset={onRemoveDataset}
-          onChangeBaseLayer={onChangeBaseLayer}
-          selectedBaseMap={selectedBaseMap}
-          setSelectedBaseMap={setSelectedBaseMap}
-          isBaseMapSectionVisible={isBaseMapSectionVisible}
-          isLayerSectionVisible={isLayerSectionVisible}
-          isActionSectionVisible={isActionSectionVisible}
-          setIsBaseMapSectionVisible={setIsBaseMapSectionVisible}
-          setIsLayerSectionVisible={setIsLayerSectionVisible}
-          setIsActionSectionVisible={setIsActionSectionVisible}
-          data={data}
-        />
+        {showResetTourView ? (
+          <ResetTourView t={t} onBack={() => setShowResetTourView(false)} />
+        ) : (
+          <Temakart
+            t={t}
+            layerSearch={layerSearch}
+            setLayerSearch={setLayerSearch}
+            filteredLayers={filteredLayers}
+            filteredDatasets={filteredDatasets}
+            trackedDatasets={trackedDatasets}
+            expandedDatasets={expandedDatasets}
+            setExpandedDatasets={setExpandedDatasets}
+            datasetScrollContainerRef={datasetScrollContainerRef}
+            datasetScrollPositionRef={datasetScrollPositionRef}
+            mainScrollPositionRef={mainScrollPositionRef}
+            hasSelectedLayers={hasSelectedLayers}
+            handleDeselectAllLayers={handleDeselectAllLayers}
+            onLayerChangeWithDataset={onLayerChangeWithDataset}
+            onRemoveDataset={onRemoveDataset}
+            onChangeBaseLayer={onChangeBaseLayer}
+            selectedBaseMap={selectedBaseMap}
+            setSelectedBaseMap={setSelectedBaseMap}
+            isBaseMapSectionVisible={isBaseMapSectionVisible}
+            isLayerSectionVisible={isLayerSectionVisible}
+            isActionSectionVisible={isActionSectionVisible}
+            setIsBaseMapSectionVisible={setIsBaseMapSectionVisible}
+            setIsLayerSectionVisible={setIsLayerSectionVisible}
+            setIsActionSectionVisible={setIsActionSectionVisible}
+            data={data}
+          />
+        )}
       </SidebarContent>
       <SidebarFooter
         language={language}
         handleLanguageChange={handleLanguageChange}
         t={t}
+        onShowResetTour={handleShowResetTour}
       />
     </Sidebar>
   );
