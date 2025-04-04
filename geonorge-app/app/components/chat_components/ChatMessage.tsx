@@ -1,6 +1,13 @@
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { ChatMessage as ChatMessageType } from "./types";
+import { Download, Eye } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@radix-ui/react-tooltip";
 
 interface ChatMessageProps {
   message: ChatMessageType;
@@ -24,26 +31,42 @@ export const ChatMessage = ({
           height={300}
         />
         <div className="flex gap-2">
-          <Button
-            onClick={() => {
-              if (message.wmsUrl && message.wmsUrl !== "None") {
-                onWmsClick(message.wmsUrl, message.title);
-              }
-            }}
-            className={`text-xs ${
-              message.wmsUrl && message.wmsUrl !== "None"
-                ? "rounded-omar bg-color-gn-primarylight hover:bg-color-gn-primary text-white"
-                : "bg-gray-300 text-gray-500 cursor-not-allowed"
-            }`}
-            disabled={!message.wmsUrl || message.wmsUrl === "None"}
-          >
-            Vis
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div>
+                  <Button
+                    variant="show"
+                    onClick={() => {
+                      if (message.wmsUrl && message.wmsUrl !== "None") {
+                        onWmsClick(message.wmsUrl, message.title);
+                      }
+                    }}
+                    className={` ${
+                      message.wmsUrl && message.wmsUrl !== "None" ? "" : ""
+                    }`}
+                    disabled={!message.wmsUrl || message.wmsUrl === "None"}
+                  >
+                    {(!message.wmsUrl || message.wmsUrl === "None") && (
+                      <Eye className="h-4 w-4" />
+                    )}
+                    Vis på kart
+                  </Button>
+                </div>
+              </TooltipTrigger>
+              {(!message.wmsUrl || message.wmsUrl === "None") && (
+                <TooltipContent className="bg-white p-2 shadow-md rounded border text-sm">
+                  <p>WMS URL er ikke tilgjengelig for dette datasettet</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
           {message.downloadUrl && (
             <Button
+              variant="download"
               onClick={() => onDownloadClick(message.downloadUrl!)}
-              className="rounded-omar bg-color-gn-secondary hover:bg-[#5c5c5d] text-white text-xs"
             >
+              <Download className="h-4 w-4" />
               Last ned datasett
             </Button>
           )}
@@ -66,7 +89,7 @@ export const ChatMessage = ({
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div
         className={`max-w-[80%] p-2 rounded text-sm whitespace-pre-wrap ${
-          isUser ? "bg-orange-100" : "bg-gray-100"
+          isUser ? "bg-orange-50" : "bg-gray-100"
         }`}
       >
         <span dangerouslySetInnerHTML={{ __html: content }} />

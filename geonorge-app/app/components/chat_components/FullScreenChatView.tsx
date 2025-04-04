@@ -33,7 +33,9 @@ const FullScreenChatView: React.FC<FullScreenChatViewProps> = ({
       <div className="flex justify-between items-center p-4 border-b container mx-auto">
         <div className="flex items-center">
           <GeoNorgeIcon />
-          <h2 className="text-xl font-bold ml-2">GeoGPT</h2>
+          <h2 className="text-xl text-color-gn-secondary font-bold ml-2">
+            GeoGPT
+          </h2>
         </div>
         <Button
           variant="outline"

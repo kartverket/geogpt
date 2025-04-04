@@ -21,6 +21,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 
 // Icons
 import { Compass, Loader2, Search, X, Plus, Minus } from "lucide-react";
+import { VersionDisplay } from "./VersionDisplay";
 
 interface Address {
   adressetekst: string;
@@ -474,7 +475,7 @@ const MapWrapper: React.FC<MapWrapperProps> = ({
       zoom={zoom}
       style={{ height: "100%", width: "100%" }}
       zoomControl={false}
-      attributionControl={true}
+      attributionControl={false}
       className="z-0"
     >
       <MapController onMapReady={onMapReady} />
@@ -482,28 +483,16 @@ const MapWrapper: React.FC<MapWrapperProps> = ({
       {showAddressSearch && <AddressSearch setSearchMarker={setSearchMarker} />}
 
       {currentBaseLayer === "topo" && (
-        <TileLayer
-          url="https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png"
-          attribution='&copy; <a href="http://www.kartverket.no/">Kartverket</a>'
-        />
+        <TileLayer url="https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png" />
       )}
       {currentBaseLayer === "graatone" && (
-        <TileLayer
-          url="https://cache.kartverket.no/v1/wmts/1.0.0/topograatone/default/webmercator/{z}/{y}/{x}.png"
-          attribution='&copy; <a href="http://www.kartverket.no/">Kartverket</a>'
-        />
+        <TileLayer url="https://cache.kartverket.no/v1/wmts/1.0.0/topograatone/default/webmercator/{z}/{y}/{x}.png" />
       )}
       {currentBaseLayer === "raster" && (
-        <TileLayer
-          url="https://cache.kartverket.no/v1/wmts/1.0.0/toporaster/default/webmercator/{z}/{y}/{x}.png"
-          attribution='&copy; <a href="http://www.kartverket.no/">Kartverket</a>'
-        />
+        <TileLayer url="https://cache.kartverket.no/v1/wmts/1.0.0/toporaster/default/webmercator/{z}/{y}/{x}.png" />
       )}
       {currentBaseLayer === "sjo" && (
-        <TileLayer
-          url="https://cache.kartverket.no/v1/wmts/1.0.0/sjokartraster/default/webmercator/{z}/{y}/{x}.png"
-          attribution='&copy; <a href="http://www.kartverket.no/">Kartverket</a>'
-        />
+        <TileLayer url="https://cache.kartverket.no/v1/wmts/1.0.0/sjokartraster/default/webmercator/{z}/{y}/{x}.png" />
       )}
 
       <DynamicWMSLayers trackedDatasets={trackedDatasets} wmsLayer={wmsLayer} />
@@ -513,6 +502,7 @@ const MapWrapper: React.FC<MapWrapperProps> = ({
 
       <LocationButton setUserMarker={setUserMarker} />
       <ZoomControl />
+      <VersionDisplay />
     </MapContainer>
   );
 };

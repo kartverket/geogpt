@@ -335,7 +335,9 @@ export function KartkatalogTab({
                 <div className="flex items-center">
                   <h2 className="text-xl text-[#262626] mb-3 flex items-center gap-2">
                     <Library className="h-5 w-5 text-color-gn-primary" />
-                    <span className="font-semibold">KARTKATALOG</span>
+                    <span className="font-semibold text-color-gn-secondary">
+                      KARTKATALOG
+                    </span>
                   </h2>
                 </div>
                 <form onSubmit={onSearchSubmit} className="mb-1">
@@ -390,7 +392,7 @@ export function KartkatalogTab({
                     <span className="text-sm font-medium text-color-gn-secondary">
                       Datasett valgt
                     </span>
-                    <div className="flex items-center text-color-gn-secondarylight justify-center font-semibold">
+                    <div className="flex text-sm items-center text-color-gn-secondary justify-center font-semibold">
                       {selectedDatasets.size}
                     </div>
                   </div>
@@ -474,21 +476,21 @@ export function KartkatalogTab({
 
                           <div className="flex flex-wrap gap-2 mt-1">
                             {result.wmsUrl && result.wmsUrl !== "None" ? (
-                              <button
+                              <Button
+                                variant="show"
                                 onClick={() =>
                                   result.wmsUrl &&
                                   onReplaceIframe(result.wmsUrl)
                                 }
-                                className="px-3 py-1.5 text-sm bg-white border shadow-sm hover:bg-gray-100 text-color-kv-primary rounded-omar transition-all flex items-center gap-1 min-w-[140px] justify-center"
                               >
                                 <Eye className="h-4 w-4" /> Vis på kart
-                              </button>
+                              </Button>
                             ) : (
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <button
                                     disabled
-                                    className="px-3 py-1.5 text-sm bg-gray-200 border shadow-sm text-gray-400 rounded-omar transition-all flex items-center gap-1 min-w-[140px] justify-center"
+                                    className="px-3 py-1.5 text-sm bg-gray-100 border shadow-sm text-gray-400 rounded-omar transition-all flex items-center gap-1 min-w-[140px] justify-center"
                                   >
                                     <XCircle className="h-4 w-4" />
                                     Utilgjengelig
@@ -514,12 +516,12 @@ export function KartkatalogTab({
                               </Tooltip>
                             )}
                             {result.downloadUrl && (
-                              <button
+                              <Button
+                                variant="download"
                                 onClick={() => onDatasetDownload(result)}
-                                className="px-3 py-1.5 text-sm bg-white hover:bg-gray-100 border shadow-sm rounded-omar transition-all flex items-center gap-1 min-w-[140px] justify-center"
                               >
                                 <Download className="h-4 w-4" /> Last ned
-                              </button>
+                              </Button>
                             )}
                           </div>
                         </div>

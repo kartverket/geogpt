@@ -94,7 +94,7 @@ export const Temakart: React.FC<Props> = ({
         collapsible
         title={t("background_map")}
         icon={Map}
-        isOpen={isBaseMapSectionVisible}
+        isOpen={!isBaseMapSectionVisible}
         onToggle={() => setIsBaseMapSectionVisible(!isBaseMapSectionVisible)}
       >
         {onChangeBaseLayer && (

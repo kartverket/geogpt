@@ -43,7 +43,7 @@ export const Section: React.FC<SectionProps> = ({
         }}
       >
         {Icon && (
-          <div className="rounded-omar p-1.5 flex items-center justify-center transition-colors bg-color-gn-primary/5">
+          <div className="rounded-md p-1.5 flex items-center justify-center transition-colors bg-color-gn-primary/5">
             <Icon className="h-5 w-5 text-color-gn-primary" />
           </div>
         )}
