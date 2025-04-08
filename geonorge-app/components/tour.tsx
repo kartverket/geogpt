@@ -486,13 +486,13 @@ export function TourAlertDialog({
           </div>
 
           <div className="p-6 w-full">
-            <div className="bg-gray-100 rounded-lg p-5 mb-6 border border-gray-100">
+            <div className="bg-gray-50 rounded-lg p-5 mb-6 border border-gray-100">
               <h3 className="font-medium ml-11 mb-3 text-base">
                 Velkommen til Geonorge!
               </h3>
               <ul className="space-y-4">
                 <li className="flex items-center">
-                  <div className="bg-white p-1.5 rounded-full mr-3">
+                  <div className="p-1.5 rounded-full mr-3">
                     <Search className="h-5 w-5 text-color-gn-primarylight" />
                   </div>
                   <span className="text-color-gn-secondary font-medium">
@@ -500,7 +500,7 @@ export function TourAlertDialog({
                   </span>
                 </li>
                 <li className="flex items-center">
-                  <div className="bg-white p-1.5 rounded-full mr-3">
+                  <div className="p-1.5 rounded-full mr-3">
                     <Layers className="h-5 w-5 text-color-gn-primarylight" />
                   </div>
                   <span className="text-color-gn-secondary font-medium">
@@ -508,7 +508,7 @@ export function TourAlertDialog({
                   </span>
                 </li>
                 <li className="flex items-center">
-                  <div className="bg-white p-1.5 rounded-full mr-3">
+                  <div className="p-1.5 rounded-full mr-3">
                     <Sparkle className="h-5 w-5 text-color-gn-primarylight" />
                   </div>
                   <span className="text-color-gn-secondary font-medium">
@@ -518,10 +518,14 @@ export function TourAlertDialog({
               </ul>
             </div>
 
-            <p className="mb-2 flex flex-row text-sm text-color-gn-secondarylight">
-              Kom i gang med Geonorge!
-            </p>
             <div className="flex flex-row justify-between space-x-6">
+              <Button
+                variant="outline"
+                onClick={handleSkip}
+                className="w-full py-3 text-base border-gray-300 text-gray-600 hover:bg-gray-50 rounded-omar"
+              >
+                Utforsk på egen hånd
+              </Button>
               <Button
                 onClick={() => {
                   setIsOpen(false);
@@ -531,13 +535,6 @@ export function TourAlertDialog({
               >
                 Start omvisning
                 <ArrowRight className="h-5 w-5" />
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleSkip}
-                className="w-full py-3 text-base border-gray-300 text-gray-600 hover:bg-gray-50 rounded-omar"
-              >
-                Utforsk på egen hånd
               </Button>
             </div>
           </div>

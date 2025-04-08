@@ -1,7 +1,13 @@
 import { useRef, useEffect, useState } from "react";
+// Compontents
 import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
+// UI Components
 import { Button } from "@/components/ui/button";
+import { TypingIndicator } from "@/components/ui/typing-indicator";
+import GeoNorgeIcon from "@/components/ui/GeoNorgeIcon";
+
+// Icons
 import {
   Maximize,
   X,
@@ -10,10 +16,14 @@ import {
   Sparkles,
   MessageCircleQuestion,
 } from "lucide-react";
-import { ChatMessage as ChatMessageType } from "./types";
-import { TypingIndicator } from "@/components/ui/typing-indicator";
+
+// Lib
 import { TOUR_STEP_IDS } from "@/lib/tour-constants";
-import GeoNorgeIcon from "@/components/ui/GeoNorgeIcon";
+
+// Types
+import { ChatMessage as ChatMessageType } from "./types";
+
+// Tooltip
 import {
   Tooltip,
   TooltipContent,
@@ -113,48 +123,48 @@ export const ChatWindow = ({
 
       <div id="chatMessages" className="flex-1 p-4 overflow-y-auto space-y-2">
         {messages.length === 0 && (
-          <div className="text-center max-w-md mx-auto">
+          <div className="text-center max-w-sm mx-auto">
             <div className="flex justify-center mb-2">
-              <div className="bg-color-gn-primarylight rounded-full p-3">
-                <Sparkles className="h-10 w-10 text-white" />
+              <div className="bg-color-gn-primary rounded-full p-3">
+                <Sparkles className="h-5 w-5 text-white" />
               </div>
             </div>
-            <div className="mb-2">
-              <h3 className="text-xl font-medium text-color-gn-secondary">
-                Velkommen til GeoGPT
-              </h3>
-              <p className="text-sm text-indigo-500 mb-4">
-                KI-drevet Kartassistent
-              </p>
-            </div>
-            <p className="text-gray-700 mb-2 text-sm font-semibold">
-              Jeg kan hjelpe deg med å:
+            <h3 className="text-lg font-medium text-color-gn-secondary mb-2">
+              Velkommen til GeoGPT
+            </h3>
+            <p className="text-gray-600 mb-4 text-sm">
+              Jeg kan hjelpe deg med å finne og utforske geografisk informasjon
             </p>
-            <ul className="text-left text-sm text-gray-700 space-y-2 mb-2">
-              <li className="flex items-center ml-9">
-                <div className="bg-color-gn-primarylight rounded-md p-1.5 flex items-center justify-center mr-3 shrink-0">
-                  <Search className="h-5 w-5 text-white" />
-                </div>
-                <span>Søke etter datasett og karttjenester</span>
-              </li>
-              <li className="flex items-center ml-9">
-                <div className="bg-color-gn-primarylight rounded-md p-1.5 flex items-center justify-center mr-3 shrink-0">
-                  <Database className="h-5 w-5 text-white" />
-                </div>
-                <span>Finne geografisk informasjon og GIS-data</span>
-              </li>
-              <li className="flex items-center ml-9">
-                <div className="bg-color-gn-primarylight rounded-md p-1.5 flex items-center justify-center mr-3 shrink-0">
-                  <MessageCircleQuestion className="h-5 w-5 text-white" />
-                </div>
-                <span>Besvare spørsmål om kart og geografiske data</span>
-              </li>
-            </ul>
-            <p className="text-sm mt-4 text-gray-500 italic">
-              Still meg et spørsmål om geodata for å komme i gang!
+
+            <div className="text-left text-sm bg-gray-50 p-4 rounded-lg border border-gray-100 mr-4 ml-4">
+              <div className="flex items-center mb-4">
+                <Search className="h-5 w-5 text-color-gn-primary mr-3 ml-4" />
+                <span className="text-gray-700">
+                  Søke etter datasett og karttjenester
+                </span>
+              </div>
+
+              <div className="flex items-center mb-4">
+                <Database className="h-5 w-5 text-color-gn-primary mr-3 ml-4" />
+                <span className="text-gray-700">
+                  Finne geografisk informasjon og GIS-data
+                </span>
+              </div>
+
+              <div className="flex items-center">
+                <MessageCircleQuestion className="h-5 w-5 text-color-gn-primary mr-3 ml-4" />
+                <span className="text-gray-700">
+                  Besvare spørsmål om kart og geodata
+                </span>
+              </div>
+            </div>
+
+            <p className="text-sm mt-4 text-gray-500">
+              Skriv et spørsmål i feltet under for å komme i gang
             </p>
           </div>
         )}
+
         {messages.map((msg, idx) => (
           <ChatMessage
             key={idx}
@@ -163,6 +173,7 @@ export const ChatWindow = ({
             onDownloadClick={onDownloadClick}
           />
         ))}
+
         {isGenerating && (
           <div className="flex justify-start">
             <TypingIndicator />
