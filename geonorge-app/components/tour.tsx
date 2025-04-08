@@ -519,7 +519,7 @@ export function TourAlertDialog({
             </div>
 
             <p className="mb-2 flex flex-row text-sm text-color-gn-secondarylight">
-              Ny på Geonorge?
+              Kom i gang med Geonorge!
             </p>
             <div className="flex flex-row justify-between space-x-6">
               <Button
@@ -537,7 +537,7 @@ export function TourAlertDialog({
                 onClick={handleSkip}
                 className="w-full py-3 text-base border-gray-300 text-gray-600 hover:bg-gray-50 rounded-omar"
               >
-                Hopp over
+                Utforsk på egen hånd
               </Button>
             </div>
           </div>
