@@ -489,7 +489,11 @@ export function KartkatalogTab({
                           </HoverCard>
 
                           <div className="flex flex-wrap gap-2 mt-1">
-                            {result.wmsUrl && result.wmsUrl !== "None" ? (
+                            {result.wmsUrl &&
+                            result.wmsUrl !== "None" &&
+                            !result.wmsUrl.error &&
+                            (!result.wmsUrl.available_layers ||
+                              result.wmsUrl.available_layers.length > 0) ? (
                               <Button
                                 variant="show"
                                 onClick={() =>
@@ -507,12 +511,32 @@ export function KartkatalogTab({
                                     className="px-3 py-1.5 text-sm bg-gray-100 border shadow-sm text-gray-400 rounded-omar transition-all flex items-center gap-1 min-w-[140px] justify-center"
                                   >
                                     <XCircle className="h-4 w-4" />
-                                    Utilgjengelig
+                                    {result.wmsUrl &&
+                                    result.wmsUrl !== "None" &&
+                                    result.wmsUrl.error
+                                      ? "Utilgjengelig"
+                                      : result.wmsUrl &&
+                                        result.wmsUrl !== "None" &&
+                                        result.wmsUrl.available_layers &&
+                                        result.wmsUrl.available_layers
+                                          .length === 0
+                                      ? "Ingen lag"
+                                      : "Utilgjengelig"}
                                   </button>
                                 </TooltipTrigger>
                                 <TooltipContent className="px-3 py-1.5 text-sm bg-white border shadow-md hover:bg-white text-gray-800 rounded-omar transition-all flex items-center gap-1">
                                   <p>
-                                    Dette datasettet kan ikke vises på kart.
+                                    {result.wmsUrl &&
+                                    result.wmsUrl !== "None" &&
+                                    result.wmsUrl.error
+                                      ? `WMS-feil: ${result.wmsUrl.error}`
+                                      : result.wmsUrl &&
+                                        result.wmsUrl !== "None" &&
+                                        result.wmsUrl.available_layers &&
+                                        result.wmsUrl.available_layers
+                                          .length === 0
+                                      ? "Dette datasettet har ingen tilgjengelige kartlag."
+                                      : "Dette datasettet kan ikke vises på kart."}
                                   </p>
                                 </TooltipContent>
                               </Tooltip>

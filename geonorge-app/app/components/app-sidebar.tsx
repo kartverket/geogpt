@@ -245,13 +245,13 @@ export function AppSidebar({
       variant="inset"
       {...props}
       className={cn(
-        "border-r border-gray-200 shadow-lg w-[350px] max-w-[90vw] bg-gray-100",
+        "border-r border-gray-200 shadow-lg w-[350px] 2xl:w-[400px] max-w-[90vw] bg-gray-100",
         "data-[state=open]:translate-x-0",
         "data-[state=closed]:-translate-x-full",
         "transition-transform duration-300 ease-in-out",
         "flex flex-col h-full"
       )}
-    >
+        >
       <SidebarHeader className="p-4 border-b bg-white shadow-sm flex-shrink-0">
         <GeoNorgeLogo className="h-auto w-40 mx-auto" />
       </SidebarHeader>

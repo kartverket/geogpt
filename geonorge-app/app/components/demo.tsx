@@ -300,7 +300,7 @@ const DemoV3 = () => {
               <PopoverContent
                 side="top"
                 align="end"
-                className="w-[450px] h-[30rem] p-0 overflow-hidden shadow-lg rounded-omar"
+                className="w-[450px] 2xl:w-[550px] h-[480px] 2xl:h-[700px] p-0 overflow-hidden shadow-lg rounded-omar"
               >
                 <ChatWindow
                   messages={messages}
