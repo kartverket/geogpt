@@ -5,7 +5,6 @@ requests
 psycopg2
 pgvector
 websockets
-psycopg2-binary
 numpy
 PyPDF2
 tiktoken
