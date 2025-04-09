@@ -51,6 +51,11 @@ import { useWebSocket } from "./chat_components";
 import { TOUR_STEP_IDS } from "@/lib/tour-constants";
 import { useTour } from "@/components/tour";
 
+export interface KartkatalogTabHandle {
+  search: (query: string) => void;
+  clearSelectedDatasets: () => void;
+}
+
 interface SearchResult {
   uuid: string;
   title?: string;
@@ -70,12 +75,10 @@ interface KartkatalogTabProps {
   ws: WebSocket | null;
 }
 
-export function KartkatalogTab({
-  className,
-  onReplaceIframe,
-  onDatasetDownload,
-  ws,
-}: KartkatalogTabProps) {
+export const KartkatalogTab = React.forwardRef<
+  KartkatalogTabHandle,
+  KartkatalogTabProps
+>(({ className, onReplaceIframe, onDatasetDownload, ws }, ref) => {
   const [isExpanded, setIsExpanded] = React.useState(true);
   const [searchInput, setSearchInput] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
@@ -132,6 +135,46 @@ export function KartkatalogTab({
       : contextSearchResults || [];
   }, [localSearchResults, contextSearchResults]);
 
+  // Define the internal function to clear selections
+  const clearSelectedDatasetsLocally = React.useCallback(() => {
+    setSelectedDatasets(new Set());
+    setSelectedDatasetsInfo(new Map());
+  }, []);
+
+  // Function to perform search programmatically
+  const performSearch = React.useCallback(
+    (query: string) => {
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        console.warn("WebSocket not open, cannot perform search.");
+        return;
+      }
+
+      setSearchInput(query); // Update the input field visually
+      setIsLoading(true);
+      setHasSearched(false);
+      setLocalSearchResults([]);
+
+      ws.send(
+        JSON.stringify({
+          action: "searchFormSubmit",
+          payload: query,
+        })
+      );
+      setIsExpanded(true); // Ensure the panel is open when search is triggered externally
+    },
+    [ws]
+  );
+
+  // Expose the search function using useImperativeHandle
+  React.useImperativeHandle(ref, () => ({
+    search: (query: string) => {
+      performSearch(query);
+    },
+    clearSelectedDatasets: () => {
+      clearSelectedDatasetsLocally(); // Call the internal function
+    },
+  }));
+
   React.useEffect(() => {
     if (ws) {
       const handleMessage = (event: MessageEvent) => {
@@ -151,20 +194,10 @@ export function KartkatalogTab({
     }
   }, [ws]);
 
+  // Original submit handler for the form
   const onSearchSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-
-    setIsLoading(true);
-    setHasSearched(false);
-    setLocalSearchResults([]);
-
-    ws.send(
-      JSON.stringify({
-        action: "searchFormSubmit",
-        payload: searchInput,
-      })
-    );
+    performSearch(searchInput); // Use the internal function now
   };
 
   // Add this just before the return statement in KartkatalogTab component
@@ -277,11 +310,6 @@ export function KartkatalogTab({
     }
   }, [openHoverCardId]);
 
-  const clearSelectedDatasets = () => {
-    setSelectedDatasets(new Set());
-    setSelectedDatasetsInfo(new Map());
-  };
-
   const SearchSkeleton = () => (
     <div className="px-4 py-3 border-b border-gray-200">
       <Skeleton className="h-5 w-3/4 mb-2 animate-pulse" />
@@ -388,7 +416,7 @@ export function KartkatalogTab({
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button
-                          onClick={clearSelectedDatasets}
+                          onClick={clearSelectedDatasetsLocally}
                           size="sm"
                           variant="outline"
                           className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
@@ -609,4 +637,6 @@ export function KartkatalogTab({
       </AlertDialog>
     </TooltipProvider>
   );
-}
+});
+
+KartkatalogTab.displayName = "KartkatalogTab";

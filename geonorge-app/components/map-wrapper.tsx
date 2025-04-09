@@ -165,8 +165,10 @@ function ZoomControl() {
 
 function AddressSearch({
   setSearchMarker,
+  onKartkatalogSearchRequest,
 }: {
   setSearchMarker: (marker: { lat: number; lng: number } | null) => void;
+  onKartkatalogSearchRequest: (query: string) => void;
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Address[]>([]);
@@ -226,6 +228,20 @@ function AddressSearch({
     searchInputRef.current?.focus();
   };
 
+  // Handle Enter key press for Kartkatalog search redirection
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (
+      e.key === "Enter" &&
+      searchResults.length === 0 &&
+      searchQuery.trim() !== ""
+    ) {
+      e.preventDefault(); // Prevent default form submission if any
+      onKartkatalogSearchRequest(searchQuery);
+      // Optionally clear the address search input after redirecting
+      // setSearchQuery('');
+    }
+  };
+
   return (
     <div
       className="absolute inset-x-0 top-4 z-[1000] flex justify-center mx-auto"
@@ -250,6 +266,7 @@ function AddressSearch({
               value={searchQuery}
               placeholder="Søk etter adresse... (trykk / for å søke)"
               onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={handleKeyDown}
               aria-label="Address search"
               className="w-full h-12 pl-10 pr-10 py-2 text-sm bg-white border border-gray-300 rounded- placeholder:text-gray-400 text-gray-800 focus:outline-none focus:border-color-gn-primary"
             />
@@ -392,6 +409,7 @@ interface MapWrapperProps {
   setUserMarker: (marker: { lat: number; lng: number } | null) => void;
   setSearchMarker: (marker: { lat: number; lng: number } | null) => void;
   onMapReady: (map: LeafletMap) => void;
+  onKartkatalogSearchRequest: (query: string) => void;
   showAddressSearch?: boolean;
 }
 
@@ -407,6 +425,7 @@ const MapWrapper: React.FC<MapWrapperProps> = ({
   setUserMarker,
   setSearchMarker,
   onMapReady,
+  onKartkatalogSearchRequest,
   showAddressSearch = true,
 }) => {
   // Move the Leaflet icon setup inside the component
@@ -493,7 +512,12 @@ const MapWrapper: React.FC<MapWrapperProps> = ({
     >
       <MapController onMapReady={onMapReady} />
 
-      {showAddressSearch && <AddressSearch setSearchMarker={setSearchMarker} />}
+      {showAddressSearch && (
+        <AddressSearch
+          setSearchMarker={setSearchMarker}
+          onKartkatalogSearchRequest={onKartkatalogSearchRequest}
+        />
+      )}
 
       {currentBaseLayer === "topo" && (
         <TileLayer
