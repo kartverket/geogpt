@@ -1,11 +1,12 @@
 import * as React from "react";
-import { ChevronDown, ChevronUp, Layers2, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Layers2, X, Eye, EyeOff } from "lucide-react";
 import { Checkbox } from "../../../components/ui/checkbox";
 import { TranslationKey } from "@/i18n/translations";
 
 interface WMSLayer {
   name: string;
   title: string;
+  legendUrl?: string;
 }
 
 interface TrackedDataset {
@@ -22,48 +23,56 @@ interface DatasetListProps {
   datasetScrollPositionRef: React.MutableRefObject<Record<string, number>>;
   mainScrollPositionRef: React.MutableRefObject<number>;
   onLayerChangeWithDataset?: (
-    datasetId: string,
-    layerName: string,
-    isChecked: boolean
+      datasetId: string,
+      layerName: string,
+      isChecked: boolean
   ) => void;
   onRemoveDataset?: (datasetId: string) => void;
   setExpandedDatasets: React.Dispatch<
-    React.SetStateAction<Record<string, boolean>>
+      React.SetStateAction<Record<string, boolean>>
   >;
   t: (key: TranslationKey) => string;
   highlightSearchTerm?: string;
 }
 
 export const DatasetList: React.FC<DatasetListProps> = ({
-  trackedDatasets,
-  expandedDatasets,
-  datasetScrollContainerRef,
-  datasetScrollPositionRef,
-  mainScrollPositionRef,
-  onLayerChangeWithDataset,
-  onRemoveDataset,
-  setExpandedDatasets,
-  t,
-  highlightSearchTerm = "",
-}) => {
-  // Håndterer utvidelse av dataset-liste med scroll-preservasjon
+                                                          trackedDatasets,
+                                                          expandedDatasets,
+                                                          datasetScrollContainerRef,
+                                                          datasetScrollPositionRef,
+                                                          mainScrollPositionRef,
+                                                          onLayerChangeWithDataset,
+                                                          onRemoveDataset,
+                                                          setExpandedDatasets,
+                                                          t,
+                                                          highlightSearchTerm = "",
+                                                        }) => {
+  const [legendVisible, setLegendVisible] = React.useState<
+      Record<string, boolean>
+  >({});
+
+  const toggleLegend = (key: string) => {
+    setLegendVisible((prev) => ({ ...prev, [key]: !prev[key] }));
+    console.log("Toggler:", key);
+  };
+
   const handleToggleDatasetExpansion = (datasetId: string) => {
     if (datasetScrollContainerRef.current) {
       mainScrollPositionRef.current =
-        datasetScrollContainerRef.current.scrollTop;
+          datasetScrollContainerRef.current.scrollTop;
     }
 
     if (expandedDatasets[datasetId] && datasetScrollContainerRef.current) {
       const datasetElement = datasetScrollContainerRef.current.querySelector(
-        `[data-dataset-id="${datasetId}"]`
+          `[data-dataset-id="${datasetId}"]`
       );
       if (datasetElement) {
         const scrollContainer = datasetElement.querySelector(
-          ".dataset-layer-container"
+            ".dataset-layer-container"
         ) as HTMLElement;
         if (scrollContainer) {
           datasetScrollPositionRef.current[datasetId] =
-            scrollContainer.scrollTop;
+              scrollContainer.scrollTop;
         }
       }
     }
@@ -75,26 +84,26 @@ export const DatasetList: React.FC<DatasetListProps> = ({
   };
 
   const handleLayerChange = (
-    datasetId: string,
-    layerName: string,
-    checked: boolean
+      datasetId: string,
+      layerName: string,
+      checked: boolean
   ) => {
     if (datasetScrollContainerRef.current) {
       mainScrollPositionRef.current =
-        datasetScrollContainerRef.current.scrollTop;
+          datasetScrollContainerRef.current.scrollTop;
     }
 
     if (datasetScrollContainerRef.current) {
       const datasetElement = datasetScrollContainerRef.current.querySelector(
-        `[data-dataset-id="${datasetId}"]`
+          `[data-dataset-id="${datasetId}"]`
       );
       if (datasetElement) {
         const scrollContainer = datasetElement.querySelector(
-          ".dataset-layer-container"
+            ".dataset-layer-container"
         ) as HTMLElement;
         if (scrollContainer) {
           datasetScrollPositionRef.current[datasetId] =
-            scrollContainer.scrollTop;
+              scrollContainer.scrollTop;
         }
       }
     }
@@ -107,14 +116,13 @@ export const DatasetList: React.FC<DatasetListProps> = ({
   const handleRemoveDataset = (datasetId: string) => {
     if (datasetScrollContainerRef.current) {
       mainScrollPositionRef.current =
-        datasetScrollContainerRef.current.scrollTop;
+          datasetScrollContainerRef.current.scrollTop;
     }
     if (onRemoveDataset) {
       onRemoveDataset(datasetId);
     }
   };
 
-  // Function to highlight text based on search term
   const highlightText = (text: string): React.ReactNode => {
     if (!highlightSearchTerm || highlightSearchTerm.trim() === "") {
       return text;
@@ -122,96 +130,135 @@ export const DatasetList: React.FC<DatasetListProps> = ({
 
     const parts = text.split(new RegExp(`(${highlightSearchTerm})`, "gi"));
     return (
-      <>
-        {parts.map((part, i) =>
-          part.toLowerCase() === highlightSearchTerm.toLowerCase() ? (
-            <mark key={i} className="bg-gray-200 px-0.5 rounded-omar">
-              {part}
-            </mark>
-          ) : (
-            part
-          )
-        )}
-      </>
+        <>
+          {parts.map((part, i) =>
+              part.toLowerCase() === highlightSearchTerm.toLowerCase() ? (
+                  <mark key={i} className="bg-gray-200 px-0.5 rounded-omar">
+                    {part}
+                  </mark>
+              ) : (
+                  part
+              )
+          )}
+        </>
     );
   };
 
   return (
-    <div
-      className="space-y-2 max-h-[30vh] overflow-y-auto"
-      ref={datasetScrollContainerRef}
-    >
-      {trackedDatasets.map((dataset) => (
-        <div
-          key={dataset.id}
-          className="border border-gray-200 rounded-omar bg-white overflow-hidden"
-          data-dataset-id={dataset.id}
-        >
-          <div
-            className="flex items-center justify-between p-2.5 bg-gray-50 cursor-pointer border-b border-gray-100"
-            onClick={() => handleToggleDatasetExpansion(dataset.id)}
-          >
-            <div className="flex items-center gap-2">
-              <div className="bg-color-gn-primary/10 rounded-md p-1.5 flex items-center justify-center">
-                <Layers2 className="h-3.5 w-3.5 text-color-gn-primary" />
-              </div>
-              <span className="font-medium text-sm">{dataset.title}</span>
-              <span className="text-xs bg-color-gn-primary/10 text-color-gn-primary px-1.5 py-0.5 rounded-omar">
+      <div
+          className="space-y-2 max-h-[30vh] overflow-y-auto"
+          ref={datasetScrollContainerRef}
+      >
+        {trackedDatasets.map((dataset) => (
+            <div
+                key={dataset.id}
+                className="border border-gray-200 rounded-omar bg-white overflow-hidden"
+                data-dataset-id={dataset.id}
+            >
+              <div
+                  className="flex items-center justify-between p-2.5 bg-gray-50 cursor-pointer border-b border-gray-100"
+                  onClick={() => handleToggleDatasetExpansion(dataset.id)}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="bg-color-gn-primary/10 rounded-md p-1.5 flex items-center justify-center">
+                    <Layers2 className="h-3.5 w-3.5 text-color-gn-primary" />
+                  </div>
+                  <span className="font-medium text-sm">{dataset.title}</span>
+                  <span className="text-xs bg-color-gn-primary/10 text-color-gn-primary px-1.5 py-0.5 rounded-omar">
                 {dataset.selectedLayers.length}/{dataset.availableLayers.length}
               </span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              {onRemoveDataset && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRemoveDataset(dataset.id);
-                  }}
-                  className="p-1 rounded-md hover:bg-gray-100 text-gray-500 hover:text-red-500 transition-colors"
-                  title={t("remove_dataset")}
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-              {expandedDatasets[dataset.id] ? (
-                <ChevronUp className="h-4 w-4 text-gray-500" />
-              ) : (
-                <ChevronDown className="h-4 w-4 text-gray-500" />
-              )}
-            </div>
-          </div>
-
-          {expandedDatasets[dataset.id] && (
-            <div className="max-h-[20vh] overflow-y-auto dataset-layer-container">
-              {dataset.availableLayers.map((layer) => (
-                <div
-                  key={`${dataset.id}-${layer.name}`}
-                  className="flex items-center gap-2.5 p-2.5 hover:bg-gray-50 transition-colors border-t border-gray-100 first:border-t-0"
-                >
-                  <Checkbox
-                    checked={dataset.selectedLayers.includes(layer.name)}
-                    id={`${dataset.id}-${layer.name}`}
-                    onCheckedChange={(checked) =>
-                      handleLayerChange(
-                        dataset.id,
-                        layer.name,
-                        checked as boolean
-                      )
-                    }
-                    className="h-4 w-4 border-gray-300 rounded"
-                  />
-                  <label
-                    htmlFor={`${dataset.id}-${layer.name}`}
-                    className="text-sm cursor-pointer flex-1 truncate text-gray-700"
-                  >
-                    {highlightText(layer.title)}
-                  </label>
                 </div>
-              ))}
+                <div className="flex items-center gap-1.5">
+                  {onRemoveDataset && (
+                      <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveDataset(dataset.id);
+                          }}
+                          className="p-1 rounded-md hover:bg-gray-100 text-gray-500 hover:text-red-500 transition-colors"
+                          title={t("remove_dataset")}
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                  )}
+                  {expandedDatasets[dataset.id] ? (
+                      <ChevronUp className="h-4 w-4 text-gray-500" />
+                  ) : (
+                      <ChevronDown className="h-4 w-4 text-gray-500" />
+                  )}
+                </div>
+              </div>
+
+              {expandedDatasets[dataset.id] && (
+                  <div className="max-h-[20vh] overflow-y-auto dataset-layer-container">
+                    {dataset.availableLayers.map((layer) => (
+                        <div
+                            key={`${dataset.id}-${layer.name}`}
+                            className="p-2.5 border-t border-gray-100 first:border-t-0"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <Checkbox
+                                checked={dataset.selectedLayers.includes(layer.name)}
+                                id={`${dataset.id}-${layer.name}`}
+                                onCheckedChange={(checked) =>
+                                    handleLayerChange(dataset.id, layer.name, checked as boolean)
+                                }
+                                className="h-4 w-4 border-gray-300 rounded"
+                            />
+                            <label
+                                htmlFor={`${dataset.id}-${layer.name}`}
+                                className="text-sm cursor-pointer flex-1 truncate text-gray-700"
+                            >
+                              {highlightText(layer.title)}
+                            </label>
+                            {layer.legendUrl && (
+                                <button
+                                    onClick={() => toggleLegend(`${dataset.id}-${layer.name}`)}
+                                    className="text-sm text-blue-500 hover:underline flex items-center gap-1"
+                                >
+                                  {legendVisible[`${dataset.id}-${layer.name}`] ? (
+                                      <>
+                                        <EyeOff className="w-4 h-4" /> Skjul tegnforklaring
+                                      </>
+                                  ) : (
+                                      <>
+                                        <Eye className="w-4 h-4" /> Vis tegnforklaring
+                                      </>
+                                  )}
+                                </button>
+                            )}
+
+                            {/* 🔽 BILDET VISES HER NÅR TOGGELES */}
+                            {legendVisible[`${dataset.id}-${layer.name}`] && layer.legendUrl && (
+                                <img
+                                    src={layer.legendUrl}
+                                    alt={`Tegnforklaring for ${layer.title}`}
+                                    className="mt-2 ml-6 border rounded shadow max-w-full"
+                                />
+                            )}
+                          </div>
+                          {legendVisible[`${dataset.id}-${layer.name}`] && layer.legendUrl && (
+                              <>
+                                <p className="text-xs text-gray-400 ml-6 break-all">
+                                  🔎 Viser bilde fra: {layer.legendUrl}
+                                </p>
+                                <img
+                                    src={layer.legendUrl}
+                                    alt={`Tegnforklaring for ${layer.title}`}
+                                    className="mt-2 ml-6 border rounded shadow max-w-full"
+                                    onError={(e) => {
+                                      console.warn("🚫 Kunne ikke laste bilde:", layer.legendUrl);
+                                      (e.target as HTMLImageElement).style.display = "none";
+                                    }}
+                                />
+                              </>
+                          )}
+                        </div>
+                    ))}
+                  </div>
+              )}
             </div>
-          )}
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
   );
 };

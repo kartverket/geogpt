@@ -7,16 +7,10 @@ export const useWebSocket = () => {
   const [isStreaming, setIsStreaming] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [uuidToFind, setUuidToFind] = useState<string>("");
-  const [specificObject, setSpecificObject] = useState<SearchResult | null>(
-    null
-  );
+  const [specificObject, setSpecificObject] = useState<SearchResult | null>(null);
   const [datasetName, setDatasetName] = useState<string>("");
-  const [geographicalAreas, setGeographicalAreas] = useState<
-    Array<{ type: string; name: string; code: string }>
-  >([]);
-  const [projections, setProjections] = useState<
-    Array<{ name: string; code: string }>
-  >([]);
+  const [geographicalAreas, setGeographicalAreas] = useState<Array<{ type: string; name: string; code: string }>>([]);
+  const [projections, setProjections] = useState<Array<{ name: string; code: string }>>([]);
   const [formats, setFormats] = useState<string[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [reconnectAttempt, setReconnectAttempt] = useState(0);
@@ -31,9 +25,8 @@ export const useWebSocket = () => {
 
   const connectWebSocket = useCallback(() => {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const host = window.location.hostname; // This will work in all environments
-    const port = "8080"; // Your WebSocket port
-
+    const host = window.location.hostname;
+    const port = "8080";
     const wsUrl = `${protocol}//${host}:${port}`;
     const socket = new WebSocket(wsUrl);
     setWs(socket);
@@ -41,18 +34,11 @@ export const useWebSocket = () => {
     socket.onopen = () => {
       setIsConnected(true);
       setReconnectAttempt(0);
-      // Send an initial message when the connection opens
-      socket.send(
-        JSON.stringify({
-          action: "searchFormSubmit",
-          payload: "",
-        })
-      );
+      socket.send(JSON.stringify({ action: "searchFormSubmit", payload: "" }));
     };
 
     socket.onclose = () => {
       setIsConnected(false);
-      // Attempt to reconnect after 2 seconds
       setTimeout(() => {
         if (reconnectAttempt < 5) {
           setReconnectAttempt((prev) => prev + 1);
@@ -69,8 +55,7 @@ export const useWebSocket = () => {
         {
           title: "Connection Error",
           type: "text",
-          content:
-            "System: Connection error. Please check your network connection.",
+          content: "System: Connection error. Please check your network connection.",
         },
       ]);
     };
@@ -96,9 +81,7 @@ export const useWebSocket = () => {
     };
   }, []);
 
-  const dedupeAreas = (
-    areas: Array<{ type: string; name: string; code: string }>
-  ) => {
+  const dedupeAreas = (areas: Array<{ type: string; name: string; code: string }>) => {
     return Array.from(new Map(areas.map((area) => [area.code, area])).values());
   };
 
@@ -108,6 +91,50 @@ export const useWebSocket = () => {
 
   const dedupeFormats = (fmts: string[]) => {
     return Array.from(new Set(fmts));
+  };
+
+  const fetchLegendUrls = async (wmsUrl: string, layers: any[]) => {
+    const getCapabilitiesUrl = wmsUrl.includes("?")
+        ? `${wmsUrl}&request=GetCapabilities&service=WMS`
+        : `${wmsUrl}?request=GetCapabilities&service=WMS`;
+
+    console.log("🌐 Fetching GetCapabilities from:", getCapabilitiesUrl);
+
+    try {
+      const response = await fetch(getCapabilitiesUrl);
+      const text = await response.text();
+      const parser = new DOMParser();
+      const xml = parser.parseFromString(text, "text/xml");
+
+      return layers.map((layer) => {
+        console.log(`🔎 Looking for legend for layer: ${layer.name}`);
+        const layerNode = Array.from(xml.getElementsByTagName("Layer")).find((el) => {
+          const nameNode = el.getElementsByTagName("Name")[0];
+          return nameNode && nameNode.textContent === layer.name;
+        });
+
+        let legendUrl: string | undefined = undefined;
+        if (layerNode) {
+          const legendNode = layerNode.querySelector("LegendURL > OnlineResource");
+          if (legendNode) {
+            legendUrl = legendNode.getAttribute("xlink:href") || undefined;
+            console.log(`🖼️ Found legend URL for ${layer.name}: ${legendUrl}`);
+          } else {
+            console.warn(`⚠️ No legend found for layer: ${layer.name}`);
+          }
+        } else {
+          console.warn(`❌ Layer node not found in XML for: ${layer.name}`);
+        }
+
+        return {
+          ...layer,
+          legendUrl,
+        };
+      });
+    } catch (err) {
+      console.error("Failed to fetch legend URLs:", err);
+      return layers;
+    }
   };
 
   const handleServerMessage = (data: WebSocketMessage) => {
@@ -120,26 +147,15 @@ export const useWebSocket = () => {
         if (payload.isNewMessage && !payload.payload) break;
         setMessages((prev) => {
           const lastMsg = prev[prev.length - 1];
-          if (
-            !lastMsg ||
-            lastMsg.type !== "streaming" ||
-            payload.isNewMessage
-          ) {
+          if (!lastMsg || lastMsg.type !== "streaming" || payload.isNewMessage) {
             return [
               ...prev,
-              {
-                title: "Streaming message",
-                type: "streaming",
-                content: payload.payload || "",
-              },
+              { title: "Streaming message", type: "streaming", content: payload.payload || "" },
             ];
           } else {
             return [
               ...prev.slice(0, -1),
-              {
-                ...lastMsg,
-                content: lastMsg.content + (payload.payload || ""),
-              },
+              { ...lastMsg, content: lastMsg.content + (payload.payload || "") },
             ];
           }
         });
@@ -152,17 +168,41 @@ export const useWebSocket = () => {
           if (!lastMsg || lastMsg.type !== "streaming") return prev;
           return [
             ...prev.slice(0, -1),
-            {
-              title: "Stream Complete",
-              type: "text",
-              content: `System: ${lastMsg.content}`,
-            },
+            { title: "Stream Complete", type: "text", content: `System: ${lastMsg.content}` },
           ];
         });
         break;
 
       case "searchVdbResults":
-        setSearchResults(payload);
+        console.log("[WebSocket] Received searchVdbResults:", payload);
+
+        Promise.all(
+            payload.map(async (dataset: any, index: number) => {
+              const wmsUrl = dataset.wms_url || dataset.wmsUrl?.wms_url;
+              const layers = dataset.available_layers || dataset.wmsUrl?.available_layers;
+
+              console.log(`📦 Dataset #${index + 1}: ${dataset.title}`);
+              console.log("🔍 Extracted wmsUrl:", wmsUrl);
+              console.log("📊 Layers:", layers);
+
+              if (wmsUrl && layers && layers.length > 0) {
+                const enrichedLayers = await fetchLegendUrls(wmsUrl, layers);
+                console.log("✅ Enriched layers with legendUrls:", enrichedLayers);
+
+                return {
+                  ...dataset,
+                  available_layers: enrichedLayers,
+                };
+              } else {
+                console.warn("⚠️ Missing wmsUrl or layers for dataset:", dataset.title);
+              }
+
+              return dataset;
+            })
+        ).then((enriched) => {
+          console.log("🎉 Final enriched dataset list:", enriched);
+          setSearchResults(enriched);
+        });
         break;
 
       case "insertImage":
@@ -174,7 +214,7 @@ export const useWebSocket = () => {
             type: "image",
             imageUrl: datasetImageUrl,
             downloadUrl: datasetDownloadUrl,
-            wmsUrl: wmsUrl,
+            wmsUrl,
           },
         ]);
         break;
@@ -183,11 +223,7 @@ export const useWebSocket = () => {
         if (payload && Array.isArray(payload)) {
           const firstUuid = payload[0].uuid;
           setUuidToFind(firstUuid);
-
-          const datasetObject = payload.find(
-            (item: SearchResult) => item.uuid === firstUuid
-          );
-
+          const datasetObject = payload.find((item: SearchResult) => item.uuid === firstUuid);
           setSpecificObject(datasetObject || null);
 
           if (datasetObject) {
@@ -195,13 +231,12 @@ export const useWebSocket = () => {
               const lastIndex = prev.length - 1;
               for (let i = lastIndex; i >= 0; i--) {
                 if (
-                  prev[i].type === "image" &&
-                  (!prev[i].downloadFormats ||
-                    prev[i].downloadFormats?.length === 0)
+                    prev[i].type === "image" &&
+                    (!prev[i].downloadFormats || prev[i].downloadFormats?.length === 0)
                 ) {
                   const updatedMessages = [...prev];
                   updatedMessages[i] = {
-                    ...updatedMessages[i],
+                    ...prev[i],
                     downloadFormats: datasetObject.downloadFormats || [],
                     title: datasetObject.title || "",
                     uuid: datasetObject.uuid,
@@ -213,7 +248,6 @@ export const useWebSocket = () => {
             });
 
             setDatasetName(datasetObject.title || "");
-
             const rawGeoAreas = datasetObject.downloadFormats.map((fmt) => ({
               type: fmt.type,
               name: fmt.name,
@@ -221,19 +255,13 @@ export const useWebSocket = () => {
             }));
             setGeographicalAreas(dedupeAreas(rawGeoAreas));
 
-            const rawProjections = datasetObject.downloadFormats.flatMap(
-              (fmt) =>
-                fmt.projections
-                  ? fmt.projections.map((proj) => ({
-                      name: proj.name,
-                      code: proj.code,
-                    }))
-                  : []
+            const rawProjections = datasetObject.downloadFormats.flatMap((fmt) =>
+                fmt.projections ? fmt.projections.map((proj) => ({ name: proj.name, code: proj.code })) : []
             );
             setProjections(dedupeProjections(rawProjections));
 
             const rawFormats = datasetObject.downloadFormats.flatMap((fmt) =>
-              fmt.formats ? fmt.formats.map((format) => format.name) : []
+                fmt.formats ? fmt.formats.map((format) => format.name) : []
             );
             setFormats(dedupeFormats(rawFormats));
           }
@@ -249,16 +277,13 @@ export const useWebSocket = () => {
 
   const sendMessage = (message: string) => {
     if (!ws || ws.readyState !== WebSocket.OPEN) {
-      // Attempt to reconnect if not connected
       if (!isConnected) {
         connectWebSocket();
       }
       return;
     }
 
-    // Set isStreaming to true immediately when sending
     setIsStreaming(true);
-
     ws.send(JSON.stringify({ action: "chatFormSubmit", payload: message }));
     setMessages((prev) => [
       ...prev,
