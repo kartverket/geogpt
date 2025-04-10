@@ -49,7 +49,7 @@ export const Section: React.FC<SectionProps> = ({
         )}
         <h3
           className={`font-medium flex-1 ${
-            collapsible && isOpen ? "text-color-gn-primary" : "text-gray-800"
+            collapsible && isOpen ? "text-color-gn-primary" : "text-color-gn-secondary"
           }`}
         >
           {title}

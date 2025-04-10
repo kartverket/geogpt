@@ -47,7 +47,7 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = ({
   ];
 
   return (
-    <div className="border-t bg-white flex-shrink-0 shadow-[0_-1px_3px_rgba(0,0,0,0.05)]">
+    <div className="border-t bg-white flex-shrink-0 shadow-sm">
       <div className="p-3">
         <div className="grid grid-cols-3 gap-2 mb-3">
           {footerLinks.map((item, index) => (

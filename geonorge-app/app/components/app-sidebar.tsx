@@ -13,6 +13,7 @@ import {
   Sidebar,
   SidebarContent,
   SidebarHeader,
+  SidebarTrigger,
 } from "@/components/ui/sidebar";
 
 import { SidebarFooter } from "@/app/components/sidebar_components/SidebarFooter";
@@ -46,14 +47,7 @@ interface TrackedDataset {
   titleMatch?: boolean;
 }
 
-export function AppSidebar({
-  availableLayers = [],
-  trackedDatasets = [],
-  onLayerChangeWithDataset,
-  onRemoveDataset,
-  onChangeBaseLayer,
-  ...props
-}: React.ComponentProps<typeof Sidebar> & {
+interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   availableLayers?: WMSLayer[];
   trackedDatasets?: TrackedDataset[];
   onLayerChangeWithDataset?: (
@@ -63,11 +57,23 @@ export function AppSidebar({
   ) => void;
   onRemoveDataset?: (datasetId: string) => void;
   onChangeBaseLayer?: LayerChangeFunctions;
-}) {
+  setSearchMarker: (marker: { lat: number; lng: number } | null) => void;
+}
+
+export function AppSidebar({
+  availableLayers = [],
+  trackedDatasets = [],
+  onLayerChangeWithDataset,
+  onRemoveDataset,
+  onChangeBaseLayer,
+  setSearchMarker,
+  ...props
+}: AppSidebarProps) {
   const { language, setLanguage, t } = useLanguage();
   const [layerSearch, setLayerSearch] = React.useState("");
   const [isLayerSectionVisible, setIsLayerSectionVisible] = useState(true);
   const [isActionSectionVisible, setIsActionSectionVisible] = useState(true);
+  const [isAddressSectionVisible, setIsAddressSectionVisible] = useState(true);
   const [selectedBaseMap, setSelectedBaseMap] = useState<string>("landskart");
   const [isBaseMapSectionVisible, setIsBaseMapSectionVisible] = useState(true);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
@@ -251,9 +257,12 @@ export function AppSidebar({
         "transition-transform duration-300 ease-in-out",
         "flex flex-col h-full"
       )}
-        >
+    >
       <SidebarHeader className="p-4 border-b bg-white shadow-sm flex-shrink-0">
-        <GeoNorgeLogo className="h-auto w-40 mx-auto" />
+        <div className="flex flex-row items-center justify-between">
+          <GeoNorgeLogo className="h-auto w-40 mx-auto" />
+          <SidebarTrigger />
+        </div>
       </SidebarHeader>
       <SidebarContent className="p-4 flex-grow overflow-y-auto">
         {showResetTourView ? (
@@ -265,6 +274,7 @@ export function AppSidebar({
         ) : (
           <Temakart
             t={t}
+            setSearchMarker={setSearchMarker} // Ensure this prop is passed
             layerSearch={layerSearch}
             setLayerSearch={setLayerSearch}
             filteredLayers={filteredLayers}
@@ -285,9 +295,11 @@ export function AppSidebar({
             isBaseMapSectionVisible={isBaseMapSectionVisible}
             isLayerSectionVisible={isLayerSectionVisible}
             isActionSectionVisible={isActionSectionVisible}
+            isAddressSectionVisible={isAddressSectionVisible}
             setIsBaseMapSectionVisible={setIsBaseMapSectionVisible}
             setIsLayerSectionVisible={setIsLayerSectionVisible}
             setIsActionSectionVisible={setIsActionSectionVisible}
+            setIsAddressSectionVisible={setIsAddressSectionVisible}
             data={data}
           />
         )}

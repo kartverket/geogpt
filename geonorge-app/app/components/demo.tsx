@@ -19,6 +19,7 @@ import FileDownloadModal from "@/app/components/FileDownloadModal/FileDownloadMo
 import FullScreenChatView from "@/app/components/chat_components/FullScreenChatView";
 import { ChatWindow } from "./chat_components";
 import DuplicateDatasetModal from "./multipleDasetModal";
+import { SidebarMinimized } from "./sidebar_components/sidebar-minimized";
 
 // UI Components
 import { Button } from "@/components/ui/button";
@@ -88,8 +89,6 @@ const DemoV3 = () => {
   // Handle map updates from WebSocket
   useEffect(() => {
     if (mapUpdates) {
-      console.log("Processing map updates:", mapUpdates);
-
       // Handle center coordinates update
       if (mapUpdates.center) {
         mapState.setMap?.((prevMap: any) => {
@@ -192,11 +191,6 @@ const DemoV3 = () => {
 
   // Effect to control popover open state based on tour step
   useEffect(() => {
-    console.log("currentStep", currentStep);
-    console.log(
-      "chatManagement.blockPopoverClose",
-      chatManagement.blockPopoverClose
-    );
     if (currentStep === 0 || currentStep === 1 || currentStep === 2) {
       // Open popover for initial tour steps if not already open
       if (!chatManagement.isPopoverOpen) {
@@ -261,6 +255,8 @@ const DemoV3 = () => {
               onMapReady={mapState.handleMapReady}
               showAddressSearch={true}
             />
+
+            <SidebarMinimized />
 
             {/* KartkatalogTab */}
             <div className="fixed top-[25%] right-0 -translate-y-0 max-h-[450px]">
@@ -345,6 +341,7 @@ const DemoV3 = () => {
             changeToRasterKart,
             changeToSjoKart,
           }}
+          setSearchMarker={mapState.setSearchMarker} // Pass the function here
           className="z-40"
         />
 

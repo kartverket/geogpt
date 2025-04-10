@@ -55,7 +55,7 @@ export const ActionItem: React.FC<ActionItemProps> = ({
           <TooltipTrigger asChild>
             <div onClick={handleClick}>{content}</div>
           </TooltipTrigger>
-          <TooltipContent className="bg-white border text-color-gn-secondary shadow-lg">
+          <TooltipContent side="right" className="bg-white border text-color-gn-secondary shadow-lg">
             <p>{disabledMessage}</p>
           </TooltipContent>
         </Tooltip>

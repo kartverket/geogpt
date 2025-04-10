@@ -18,7 +18,7 @@ export const useChatManagement = ({
   replaceIframe,
 }: ChatManagementProps) => {
   const [chatInput, setChatInput] = useState<string>("");
-  const [isPopoverOpen, setIsPopoverOpen] = useState(true);
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [preventOutsideClose, setPreventOutsideClose] = useState(true);
 

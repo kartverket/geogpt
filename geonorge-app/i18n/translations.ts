@@ -3,11 +3,6 @@ export type Language = "nb" | "nn" | "en";
 export type TranslationKey =
   | "background_map"
   | "theme_maps"
-  | "search_layers"
-  | "active_datasets"
-  | "deselect_all"
-  | "remove_dataset"
-  | "no_layers_found"
   | "tool"
   | "draw_and_measure"
   | "share_map"
@@ -19,9 +14,6 @@ export type TranslationKey =
   | "grayscale_map"
   | "raster_map"
   | "sea_map"
-  | "no_datasets_selected"
-  | "no_layers_available"
-  | "layers"
   | "reset_tour_title"
   | "tour_reset_message"
   | "reset_tour_button"
@@ -37,18 +29,14 @@ export type TranslationKey =
   | "feedback_form"
   | "close_button"
   | "feature_not_available"
-  | "remove_dataset_tooltip"
-  | "expand_collapse_tooltip";
+  | "search_address_placeholder"
+  | "search_address"
+  | "language";
 
 export const translations: Record<Language, Record<TranslationKey, string>> = {
   nb: {
     background_map: "Bakgrunnskart",
     theme_maps: "Temakart",
-    active_datasets: "Aktive datasett",
-    deselect_all: "Fjern alle valgte lag",
-    remove_dataset: "Fjern datasett",
-    search_layers: "Søk etter lag...",
-    no_layers_found: "Ingen lag funnet",
     tool: "Verktøy",
     draw_and_measure: "TEGNE OG MÅLE",
     share_map: "DELE KARTET",
@@ -60,10 +48,6 @@ export const translations: Record<Language, Record<TranslationKey, string>> = {
     grayscale_map: "Gråtone",
     raster_map: "Rasterkart",
     sea_map: "Sjøkart",
-
-    no_datasets_selected: "Ingen datasett er valgt",
-    no_layers_available: "Ingen lag tilgjengelig",
-    layers: "Lag",
 
     reset_tour_title: "Tilbakestill omvisning",
     tour_reset_message:
@@ -85,17 +69,13 @@ export const translations: Record<Language, Record<TranslationKey, string>> = {
     feedback_form: "Gå til tilbakemeldingsskjema",
     close_button: "Lukk",
     feature_not_available: "Denne funksjonen er ikke tilgjengelig ennå",
-    remove_dataset_tooltip: "Fjern datasett",
-    expand_collapse_tooltip: "Åpne/Lukk",
+    search_address: "Adressesøk",
+    search_address_placeholder: "Søk etter adresse",
+    language: "Språk",
   },
   nn: {
     background_map: "Bakgrunnskart",
     theme_maps: "Temakart",
-    active_datasets: "Aktive datasett",
-    deselect_all: "Fjern alle valgte lag",
-    remove_dataset: "Fjern datasett",
-    search_layers: "Søk etter lag...",
-    no_layers_found: "Ingen lag funne",
     tool: "Verktøy",
     draw_and_measure: "TEIKNE OG MÅLE",
     share_map: "DELE KARTET",
@@ -107,10 +87,6 @@ export const translations: Record<Language, Record<TranslationKey, string>> = {
     grayscale_map: "Gråtone",
     raster_map: "Rasterkart",
     sea_map: "Sjøkart",
-
-    no_datasets_selected: "Ingen datasett er valde",
-    no_layers_available: "Ingen lag tilgjengelege",
-    layers: "Lag",
 
     reset_tour_title: "Tilbakestill omvising",
     tour_reset_message:
@@ -132,17 +108,13 @@ export const translations: Record<Language, Record<TranslationKey, string>> = {
     feedback_form: "Gå til tilbakemeldingsskjema",
     close_button: "Lukk",
     feature_not_available: "Denne funksjonen er ikkje tilgjengeleg enno",
-    remove_dataset_tooltip: "Fjern datasett",
-    expand_collapse_tooltip: "Opne/Lukk",
+    search_address: "Adressesøk",
+    search_address_placeholder: "Søk etter adresse",
+    language: "Språk",
   },
   en: {
     background_map: "Background Map",
     theme_maps: "Thematic Maps",
-    active_datasets: "Active datasets",
-    deselect_all: "Deselect all layers",
-    remove_dataset: "Remove dataset",
-    search_layers: "Search for layers...",
-    no_layers_found: "No layers found",
     tool: "Tools",
     draw_and_measure: "DRAW AND MEASURE",
     share_map: "SHARE MAP",
@@ -154,10 +126,6 @@ export const translations: Record<Language, Record<TranslationKey, string>> = {
     grayscale_map: "Grayscale",
     raster_map: "Raster map",
     sea_map: "Sea map",
-
-    no_datasets_selected: "No datasets selected",
-    no_layers_available: "No layers available",
-    layers: "Layers",
 
     reset_tour_title: "Reset Tour",
     tour_reset_message:
@@ -178,7 +146,8 @@ export const translations: Record<Language, Record<TranslationKey, string>> = {
     feedback_form: "Go to feedback form",
     close_button: "Close",
     feature_not_available: "This feature is not available yet",
-    remove_dataset_tooltip: "Remove dataset",
-    expand_collapse_tooltip: "Expand/Collapse",
+    search_address: "Address Search",
+    search_address_placeholder: "Search for address... (press / to search)",
+    language: "Language",
   },
 };
