@@ -68,6 +68,7 @@ export function AppSidebar({
   const [layerSearch, setLayerSearch] = React.useState("");
   const [isLayerSectionVisible, setIsLayerSectionVisible] = useState(true);
   const [isActionSectionVisible, setIsActionSectionVisible] = useState(true);
+  const [isAddressSectionVisible, setIsAddressSectionVisible] = useState(true);
   const [selectedBaseMap, setSelectedBaseMap] = useState<string>("landskart");
   const [isBaseMapSectionVisible, setIsBaseMapSectionVisible] = useState(true);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
@@ -251,7 +252,7 @@ export function AppSidebar({
         "transition-transform duration-300 ease-in-out",
         "flex flex-col h-full"
       )}
-        >
+    >
       <SidebarHeader className="p-4 border-b bg-white shadow-sm flex-shrink-0">
         <GeoNorgeLogo className="h-auto w-40 mx-auto" />
       </SidebarHeader>
@@ -285,9 +286,11 @@ export function AppSidebar({
             isBaseMapSectionVisible={isBaseMapSectionVisible}
             isLayerSectionVisible={isLayerSectionVisible}
             isActionSectionVisible={isActionSectionVisible}
+            isAddressSectionVisible={isAddressSectionVisible}
             setIsBaseMapSectionVisible={setIsBaseMapSectionVisible}
             setIsLayerSectionVisible={setIsLayerSectionVisible}
             setIsActionSectionVisible={setIsActionSectionVisible}
+            setIsAddressSectionVisible={setIsAddressSectionVisible}
             data={data}
           />
         )}

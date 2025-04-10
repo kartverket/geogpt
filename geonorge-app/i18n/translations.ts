@@ -38,6 +38,8 @@ export type TranslationKey =
   | "close_button"
   | "feature_not_available"
   | "remove_dataset_tooltip"
+  | "search_address_placeholder"
+  | "search_address"
   | "expand_collapse_tooltip";
 
 export const translations: Record<Language, Record<TranslationKey, string>> = {
@@ -87,6 +89,8 @@ export const translations: Record<Language, Record<TranslationKey, string>> = {
     feature_not_available: "Denne funksjonen er ikke tilgjengelig ennå",
     remove_dataset_tooltip: "Fjern datasett",
     expand_collapse_tooltip: "Åpne/Lukk",
+    search_address: "Adressesøk",
+    search_address_placeholder: "Søk etter adresse",
   },
   nn: {
     background_map: "Bakgrunnskart",
@@ -134,6 +138,8 @@ export const translations: Record<Language, Record<TranslationKey, string>> = {
     feature_not_available: "Denne funksjonen er ikkje tilgjengeleg enno",
     remove_dataset_tooltip: "Fjern datasett",
     expand_collapse_tooltip: "Opne/Lukk",
+    search_address: "Adressesøk",
+    search_address_placeholder: "Søk etter adresse",
   },
   en: {
     background_map: "Background Map",
@@ -180,5 +186,7 @@ export const translations: Record<Language, Record<TranslationKey, string>> = {
     feature_not_available: "This feature is not available yet",
     remove_dataset_tooltip: "Remove dataset",
     expand_collapse_tooltip: "Expand/Collapse",
+    search_address: "Adressesøk",
+    search_address_placeholder: "Search after address",
   },
 };

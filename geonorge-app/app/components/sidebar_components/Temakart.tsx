@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Map, Layers2, Wrench } from "lucide-react";
+import { Map, Layers2, Wrench, Home } from "lucide-react";
 import { Section } from "@/app/components/sidebar_components/Section";
 import { BaseMapSelector } from "@/app/components/sidebar_components/BaseMapSelector";
 import { SearchInput } from "@/app/components/sidebar_components/SearchInput";
@@ -41,9 +41,11 @@ interface Props {
   isBaseMapSectionVisible: boolean;
   isLayerSectionVisible: boolean;
   isActionSectionVisible: boolean;
+  isAddressSectionVisible: boolean;
   setIsBaseMapSectionVisible: (val: boolean) => void;
   setIsLayerSectionVisible: (val: boolean) => void;
   setIsActionSectionVisible: (val: boolean) => void;
+  setIsAddressSectionVisible: (val: boolean) => void;
   data: {
     actions: {
       title: string;
@@ -76,9 +78,11 @@ export const Temakart: React.FC<Props> = ({
   isBaseMapSectionVisible,
   isLayerSectionVisible,
   isActionSectionVisible,
+  isAddressSectionVisible,
   setIsBaseMapSectionVisible,
   setIsLayerSectionVisible,
   setIsActionSectionVisible,
+  setIsAddressSectionVisible,
   data,
 }) => {
   // State to track if we're displaying search results
@@ -91,6 +95,16 @@ export const Temakart: React.FC<Props> = ({
 
   return (
     <div className="space-y-4">
+      <Section
+        id="address"
+        collapsible
+        title={t("search_address")}
+        icon={Home}
+        isOpen={isAddressSectionVisible}
+        onToggle={() => setIsAddressSectionVisible(!isAddressSectionVisible)}
+      >
+        <div>ADDRESS SEARCH LOGIC</div>
+      </Section>
       <Section
         id="basemap"
         collapsible
