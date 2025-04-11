@@ -93,22 +93,6 @@ async def fetch_get_data_api(uuid):
         print(f'Error fetching wms-data for {uuid}', str(error))
         return []
 
-async def get_wms(uuid):
-    """Get the WMS URL for a dataset.
-
-    Args:
-        uuid (str): The dataset UUID
-
-    Returns:
-        str: WMS URL or 'None' if not found
-    """
-    try:
-        raw = await fetch_get_data_api(uuid)
-        res = raw.get('Distributions', {}).get('RelatedViewServices', [{}])[0].get('MapUrl')
-        return res if res else 'None'
-    except Exception:
-        return 'None'
-
 def convert_v1_to_v2(json_data):
     """Convert API V1 format to V2 format.
 
