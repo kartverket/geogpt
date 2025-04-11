@@ -3,6 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Chat as FullScreenChat } from "@/components/ui/chat";
 import GeoNorgeIcon from "@/components/ui/GeoNorgeIcon";
 
+// Define or import DownloadInfo
+interface DownloadInfo {
+  uuid: string;
+  title: string;
+  downloadUrl: string;
+  downloadFormats: any[];
+}
+
 interface FullScreenChatViewProps {
   messages: any[];
   chatInput: string;
@@ -12,7 +20,7 @@ interface FullScreenChatViewProps {
   handleSubmit: (e?: { preventDefault?: () => void }) => void;
   handleAppend: (message: { role: "user"; content: string }) => void;
   onWmsClick: (wmsUrl: any, datasetTitle?: string) => void;
-  onDownloadClick: (url: string) => void;
+  onDownloadClick: (info: DownloadInfo) => void;
   exitFullScreen: () => void;
 }
 
