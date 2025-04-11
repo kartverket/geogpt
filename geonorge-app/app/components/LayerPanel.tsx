@@ -14,7 +14,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useWebSocket } from "./chat_components/useWebSocket";
 import { WMSLayer, SearchResult } from "./chat_components/types";
@@ -148,18 +147,19 @@ const favoriteLayers: SimpleLayer[] = [
 
 // Interface for the layer information passed up
 export interface ActiveLayerInfo {
-  id: string;
+  id: string; // Unique ID: `${sourceUuid}-${layer.name}`
   name: string;
   title: string;
   sourceUrl: string;
   sourceTitle: string;
+  sourceUuid: string;
 }
 
 // Define props for LayerPanel
 interface LayerPanelProps {
-  activeLayerIds: string[]; // Pass down IDs of layers active on the map
-  onToggleLayer: (layerInfo: ActiveLayerInfo, isChecked: boolean) => void; // Handler for toggling layers
-  onDatasetDownload: (dataset: SearchResult) => void; // Handler for triggering download
+  activeLayerIds: string[];
+  onToggleLayer: (layerInfo: ActiveLayerInfo, isChecked: boolean) => void;
+  onDatasetDownload: (dataset: SearchResult) => void;
 }
 
 export const LayerPanel: React.FC<LayerPanelProps> = ({
@@ -167,25 +167,27 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
   onToggleLayer,
   onDatasetDownload,
 }) => {
-  const { searchResults, ws } = useWebSocket(); // Get WebSocket instance
+  const { searchResults, ws } = useWebSocket();
   const [searchTerm, setSearchTerm] = useState("");
-  const [isSearching, setIsSearching] = useState(false); // Add searching state
-  const [hasSearched, setHasSearched] = useState(false); // Track if a search has been initiated
+  const [isSearching, setIsSearching] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
-  const [filterType, setFilterType] = useState<string | null>(null); // Keep filter type for badges
-  // State to store all results that have WMS info, keyed by UUID
+  const [filterType, setFilterType] = useState<string | null>(null);
   const [allWmsResultsMap, setAllWmsResultsMap] = React.useState<
     Map<string, SearchResult>
   >(new Map());
-
-  // State for selected datasets
   const [selectedDatasets, setSelectedDatasets] = React.useState<Set<string>>(
     new Set()
   );
   const [selectedDatasetsInfo, setSelectedDatasetsInfo] = React.useState<
     Map<string, SearchResult>
   >(new Map());
-  const [showDownloadDialog, setShowDownloadDialog] = React.useState(false); // State for the dialog
+  const [showDownloadDialog, setShowDownloadDialog] = React.useState(false);
+  // State for duplicate layer alert
+  const [showDuplicateLayerAlert, setShowDuplicateLayerAlert] =
+    React.useState(false);
+  const [duplicateLayerAlertMessage, setDuplicateLayerAlertMessage] =
+    React.useState("");
 
   const toggleCategory = (categoryId: string) => {
     setExpandedCategories((prev) =>
@@ -198,17 +200,14 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
   const clearSearch = () => {
     setSearchTerm("");
     setFilterType(null);
-    setHasSearched(false); // Reset search state
-    setIsSearching(false); // Ensure loading state is also reset
-    // Optionally, send a message to reset results on the backend or clear local results
-    // if (ws && ws.readyState === WebSocket.OPEN) {
-    //   ws.send(JSON.stringify({ action: "clearSearchResults" }));
-    // }
+    setHasSearched(false);
+    setIsSearching(false);
+    // Clear search results from the hook state if desired
+    // (Assuming useWebSocket hook provides a way to clear/reset its state)
+    // clearWebSocketResults(); // Placeholder for actual function
   };
 
-  // Select/deselect dataset
   const handleSelectDataset = (dataset: SearchResult) => {
-    // Ensure dataset and uuid exist
     if (!dataset || !dataset.uuid) {
       console.warn("Attempted to select a dataset without a UUID:", dataset);
       return;
@@ -224,7 +223,6 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
         });
       } else {
         newSet.add(dataset.uuid);
-        // Store the dataset info
         setSelectedDatasetsInfo((prevInfo) => {
           const newMap = new Map(prevInfo);
           newMap.set(dataset.uuid, dataset);
@@ -235,80 +233,88 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
     });
   };
 
-  // Clear selected datasets
   const clearSelectedDatasets = () => {
     setSelectedDatasets(new Set());
     setSelectedDatasetsInfo(new Map());
   };
 
-  // Handle bulk download click - Now just opens the dialog
   const handleBulkDownloadClick = () => {
     if (selectedDatasetsInfo.size > 0) {
       setShowDownloadDialog(true);
     }
   };
 
-  // Function to initiate downloads after dialog confirmation
-  const initiateDownloads = () => {
+  const initiateDownloads = async () => {
     console.log("Initiating bulk download for:", selectedDatasetsInfo);
-    if (!onDatasetDownload) {
-      console.error("onDatasetDownload prop is not provided to LayerPanel.");
-      setShowDownloadDialog(false); // Close dialog even on error
-      return;
-    }
+    const downloadLinks: HTMLAnchorElement[] = [];
+
     selectedDatasetsInfo.forEach((dataset) => {
-      onDatasetDownload(dataset); // Trigger download for each selected dataset
+      // Assuming dataset object has a downloadUrl property similar to kartkatalog-tab
+      if (dataset.downloadUrl) {
+        console.log(
+          `Creating download link for ${dataset.title || dataset.uuid} at ${
+            dataset.downloadUrl
+          }`
+        );
+        const link = document.createElement("a");
+        link.href = dataset.downloadUrl;
+        link.setAttribute("download", ""); // Suggest a filename if available, otherwise browser decides
+        link.setAttribute("target", "_blank"); // Helps in some browser contexts
+        link.style.display = "none";
+        document.body.appendChild(link);
+        downloadLinks.push(link);
+      } else {
+        console.warn(
+          `Dataset ${dataset.title || dataset.uuid} has no downloadUrl.`
+        );
+      }
     });
-    setShowDownloadDialog(false); // Close the dialog
-    // Optionally clear selection after initiating downloads
+
+    console.log(`Attempting to click ${downloadLinks.length} download links.`);
+    // Click links sequentially with a small delay
+    for (const link of downloadLinks) {
+      link.click();
+      // Small delay between clicks might help avoid browser blocking
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
+    // Cleanup: Remove links after a delay to ensure download starts
+    setTimeout(() => {
+      console.log(`Cleaning up ${downloadLinks.length} download links.`);
+      downloadLinks.forEach((link) => {
+        if (document.body.contains(link)) {
+          document.body.removeChild(link);
+        }
+      });
+    }, 1000); // Increased delay for cleanup
+
+    setShowDownloadDialog(false);
     clearSelectedDatasets();
   };
 
   const handleSearchSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    console.log("[LayerPanel] handleSearchSubmit triggered."); // Log trigger
-    console.log("[LayerPanel] ws object:", ws); // Log ws object
-    console.log("[LayerPanel] searchTerm:", searchTerm); // Log search term
-
-    if (ws) {
-      console.log("[LayerPanel] ws.readyState:", ws.readyState); // Log readyState if ws exists
-    }
-
-    // Add specific logs for each condition
-    if (!ws) {
-      console.log("[LayerPanel] WS send prevented: ws is null or undefined.");
-      return;
-    }
-    if (ws.readyState !== WebSocket.OPEN) {
-      console.log(
-        `[LayerPanel] WS send prevented: ws.readyState is ${ws.readyState} (Expected: ${WebSocket.OPEN}).`
+    if (!ws || ws.readyState !== WebSocket.OPEN || !searchTerm.trim()) {
+      console.warn(
+        "[LayerPanel] WS send prevented due to state or empty term."
       );
       return;
     }
-    if (!searchTerm.trim()) {
-      console.log(
-        "[LayerPanel] WS send prevented: searchTerm is empty or whitespace."
-      );
-      return;
-    }
-
     console.log(
       "[LayerPanel] Conditions met. Sending search request:",
       searchTerm
     );
     setIsSearching(true);
-    setHasSearched(true); // Mark that a search has been performed
+    setHasSearched(true);
     ws.send(
       JSON.stringify({
-        action: "searchFormSubmit", // Use the same action as KartkatalogTab for consistency? Or a new one?
+        action: "searchFormSubmit",
         payload: searchTerm,
       })
     );
-    // Clear filterType when performing a new search
     setFilterType(null);
   };
 
-  // Effect to handle incoming search results and reset loading state
   useEffect(() => {
     if (ws) {
       const handleMessage = (event: MessageEvent) => {
@@ -320,27 +326,21 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
           ) {
             const newResults: SearchResult[] = data.payload || [];
             console.log("Received search results from WebSocket:", newResults);
-            setIsSearching(false); // Stop loading indicator
+            setIsSearching(false);
 
-            // Update the map of all known WMS results
             setAllWmsResultsMap((prevMap) => {
               const newMap = new Map(prevMap);
               newResults.forEach((result) => {
-                // Store only results with WMS capabilities and a UUID
                 if (result.uuid && result.wmsUrl) {
                   newMap.set(result.uuid, result);
                 }
               });
               return newMap;
             });
-
-            // Optionally automatically expand results - uncomment if needed
-            // const resultUuids = newResults.map((r) => r.uuid).filter(Boolean);
-            // setExpandedCategories(prev => [...new Set([...prev, ...resultUuids])]);
           }
         } catch (error) {
           console.error("Failed to parse WebSocket message:", error);
-          setIsSearching(false); // Stop loading on error too
+          setIsSearching(false);
         }
       };
 
@@ -350,56 +350,48 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
         ws.removeEventListener("message", handleMessage);
       };
     } else {
-      setIsSearching(false); // Ensure loading is false if ws is not available
+      setIsSearching(false);
     }
-  }, [ws]); // Removed allWmsResultsMap dependency - it's updated internally
+  }, [ws]);
 
-  // Determine which results to display based on search, filters, and active layers
   const displayedResults = useMemo(() => {
     const currentSearchResults = searchResults || [];
 
     if (filterType === "active") {
       const allKnownWmsResults = Array.from(allWmsResultsMap.values());
-      // Filter all known results that have any active layer
       return allKnownWmsResults.filter((result) => {
         const wmsInfo = result.wmsUrl;
-        if (!wmsInfo || !wmsInfo.available_layers || !wmsInfo.wms_url) {
-          return false; // Cannot be active if no WMS layers/url
+        if (!result.uuid || !wmsInfo || !wmsInfo.available_layers) {
+          return false;
         }
-        return wmsInfo.available_layers.some((layer) => {
-          const layerId = `${wmsInfo.wms_url}-${layer.name}`;
-          return activeLayerIds.includes(layerId);
-        });
+        return activeLayerIds.some((activeId) =>
+          activeId.startsWith(`${result.uuid}-`)
+        );
       });
     }
-
-    // TODO: Implement other filters like 'popular' here, filtering 'currentSearchResults'
-    // if (filterType === 'popular') { ... }
-
-    // Default: return the latest search results if no specific filter is active
+    // Implement 'popular' filter if needed here
+    // Default: return latest search results
     return currentSearchResults;
   }, [searchResults, filterType, activeLayerIds, allWmsResultsMap]);
 
   return (
     <TooltipProvider delayDuration={100}>
       <div className="w-full flex flex-col h-screen bg-white border-r border-geo-lightGray shrink-0">
+        {/* Header and Search */}
         <div className="p-4 border-b border-geo-lightGray">
-          {/* <h2 className="text-lg font-semibold text-geo-darkGray mb-3">
-            Kartkatalog
-          </h2> */}
           <form onSubmit={handleSearchSubmit} className="relative mb-2">
             <Input
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Søk etter datasett..."
               className="pl-9 bg-geo-slate border"
-              disabled={isSearching} // Disable input while searching
+              disabled={isSearching}
             />
             <button
               type="submit"
               className="absolute left-3 top-1/2 transform -translate-y-1/2 p-1 text-geo-textGray hover:text-geo-darkGray disabled:opacity-50"
               aria-label="Submit search"
-              disabled={isSearching || !searchTerm.trim()} // Disable if searching or input is empty
+              disabled={isSearching || !searchTerm.trim()}
             >
               <Search size={16} />
             </button>
@@ -419,7 +411,6 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
               </div>
             )}
           </form>
-
           {/* Quick filters */}
           <div className="flex gap-2 my-2 flex-wrap">
             <Badge
@@ -444,21 +435,20 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
           </div>
         </div>
 
+        {/* Tabs */}
         <Tabs defaultValue="all" className="flex-1 flex flex-col min-h-0">
-          {" "}
-          {/* Added min-h-0 for flex child scrolling */}
           <TabsList className="grid grid-cols-3 mx-4 mt-2 shrink-0">
-            {" "}
-            {/* Added shrink-0 */}
             <TabsTrigger value="all">Alle datasett</TabsTrigger>
             <TabsTrigger value="recent">Nylig brukt</TabsTrigger>
             <TabsTrigger value="favorites">Favoritter</TabsTrigger>
           </TabsList>
+
+          {/* Tab Content: All Datasets (Search Results) */}
           <TabsContent
             value="all"
             className="flex-1 overflow-y-auto px-4 pb-4 space-y-1 relative"
           >
-            {/* Selected datasets (multiple-dataset-selection) for bulk download */}
+            {/* Bulk Download Bar */}
             {selectedDatasets.size > 0 && (
               <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-2 flex justify-between items-center shadow-sm mb-2">
                 <div className="flex items-center gap-2">
@@ -492,39 +482,35 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
               </div>
             )}
 
+            {/* Loading/Empty States */}
             {isSearching ? (
               <div className="text-center py-8 text-geo-textGray flex items-center justify-center gap-2">
                 <Loader2 size={16} className="animate-spin" />
                 <span>Søker...</span>
               </div>
-            ) : displayedResults.length === 0 ? ( // Check displayedResults length
-              // Show appropriate message based on context
+            ) : displayedResults.length === 0 ? (
               <div className="text-center py-8 text-geo-textGray">
                 {filterType === "active" ? (
-                  // Message when 'Active' filter is on but finds nothing
                   <p>Ingen kjente datasett matcher de aktive kartlagene.</p>
                 ) : !hasSearched ? (
-                  // Initial message before any search
                   <p>Start søk for å finne datasett.</p>
                 ) : (
-                  // Message when search yields no results
                   <p>Ingen resultater funnet for "{searchTerm}"</p>
                 )}
                 <button
-                  onClick={clearSearch} // clearSearch clears filters too
+                  onClick={clearSearch}
                   className="text-geo-blue hover:underline mt-2"
                 >
                   {filterType === "active"
-                    ? "Vis alle søkeresultater" // Or "Tilbakestill filter"
+                    ? "Vis alle søkeresultater"
                     : hasSearched
                     ? "Tilbakestill søk"
                     : ""}
                 </button>
               </div>
             ) : (
-              // Render the list using displayedResults
+              // Render Search Results
               displayedResults.map((searchResult) => {
-                // Map over displayedResults
                 const resultKey =
                   searchResult.uuid ||
                   searchResult.title ||
@@ -536,6 +522,7 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
                     key={resultKey}
                     className="border-b border-geo-lightGray last:border-b-0 py-2 flex items-start gap-3"
                   >
+                    {/* Download Checkbox */}
                     <div className="pt-1">
                       {canDownload ? (
                         <Checkbox
@@ -549,18 +536,20 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
                           }`}
                         />
                       ) : (
-                        <div className="w-4 h-4" />
+                        <div className="w-4 h-4" /> /* Placeholder */
                       )}
                     </div>
 
+                    {/* Dataset Info & Layers */}
                     <div className="flex-1">
+                      {/* Title Row */}
                       <div
                         className="flex items-center justify-between cursor-pointer group mb-1"
                         onClick={() =>
                           searchResult.uuid && toggleCategory(searchResult.uuid)
                         }
                       >
-                        <div className="flex items-center gap-2 overflow-hidden max-w-[275px]">
+                        <div className="flex items-center gap-2 overflow-hidden max-w-[250px]">
                           <span className="text-sm font-medium text-geo-darkGray truncate group-hover:text-geo-blue">
                             {searchResult.title || "Ukjent Tittel"}
                           </span>
@@ -580,10 +569,6 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
                                   className="h-7 w-7 text-geo-textGray hover:text-geo-blue"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    console.log(
-                                      "[LayerPanel] Download clicked for:",
-                                      searchResult
-                                    );
                                     onDatasetDownload(searchResult);
                                   }}
                                 >
@@ -595,6 +580,7 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
                               </TooltipContent>
                             </Tooltip>
                           )}
+                          {/* Expand/Collapse Icon */}
                           <div className="text-geo-textGray p-1">
                             {searchResult.uuid &&
                             expandedCategories.includes(searchResult.uuid) ? (
@@ -606,6 +592,7 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
                         </div>
                       </div>
 
+                      {/* WMS Layer List (Collapsible) */}
                       {searchResult.uuid &&
                         expandedCategories.includes(searchResult.uuid) &&
                         searchResult.wmsUrl?.available_layers && (
@@ -615,29 +602,155 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
                                 (layer: WMSLayer) => {
                                   const sourceUrl =
                                     searchResult.wmsUrl?.wms_url;
-                                  if (!sourceUrl) return null;
+                                  // Need both URL and UUID for logic
+                                  if (!sourceUrl || !searchResult.uuid) {
+                                    return null;
+                                  }
 
-                                  const layerId = `${sourceUrl}-${layer.name}`;
+                                  const uniqueLayerId = `${searchResult.uuid}-${layer.name}`;
                                   const isChecked =
-                                    activeLayerIds.includes(layerId);
+                                    activeLayerIds.includes(uniqueLayerId);
 
                                   return (
                                     <div
-                                      key={layerId}
+                                      key={uniqueLayerId}
                                       className="flex items-center gap-2 px-2 py-1.5 hover:bg-geo-slate/50 rounded-md"
                                     >
                                       <Checkbox
-                                        id={layerId}
+                                        id={uniqueLayerId}
                                         checked={isChecked}
                                         onCheckedChange={(checkedState) => {
+                                          // --- Start Duplicate Check Logic (only if activating) ---
+                                          if (checkedState === true) {
+                                            const targetSourceUrl =
+                                              searchResult.wmsUrl?.wms_url;
+                                            const targetLayerName = layer.name;
+                                            const targetLayerTitle =
+                                              layer.title || layer.name;
+
+                                            if (
+                                              !targetSourceUrl ||
+                                              !searchResult.uuid
+                                            ) {
+                                              console.error(
+                                                "Missing info for duplicate check"
+                                              );
+                                              return;
+                                            }
+
+                                            let isDuplicateWmsLayer = false;
+                                            let existingDatasetTitle = "";
+
+                                            // Check against currently active layers
+                                            console.log(
+                                              `[Duplicate Check] Starting for Target: Layer='${targetLayerName}', URL='${targetSourceUrl}', From UUID='${searchResult.uuid}'`
+                                            );
+                                            for (const activeId of activeLayerIds) {
+                                              console.log(
+                                                `-- Checking Active ID: ${activeId} --`
+                                              );
+
+                                              // Match UUID pattern (8-4-4-4-12 hex chars) at the start, then capture the rest after '-'
+                                              const uuidPattern =
+                                                /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})-(.*)$/i;
+                                              const parts =
+                                                activeId.match(uuidPattern);
+
+                                              if (!parts || parts.length < 3) {
+                                                console.log(
+                                                  `   Skipping activeId (UUID pattern parse fail): ${activeId}`
+                                                );
+                                                continue;
+                                              }
+
+                                              const activeSourceUuid = parts[1]; // Full UUID
+                                              const activeLayerName = parts[2]; // Layer name after the UUID and hyphen
+                                              console.log(
+                                                `   Active Parsed: UUID=${activeSourceUuid}, Layer=${activeLayerName}`
+                                              );
+
+                                              // Skip if it's the same layer from the *same* dataset
+                                              if (
+                                                activeSourceUuid ===
+                                                searchResult.uuid
+                                              ) {
+                                                console.log(
+                                                  `   Skipping: Same dataset UUID (${activeSourceUuid})`
+                                                );
+                                                continue;
+                                              }
+
+                                              const activeSearchResult =
+                                                allWmsResultsMap.get(
+                                                  activeSourceUuid
+                                                );
+                                              console.log(
+                                                `   Found active SearchResult in Map:`,
+                                                activeSearchResult
+                                                  ? "Yes"
+                                                  : "No",
+                                                activeSearchResult?.title
+                                              );
+                                              const activeSourceUrl =
+                                                activeSearchResult?.wmsUrl
+                                                  ?.wms_url;
+                                              console.log(
+                                                `   Active URL from Map: ${activeSourceUrl}`
+                                              );
+
+                                              // Check for match: same URL and same layer name
+                                              const urlsMatch =
+                                                activeSourceUrl ===
+                                                targetSourceUrl;
+                                              const namesMatch =
+                                                activeLayerName ===
+                                                targetLayerName;
+                                              console.log(
+                                                `   URLs Match: ${urlsMatch} ('${activeSourceUrl}' vs '${targetSourceUrl}')`
+                                              );
+                                              console.log(
+                                                `   Names Match: ${namesMatch} ('${activeLayerName}' vs '${targetLayerName}')`
+                                              );
+
+                                              if (urlsMatch && namesMatch) {
+                                                console.log(
+                                                  `   ** DUPLICATE DETECTED **`
+                                                );
+                                                isDuplicateWmsLayer = true;
+                                                existingDatasetTitle =
+                                                  activeSearchResult?.title ||
+                                                  "et annet datasett";
+                                                break; // Found a duplicate, no need to check further
+                                              }
+                                            }
+                                            console.log(
+                                              `[Duplicate Check] Finished. isDuplicateWmsLayer: ${isDuplicateWmsLayer}`
+                                            );
+
+                                            // If a duplicate is found, show alert and stop
+                                            if (isDuplicateWmsLayer) {
+                                              console.log(
+                                                `[Duplicate Check] Showing alert.`
+                                              );
+                                              setDuplicateLayerAlertMessage(
+                                                `Laget "${targetLayerTitle}" fra denne WMS-tjenesten er allerede aktivt via datasettet "${existingDatasetTitle}". Du kan kun ha én forekomst av dette kartlaget aktivt om gangen.`
+                                              );
+                                              setShowDuplicateLayerAlert(true);
+                                              return; // <<< PREVENT TOGGLING
+                                            }
+                                          }
+                                          // --- End Duplicate Check Logic ---
+
+                                          // --- Proceed with Toggle ---
                                           const layerInfo: ActiveLayerInfo = {
-                                            id: layerId,
+                                            id: uniqueLayerId,
                                             name: layer.name,
                                             title: layer.title || layer.name,
-                                            sourceUrl: sourceUrl,
+                                            sourceUrl: sourceUrl, // Relies on check above
                                             sourceTitle:
                                               searchResult.title ||
                                               "Ukjent Kilde",
+                                            sourceUuid: searchResult.uuid,
                                           };
                                           onToggleLayer(
                                             layerInfo,
@@ -646,7 +759,7 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
                                         }}
                                       />
                                       <label
-                                        htmlFor={layerId}
+                                        htmlFor={uniqueLayerId}
                                         className="flex-1 text-sm text-geo-textGray cursor-pointer"
                                       >
                                         {layer.title || layer.name}
@@ -662,6 +775,7 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
                             )}
                           </div>
                         )}
+                      {/* Message if WMS details are not available */}
                       {searchResult.uuid &&
                         expandedCategories.includes(searchResult.uuid) &&
                         !searchResult.wmsUrl?.available_layers && (
@@ -675,6 +789,8 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
               })
             )}
           </TabsContent>
+
+          {/* Tab Content: Recently Used */}
           <TabsContent
             value="recent"
             className="flex-1 overflow-y-auto px-4 pb-4"
@@ -687,22 +803,25 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
               <div className="space-y-1">
                 {recentlyUsedLayers.map((layer) => (
                   <div
-                    key={layer.id}
+                    key={`recent-${layer.id}`} // Ensure unique key
                     className="flex items-center gap-2 px-2 py-1.5 hover:bg-geo-slate/50 rounded-md"
                   >
                     <Checkbox
                       id={`recent-${layer.id}`}
+                      // This check might need adjustment if IDs aren't unique across sources
                       checked={activeLayerIds.includes(layer.id)}
                       onCheckedChange={(checkedState) => {
+                        // TODO: Implement proper duplicate check for mock data if needed
                         const categoryLabel =
                           mockLayers.find((c) => c.id === layer.categoryId)
                             ?.label || "Ukjent Kategori";
                         const layerInfo: ActiveLayerInfo = {
-                          id: layer.id,
+                          id: layer.id, // Using mock ID
                           name: layer.label,
                           title: layer.label,
-                          sourceUrl: "",
+                          sourceUrl: "", // Mock data has no URL
                           sourceTitle: categoryLabel,
+                          sourceUuid: `mock-${layer.categoryId}`, // Placeholder UUID
                         };
                         onToggleLayer(layerInfo, !!checkedState);
                       }}
@@ -721,6 +840,8 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
               </div>
             </div>
           </TabsContent>
+
+          {/* Tab Content: Favorites */}
           <TabsContent
             value="favorites"
             className="flex-1 overflow-y-auto px-4 pb-4"
@@ -733,22 +854,25 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
               <div className="space-y-1">
                 {favoriteLayers.map((layer) => (
                   <div
-                    key={layer.id}
+                    key={`fav-${layer.id}`} // Ensure unique key
                     className="flex items-center gap-2 px-2 py-1.5 hover:bg-geo-slate/50 rounded-md"
                   >
                     <Checkbox
                       id={`fav-${layer.id}`}
+                      // This check might need adjustment
                       checked={activeLayerIds.includes(layer.id)}
                       onCheckedChange={(checkedState) => {
+                        // TODO: Implement proper duplicate check for mock data if needed
                         const categoryLabel =
                           mockLayers.find((c) => c.id === layer.categoryId)
                             ?.label || "Ukjent Kategori";
                         const layerInfo: ActiveLayerInfo = {
-                          id: layer.id,
+                          id: layer.id, // Using mock ID
                           name: layer.label,
                           title: layer.label,
-                          sourceUrl: "",
+                          sourceUrl: "", // Mock data has no URL
                           sourceTitle: categoryLabel,
+                          sourceUuid: `mock-${layer.categoryId}`, // Placeholder UUID
                         };
                         onToggleLayer(layerInfo, !!checkedState);
                       }}
@@ -781,8 +905,6 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
               </AlertDialogTitle>
               <AlertDialogDescription className="text-gray-600">
                 Nedlastingsprosessen vil starte for alle valgte datasett.
-                {/* You might adjust this text depending on how executeDatasetDownload behaves */}
-                {/* For example: "Detaljer for hvert datasett vil vises." */}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter className="gap-3">
@@ -790,11 +912,37 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
                 Avbryt
               </AlertDialogCancel>
               <AlertDialogAction
-                onClick={initiateDownloads} // Call initiateDownloads on confirm
+                onClick={initiateDownloads}
                 className="rounded-omar bg-blue-500 hover:bg-blue-600 text-white transition-colors"
               >
                 <Download className="h-4 w-4 mr-2" />
                 Start nedlasting
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Duplicate WMS Layer Alert Dialog */}
+        <AlertDialog
+          open={showDuplicateLayerAlert}
+          onOpenChange={setShowDuplicateLayerAlert}
+        >
+          <AlertDialogContent className="bg-white rounded-omar border border-gray-200 shadow-lg max-w-md">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-xl flex items-center text-yellow-700">
+                {/* <AlertTriangle className="h-5 w-5 mr-2" /> */}
+                Duplisert Kartlag Funnet
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-gray-600">
+                {duplicateLayerAlertMessage}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogAction
+                onClick={() => setShowDuplicateLayerAlert(false)}
+                className="rounded-omar bg-blue-500 hover:bg-blue-600 text-white transition-colors"
+              >
+                Ok, forstått
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
