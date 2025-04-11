@@ -54,9 +54,10 @@ async def dataset_has_download(uuid: str) -> bool:
     return len(api_json) > 0
 
 
-async def get_standard_or_first_format(uuid: str) -> Dict[str, Any]:
+async def get_standard_or_first_format(uuid: str, prefetched_area_data: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
     """
     Attempts to select a default format using predefined preferences.
+    Accepts optional prefetched_area_data to avoid redundant API calls.
     Falls back to the first available option if defaults are not found.
     
     Returns a dictionary with area, projection, and format information,
@@ -69,8 +70,13 @@ async def get_standard_or_first_format(uuid: str) -> Dict[str, Any]:
     user_group = "GeoGPT"
     usage_purpose = "GeoGPT"
 
-    api_json = await fetch_area_data(uuid)
-    areas: List[Dict[str, Any]] = api_json  # already a list of dict
+    areas: List[Dict[str, Any]]
+    if prefetched_area_data is not None:
+        logger.debug(f"Using prefetched area data for {uuid}")
+        areas = prefetched_area_data
+    else:
+        logger.debug(f"No prefetched data, fetching area data for {uuid}")
+        areas = await fetch_area_data(uuid)
 
     if not areas:
         logger.warning("No valid area data found for UUID: %s", uuid)
@@ -279,7 +285,7 @@ async def get_dataset_download_and_wms_status(vdb_search_response: List[tuple]) 
             download_url = None
             if formats_api_response:
                 try:
-                    standard_format = await get_standard_or_first_format(uuid)
+                    standard_format = await get_standard_or_first_format(uuid, formats_api_response)
                     if standard_format:
                         try:
                             download_url = await get_download_url(uuid, standard_format)

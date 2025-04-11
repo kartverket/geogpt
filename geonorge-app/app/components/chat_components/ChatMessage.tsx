@@ -1,11 +1,18 @@
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { ChatMessage as ChatMessageType } from "./types";
+import { ChatMessage as ChatMessageType, SearchResult } from "./types";
+import { Download, Eye } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@radix-ui/react-tooltip";
 
 interface ChatMessageProps {
   message: ChatMessageType;
-  onWmsClick: (url: string, title?: string) => void;
-  onDownloadClick: (url: string) => void;
+  onWmsClick: (searchResult: SearchResult) => void;
+  onDownloadClick: (info: SearchResult) => void;
 }
 
 export const ChatMessage = ({
@@ -24,26 +31,85 @@ export const ChatMessage = ({
           height={300}
         />
         <div className="flex gap-2">
-          <Button
-            onClick={() => {
-              if (message.wmsUrl && message.wmsUrl !== "None") {
-                onWmsClick(message.wmsUrl, message.title);
-              }
-            }}
-            className={`text-xs ${
-              message.wmsUrl && message.wmsUrl !== "None"
-                ? "rounded-omar bg-color-gn-primarylight hover:bg-color-gn-primary text-white"
-                : "bg-gray-300 text-gray-500 cursor-not-allowed"
-            }`}
-            disabled={!message.wmsUrl || message.wmsUrl === "None"}
-          >
-            Vis
-          </Button>
+          <TooltipProvider delayDuration={100}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div>
+                  <Button
+                    variant="show"
+                    onClick={() => {
+                      const wmsInfo = message.wmsUrl;
+                      if (
+                        wmsInfo &&
+                        wmsInfo !== "None" &&
+                        typeof wmsInfo === "object" &&
+                        "wms_url" in wmsInfo &&
+                        wmsInfo.wms_url &&
+                        wmsInfo.wms_url !== "None"
+                      ) {
+                        const searchResult: SearchResult = {
+                          uuid: message.uuid || `msg-${Date.now()}`,
+                          title: message.title || "Ukjent datasett",
+                          wmsUrl: wmsInfo,
+                          downloadUrl: message.downloadUrl || null,
+                          downloadFormats: message.downloadFormats || [],
+                        };
+                        onWmsClick(searchResult);
+                      } else {
+                        console.warn(
+                          "WMS data missing or in unexpected format on message:",
+                          message
+                        );
+                      }
+                    }}
+                    disabled={
+                      !(
+                        message.wmsUrl &&
+                        message.wmsUrl !== "None" &&
+                        typeof message.wmsUrl === "object" &&
+                        "wms_url" in message.wmsUrl &&
+                        message.wmsUrl.wms_url &&
+                        message.wmsUrl.wms_url !== "None"
+                      )
+                    }
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    Vis på kart
+                  </Button>
+                </div>
+              </TooltipTrigger>
+              {!(
+                message.wmsUrl &&
+                message.wmsUrl !== "None" &&
+                typeof message.wmsUrl === "object" &&
+                "wms_url" in message.wmsUrl &&
+                message.wmsUrl.wms_url &&
+                message.wmsUrl.wms_url !== "None"
+              ) && (
+                <TooltipContent className="bg-white p-2 shadow-md rounded border text-sm">
+                  <p>WMS URL er ikke tilgjengelig for dette datasettet</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
           {message.downloadUrl && (
             <Button
-              onClick={() => onDownloadClick(message.downloadUrl!)}
-              className="rounded-omar bg-color-gn-secondary hover:bg-[#5c5c5d] text-white text-xs"
+              variant="download"
+              onClick={() => {
+                const downloadInfo: SearchResult = {
+                  uuid: message.uuid || `msg-${Date.now()}`,
+                  title: message.title || "Ukjent datasett",
+                  downloadUrl: message.downloadUrl!,
+                  downloadFormats: message.downloadFormats || [],
+                  wmsUrl:
+                    message.wmsUrl && typeof message.wmsUrl === "object"
+                      ? message.wmsUrl
+                      : undefined,
+                };
+                onDownloadClick(downloadInfo);
+              }}
             >
+              <Download className="h-4 w-4 mr-2" />
               Last ned datasett
             </Button>
           )}
@@ -60,16 +126,49 @@ export const ChatMessage = ({
   } else if (content.startsWith("System: ")) {
     content = content.slice("System: ".length);
   }
+
+  // Format bold text
   content = content.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
 
+  content = content.replace(
+    /(https?:\/\/[^\s]+)/g,
+    '<a href="$1" target="_blank" rel="noopener noreferrer" class="underline break-all">$1</a>'
+  );
+
+  // Format URLs with better styling
+  content = content.replace(
+    /\[([^\]]+)\]\(([^)]+)\)/g,
+    '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-black hover:underline break-words">$1</a>'
+  );
+
+  // Format bullet points (asterisks)
+  content = content.replace(/^\s*\*\s+(.+)$/gm, "<li>$1</li>");
+
+  // Wrap lists in ul tags with better styling for nested content
+  if (content.includes("<li>")) {
+    content = content.replace(
+      /(<li>.*?<\/li>)+/gs,
+      '<ul class="list-disc pl-5 my-2 space-y-1">$&</ul>'
+    );
+  }
+
+  // Add paragraph breaks for better readability
+  content = content.replace(/\n\n+/g, '</p><p class="my-2">');
+  if (!content.startsWith("<ul") && !content.startsWith("<p")) {
+    content = "<p>" + content + "</p>";
+  }
+
   return (
-    <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
+    <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-3`}>
       <div
-        className={`max-w-[80%] p-2 rounded text-sm whitespace-pre-wrap ${
-          isUser ? "bg-orange-100" : "bg-gray-100"
+        className={`max-w-[80%] p-3 rounded-md text-sm break-words ${
+          isUser ? "bg-orange-50" : "bg-gray-100"
         }`}
       >
-        <span dangerouslySetInnerHTML={{ __html: content }} />
+        <div
+          className="chat-content"
+          dangerouslySetInnerHTML={{ __html: content }}
+        />
       </div>
     </div>
   );

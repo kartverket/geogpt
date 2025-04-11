@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { ChatMessage, WebSocketMessage, SearchResult } from "./types";
+import { ChatMessage, WebSocketMessage, SearchResult, WMSLayer } from "./types";
 
 export const useWebSocket = () => {
   const [ws, setWs] = useState<WebSocket | null>(null);
@@ -166,77 +166,66 @@ export const useWebSocket = () => {
         break;
 
       case "insertImage":
-        const { datasetImageUrl, datasetDownloadUrl, wmsUrl } = payload;
+        const {
+          datasetImageUrl,
+          datasetDownloadUrl,
+          wmsUrl,
+          datasetTitle,
+          datasetUuid,
+          downloadFormats,
+        } = payload;
+        setSpecificObject({
+          uuid: datasetUuid,
+          title: datasetTitle,
+          downloadUrl: datasetDownloadUrl,
+          wmsUrl: wmsUrl,
+          downloadFormats: downloadFormats,
+        });
         setMessages((prev) => [
           ...prev,
           {
-            title: "Image message",
+            title: datasetTitle || "Bilde melding",
             type: "image",
             imageUrl: datasetImageUrl,
             downloadUrl: datasetDownloadUrl,
             wmsUrl: wmsUrl,
+            uuid: datasetUuid,
+            downloadFormats: downloadFormats || [],
           },
         ]);
-        break;
 
-      case "chatDatasets":
-        if (payload && Array.isArray(payload)) {
-          const firstUuid = payload[0].uuid;
-          setUuidToFind(firstUuid);
+        if (downloadFormats) {
+          setUuidToFind(datasetUuid);
+          setSpecificObject({
+            uuid: datasetUuid,
+            title: datasetTitle,
+            downloadUrl: datasetDownloadUrl,
+            wmsUrl: wmsUrl,
+            downloadFormats: downloadFormats,
+          });
+          setDatasetName(datasetTitle || "");
 
-          const datasetObject = payload.find(
-            (item: SearchResult) => item.uuid === firstUuid
+          const rawGeoAreas = downloadFormats.map((fmt: any) => ({
+            type: fmt.type,
+            name: fmt.name,
+            code: fmt.code,
+          }));
+          setGeographicalAreas(dedupeAreas(rawGeoAreas));
+
+          const rawProjections = downloadFormats.flatMap((fmt: any) =>
+            fmt.projections
+              ? fmt.projections.map((proj: any) => ({
+                  name: proj.name,
+                  code: proj.code,
+                }))
+              : []
           );
+          setProjections(dedupeProjections(rawProjections));
 
-          setSpecificObject(datasetObject || null);
-
-          if (datasetObject) {
-            setMessages((prev) => {
-              const lastIndex = prev.length - 1;
-              for (let i = lastIndex; i >= 0; i--) {
-                if (
-                  prev[i].type === "image" &&
-                  (!prev[i].downloadFormats ||
-                    prev[i].downloadFormats?.length === 0)
-                ) {
-                  const updatedMessages = [...prev];
-                  updatedMessages[i] = {
-                    ...updatedMessages[i],
-                    downloadFormats: datasetObject.downloadFormats || [],
-                    title: datasetObject.title || "",
-                    uuid: datasetObject.uuid,
-                  };
-                  return updatedMessages;
-                }
-              }
-              return prev;
-            });
-
-            setDatasetName(datasetObject.title || "");
-
-            const rawGeoAreas = datasetObject.downloadFormats.map((fmt) => ({
-              type: fmt.type,
-              name: fmt.name,
-              code: fmt.code,
-            }));
-            setGeographicalAreas(dedupeAreas(rawGeoAreas));
-
-            const rawProjections = datasetObject.downloadFormats.flatMap(
-              (fmt) =>
-                fmt.projections
-                  ? fmt.projections.map((proj) => ({
-                      name: proj.name,
-                      code: proj.code,
-                    }))
-                  : []
-            );
-            setProjections(dedupeProjections(rawProjections));
-
-            const rawFormats = datasetObject.downloadFormats.flatMap((fmt) =>
-              fmt.formats ? fmt.formats.map((format) => format.name) : []
-            );
-            setFormats(dedupeFormats(rawFormats));
-          }
+          const rawFormats = downloadFormats.flatMap((fmt: any) =>
+            fmt.formats ? fmt.formats.map((format: any) => format.name) : []
+          );
+          setFormats(dedupeFormats(rawFormats));
         }
         break;
 
@@ -246,6 +235,10 @@ export const useWebSocket = () => {
         break;
     }
   };
+
+  const clearMapUpdates = useCallback(() => {
+    setMapUpdates({});
+  }, []);
 
   const sendMessage = (message: string) => {
     if (!ws || ws.readyState !== WebSocket.OPEN) {
@@ -285,5 +278,6 @@ export const useWebSocket = () => {
     formats,
     isConnected,
     mapUpdates,
+    clearMapUpdates,
   };
 };

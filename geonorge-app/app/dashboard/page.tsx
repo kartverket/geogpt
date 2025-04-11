@@ -1,13 +1,16 @@
 import { SidebarProvider } from "@/components/ui/sidebar";
-import Demo from "../components/demo";
+import DemoV4 from "../components/demov4";
+import { VersionDisplay } from "../components/VersionDisplay";
 import { GeoNorgeTour } from "../components/GeoNorgeTour";
 
 export default function Page() {
   return (
     <SidebarProvider>
-      <Demo />
-      {/* TOUR GUIDE IKKE RØRRRR */}
-      <GeoNorgeTour />
+      <div className="relative h-screen w-full">
+        <DemoV4 />
+        <GeoNorgeTour />
+        <VersionDisplay />
+      </div>
     </SidebarProvider>
   );
 }
