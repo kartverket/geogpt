@@ -37,7 +37,6 @@ export interface Address {
 export interface SearchResult {
   uuid: string;
   title?: string;
-  wmsUrl?: string;
   restricted?: boolean;
   downloadUrl?: string | null;
   downloadFormats?: Array<{
@@ -47,7 +46,14 @@ export interface SearchResult {
     projections?: Array<{ name: string; code: string }>;
     formats?: Array<{ name: string }>;
   }>;
+  wmsUrl?: {
+    wms_url: string;
+    available_layers: WMSLayer[];
+    available_formats?: string[];
+    title?: string;
+  };
 }
+
 export interface MapUpdate {
   center?: [number, number];
   zoom?: number;
