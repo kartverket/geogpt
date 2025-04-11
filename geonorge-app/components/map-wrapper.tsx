@@ -23,6 +23,9 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 // Icons
 import { Compass, Loader2, Search, X, Plus, Minus } from "lucide-react";
 
+import { TrackedDataset } from "@/hooks/useWmsManagement";
+import { ActiveLayerInfo } from "@/app/components/LayerPanel";
+
 interface Address {
   adressetekst: string;
   poststed?: string;
@@ -326,27 +329,25 @@ function MapController({
 
 // Dynamic WMS Layer component to handle WMS layers
 function DynamicWMSLayers({
-  trackedDatasets,
-  wmsLayer,
+  activeMapLayers,
 }: {
-  trackedDatasets: any[];
-  wmsLayer: Record<string, any>;
+  activeMapLayers: ActiveLayerInfo[];
 }) {
   return (
     <>
-      {trackedDatasets.map((dataset) =>
-        dataset.selectedLayers.map((layerName: string) => (
+      {activeMapLayers.map((layer) => {
+        return (
           <WMSTileLayer
-            key={`${dataset.id}:${layerName}`}
-            url={dataset.wmsUrl.split("?")[0]}
-            layers={layerName}
+            key={layer.id}
+            url={layer.sourceUrl.split("?")[0]}
+            layers={layer.name}
             format="image/png"
             transparent={true}
-            version="1.3.0"
             zIndex={10}
+            version="1.3.0"
           />
-        ))
-      )}
+        );
+      })}
     </>
   );
 }
@@ -384,7 +385,8 @@ interface MapWrapperProps {
   center: [number, number];
   zoom: number;
   currentBaseLayer: string;
-  trackedDatasets: any[];
+  trackedDatasets: TrackedDataset[];
+  activeMapLayers: ActiveLayerInfo[];
   wmsLayer: Record<string, any>;
   userMarker: any;
   searchMarker: any;
@@ -400,6 +402,7 @@ const MapWrapper: React.FC<MapWrapperProps> = ({
   zoom,
   currentBaseLayer,
   trackedDatasets,
+  activeMapLayers,
   wmsLayer,
   userMarker,
   searchMarker,
@@ -490,11 +493,11 @@ const MapWrapper: React.FC<MapWrapperProps> = ({
       zoomControl={false}
       attributionControl={true}
       className="z-0"
+      doubleClickZoom={false}
     >
       <MapController onMapReady={onMapReady} />
 
       {showAddressSearch && <AddressSearch setSearchMarker={setSearchMarker} />}
-
       {currentBaseLayer === "topo" && (
         <TileLayer
           url="https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png"
@@ -520,7 +523,7 @@ const MapWrapper: React.FC<MapWrapperProps> = ({
         />
       )}
 
-      <DynamicWMSLayers trackedDatasets={trackedDatasets} wmsLayer={wmsLayer} />
+      <DynamicWMSLayers activeMapLayers={activeMapLayers} />
 
       {/* Markers */}
       <DynamicMarkers
