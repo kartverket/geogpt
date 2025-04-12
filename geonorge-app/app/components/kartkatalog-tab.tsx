@@ -490,7 +490,11 @@ export function KartkatalogTab({
                               <button
                                 onClick={() =>
                                   result.wmsUrl &&
-                                  onReplaceIframe(result.wmsUrl)
+                                  onReplaceIframe(
+                                    typeof result.wmsUrl === "string"
+                                      ? result.wmsUrl
+                                      : result.wmsUrl.wms_url
+                                  )
                                 }
                                 className="px-3 py-1.5 text-sm bg-white border shadow-sm hover:bg-gray-100 text-color-kv-primary rounded-omar transition-all flex items-center gap-1 min-w-[140px] justify-center"
                               >

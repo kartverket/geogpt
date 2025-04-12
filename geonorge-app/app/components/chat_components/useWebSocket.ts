@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { ChatMessage, WebSocketMessage, SearchResult } from "./types";
+import { ChatMessage, WebSocketMessage, SearchResult, WMSLayer } from "./types";
 
 export const useWebSocket = () => {
   const [ws, setWs] = useState<WebSocket | null>(null);
@@ -166,15 +166,22 @@ export const useWebSocket = () => {
         break;
 
       case "insertImage":
-        const { datasetImageUrl, datasetDownloadUrl, wmsUrl } = payload;
+        const {
+          datasetImageUrl,
+          datasetDownloadUrl,
+          wmsUrl,
+          datasetTitle,
+          datasetUuid,
+        } = payload;
         setMessages((prev) => [
           ...prev,
           {
-            title: "Image message",
+            title: datasetTitle || "Bilde melding",
             type: "image",
             imageUrl: datasetImageUrl,
             downloadUrl: datasetDownloadUrl,
             wmsUrl: wmsUrl,
+            uuid: datasetUuid,
           },
         ]);
         break;
@@ -214,17 +221,19 @@ export const useWebSocket = () => {
 
             setDatasetName(datasetObject.title || "");
 
-            const rawGeoAreas = datasetObject.downloadFormats.map((fmt) => ({
-              type: fmt.type,
-              name: fmt.name,
-              code: fmt.code,
-            }));
+            const rawGeoAreas = datasetObject.downloadFormats.map(
+              (fmt: any) => ({
+                type: fmt.type,
+                name: fmt.name,
+                code: fmt.code,
+              })
+            );
             setGeographicalAreas(dedupeAreas(rawGeoAreas));
 
             const rawProjections = datasetObject.downloadFormats.flatMap(
-              (fmt) =>
+              (fmt: any) =>
                 fmt.projections
-                  ? fmt.projections.map((proj) => ({
+                  ? fmt.projections.map((proj: any) => ({
                       name: proj.name,
                       code: proj.code,
                     }))
@@ -232,8 +241,9 @@ export const useWebSocket = () => {
             );
             setProjections(dedupeProjections(rawProjections));
 
-            const rawFormats = datasetObject.downloadFormats.flatMap((fmt) =>
-              fmt.formats ? fmt.formats.map((format) => format.name) : []
+            const rawFormats = datasetObject.downloadFormats.flatMap(
+              (fmt: any) =>
+                fmt.formats ? fmt.formats.map((format: any) => format.name) : []
             );
             setFormats(dedupeFormats(rawFormats));
           }
@@ -246,6 +256,10 @@ export const useWebSocket = () => {
         break;
     }
   };
+
+  const clearMapUpdates = useCallback(() => {
+    setMapUpdates({});
+  }, []);
 
   const sendMessage = (message: string) => {
     if (!ws || ws.readyState !== WebSocket.OPEN) {
@@ -285,5 +299,6 @@ export const useWebSocket = () => {
     formats,
     isConnected,
     mapUpdates,
+    clearMapUpdates,
   };
 };

@@ -196,7 +196,6 @@ const Sidebar = React.forwardRef<
     }
 
     return (
-      // Sidebar pushed out when collapsed.
       <div
         ref={ref}
         className={cn(
@@ -232,7 +231,7 @@ const SidebarTrigger = React.forwardRef<
       }}
       {...props}
     >
-      <Menu className="text-white"/>
+      <Menu className="text-white" />
       <span className="sr-only">Open/Close Sidebar</span>
     </Button>
   );

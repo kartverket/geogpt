@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from "react";
 import {
   dedupeFormats,
   dedupeAreas,
@@ -8,15 +8,22 @@ import {
 import { SearchResult } from "@/app/components/chat_components/types";
 
 export const useDownloadManagement = () => {
-  const [isFileDownloadModalOpen, setFileDownloadModalOpen] = useState<boolean>(false);
-  const [pendingDownloadUrl, setPendingDownloadUrl] = useState<string | null>(null);
+  const [isFileDownloadModalOpen, setFileDownloadModalOpen] =
+    useState<boolean>(false);
+  const [pendingDownloadUrl, setPendingDownloadUrl] = useState<string | null>(
+    null
+  );
   const [geographicalAreas, setGeographicalAreas] = useState<
     { type: string; name: string; code: string }[]
   >([]);
-  const [projections, setProjections] = useState<{ name: string; code: string }[]>([]);
+  const [projections, setProjections] = useState<
+    { name: string; code: string }[]
+  >([]);
   const [formats, setFormats] = useState<string[]>([]);
   const [datasetName, setDatasetName] = useState<string>("");
-  const [specificObject, setSpecificObject] = useState<SearchResult | null>(null);
+  const [specificObject, setSpecificObject] = useState<SearchResult | null>(
+    null
+  );
 
   const handleAreaChange = (selectedAreaCode: string) => {
     if (!specificObject) return;
@@ -109,7 +116,7 @@ export const useDownloadManagement = () => {
 
   return {
     isFileDownloadModalOpen,
-    pendingDownloadUrl, 
+    pendingDownloadUrl,
     geographicalAreas,
     projections,
     formats,
@@ -123,6 +130,6 @@ export const useDownloadManagement = () => {
     handleDirectDownload,
     confirmDownload,
     handleStandardDownload,
-    handleModalClose
+    handleModalClose,
   };
 };

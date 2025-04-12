@@ -22,7 +22,6 @@ if langsmith_tracing:
         logger.error(f"Error initializing LangSmith for embeddings: {str(e)}")
         langsmith_tracing = False
 
-@traceable(run_type="embedding", name="Azure OpenAI Embedding")
 async def fetch_openai_embeddings(text):
     """Fetch embeddings from Azure OpenAI API for the given text"""
     
