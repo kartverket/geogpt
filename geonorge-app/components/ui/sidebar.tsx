@@ -196,11 +196,10 @@ const Sidebar = React.forwardRef<
     }
 
     return (
-      // Sidebar pushed out when collapsed.
       <div
         ref={ref}
         className={cn(
-          "fixed top-0 left-0 h-full z-50 bg-white transition-transform duration-300",
+          "relative h-full bg-white transition-all duration-300",
           state === "collapsed" && "-translate-x-full",
           className
         )}
@@ -232,7 +231,7 @@ const SidebarTrigger = React.forwardRef<
       }}
       {...props}
     >
-      <Menu className="text-white"/>
+      <Menu className="text-white" />
       <span className="sr-only">Open/Close Sidebar</span>
     </Button>
   );
