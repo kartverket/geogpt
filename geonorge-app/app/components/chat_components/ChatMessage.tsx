@@ -1,10 +1,10 @@
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { ChatMessage as ChatMessageType } from "./types";
+import { ChatMessage as ChatMessageType, SearchResult } from "./types";
 
 interface ChatMessageProps {
   message: ChatMessageType;
-  onWmsClick: (url: string, title?: string) => void;
+  onWmsClick: (searchResult: SearchResult) => void;
   onDownloadClick: (url: string) => void;
 }
 
@@ -26,16 +26,49 @@ export const ChatMessage = ({
         <div className="flex gap-2">
           <Button
             onClick={() => {
-              if (message.wmsUrl && message.wmsUrl !== "None") {
-                onWmsClick(message.wmsUrl, message.title);
+              const wmsInfo = message.wmsUrl;
+              if (
+                wmsInfo &&
+                wmsInfo !== "None" &&
+                typeof wmsInfo === "object" &&
+                "wms_url" in wmsInfo &&
+                wmsInfo.wms_url &&
+                wmsInfo.wms_url !== "None"
+              ) {
+                const searchResult: SearchResult = {
+                  uuid: message.uuid || `msg-${Date.now()}`,
+                  title: message.title || "Ukjent datasett",
+                  wmsUrl: wmsInfo,
+                  downloadUrl: message.downloadUrl || null,
+                };
+                onWmsClick(searchResult);
+              } else {
+                console.warn(
+                  "WMS data missing or in unexpected format on message:",
+                  message
+                );
               }
             }}
             className={`text-xs ${
-              message.wmsUrl && message.wmsUrl !== "None"
+              message.wmsUrl &&
+              message.wmsUrl !== "None" &&
+              typeof message.wmsUrl === "object" &&
+              "wms_url" in message.wmsUrl &&
+              message.wmsUrl.wms_url &&
+              message.wmsUrl.wms_url !== "None"
                 ? "rounded-omar bg-color-gn-primarylight hover:bg-color-gn-primary text-white"
                 : "bg-gray-300 text-gray-500 cursor-not-allowed"
             }`}
-            disabled={!message.wmsUrl || message.wmsUrl === "None"}
+            disabled={
+              !(
+                message.wmsUrl &&
+                message.wmsUrl !== "None" &&
+                typeof message.wmsUrl === "object" &&
+                "wms_url" in message.wmsUrl &&
+                message.wmsUrl.wms_url &&
+                message.wmsUrl.wms_url !== "None"
+              )
+            }
           >
             Vis
           </Button>
