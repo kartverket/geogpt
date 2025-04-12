@@ -96,6 +96,7 @@ const DemoV4 = () => {
     ws,
     mapUpdates,
     searchResults,
+    clearMapUpdates,
   } = useWebSocket();
 
   // Pass the REAL executeDatasetDownload to useChatManagement
@@ -119,7 +120,8 @@ const DemoV4 = () => {
   // === MOVE EFFECTS INSIDE THE COMPONENT ===
   // Handle map updates from WebSocket
   useEffect(() => {
-    if (mapUpdates) {
+    // Only process if mapUpdates is not null and has actual updates
+    if (mapUpdates && Object.keys(mapUpdates).length > 0) {
       console.log("Processing map updates:", mapUpdates);
 
       // Handle center coordinates update
@@ -193,6 +195,9 @@ const DemoV4 = () => {
           }
         );
       }
+
+      // Clear the map updates after processing
+      clearMapUpdates();
     }
     // Ensure all dependencies from mapState are included if necessary
   }, [
@@ -202,6 +207,7 @@ const DemoV4 = () => {
     mapState.addSearchMarker,
     mapState.setSearchMarker,
     mapState.setUserMarker,
+    clearMapUpdates,
   ]);
 
   // Manage interactions between modal and popover
