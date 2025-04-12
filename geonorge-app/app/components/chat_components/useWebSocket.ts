@@ -257,6 +257,10 @@ export const useWebSocket = () => {
     }
   };
 
+  const clearMapUpdates = useCallback(() => {
+    setMapUpdates({});
+  }, []);
+
   const sendMessage = (message: string) => {
     if (!ws || ws.readyState !== WebSocket.OPEN) {
       // Attempt to reconnect if not connected
@@ -295,5 +299,6 @@ export const useWebSocket = () => {
     formats,
     isConnected,
     mapUpdates,
+    clearMapUpdates,
   };
 };
