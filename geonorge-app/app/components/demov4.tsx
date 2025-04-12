@@ -109,6 +109,11 @@ const DemoV4 = () => {
   const [isLayerPanelOpen, setIsLayerPanelOpen] = useState(false);
   const [showInitialInput, setShowInitialInput] = useState(true);
   const [activeMapLayers, setActiveMapLayers] = useState<ActiveLayerInfo[]>([]);
+  // Add state for LayerPanel filter
+  const [layerPanelFilter, setLayerPanelFilter] = useState<string | null>(null);
+  // State to track the dataset just added via chat
+  const [datasetJustAddedFromChat, setDatasetJustAddedFromChat] =
+    useState<SearchResult | null>(null);
 
   // === MOVE EFFECTS INSIDE THE COMPONENT ===
   // Handle map updates from WebSocket
@@ -234,6 +239,26 @@ const DemoV4 = () => {
   const openLayerPanel = () => {
     setIsLayerPanelOpen(true);
     setIsChatOpen(false);
+  };
+
+  // Create a wrapper function for handling WMS clicks from chat
+  const handleWmsClickFromChat = (searchResult: SearchResult) => {
+    // 1. Add the layer using the hook's function
+    wmsManagement.addFirstWmsLayerFromSearchResult(
+      searchResult,
+      activeMapLayers,
+      setActiveMapLayers
+    );
+
+    // 2. Open the Layer Panel
+    setIsLayerPanelOpen(true);
+    setIsChatOpen(false); // Optionally close chat panel
+
+    // 3. Set the filter type to 'active'
+    setLayerPanelFilter("active");
+
+    // 4. Track the added dataset so LayerPanel can be updated
+    setDatasetJustAddedFromChat(searchResult);
   };
 
   // New handler to toggle individual layers from LayerPanel
@@ -391,7 +416,7 @@ const DemoV4 = () => {
               onInputChange={chatManagement.handleChatInputChange}
               onSubmit={handleChatSubmit}
               isGenerating={isStreaming}
-              onWmsClick={wmsManagement.replaceIframe}
+              onWmsClick={handleWmsClickFromChat}
               onDownloadClick={chatManagement.handleFullScreenDownload}
               onEnterFullScreen={chatManagement.enterFullScreen}
               onClose={() => setIsChatOpen(false)}
@@ -421,6 +446,10 @@ const DemoV4 = () => {
                 activeLayerIds={activeLayerIds}
                 onToggleLayer={handleToggleLayerFromPanel}
                 onDatasetDownload={executeDatasetDownload}
+                filterType={layerPanelFilter}
+                onFilterTypeChange={setLayerPanelFilter}
+                // Pass the newly added dataset info
+                newlyAddedDatasetInfo={datasetJustAddedFromChat}
               />
             </div>
           </div>
@@ -436,7 +465,7 @@ const DemoV4 = () => {
             handleInputChange={chatManagement.fullScreenHandleInputChange}
             handleSubmit={chatManagement.fullScreenHandleSubmit}
             handleAppend={chatManagement.handleAppend}
-            onWmsClick={wmsManagement.replaceIframe}
+            onWmsClick={handleWmsClickFromChat}
             onDownloadClick={chatManagement.handleFullScreenDownload}
             exitFullScreen={chatManagement.exitFullScreen}
           />

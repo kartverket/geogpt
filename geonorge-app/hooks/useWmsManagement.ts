@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { WMSLayer } from "@/app/components/chat_components/types";
+import { WMSLayer, SearchResult } from "@/app/components/chat_components/types";
+import { ActiveLayerInfo } from "@/app/components/LayerPanel";
 
 export interface TrackedDataset {
   id: string;
@@ -156,6 +157,75 @@ export const useWmsManagement = () => {
     );
   };
 
+  const addFirstWmsLayerFromSearchResult = async (
+    searchResult: SearchResult,
+    activeMapLayers: ActiveLayerInfo[],
+    setActiveMapLayers: React.Dispatch<React.SetStateAction<ActiveLayerInfo[]>>
+  ) => {
+    console.log(searchResult, "searchResult");
+    if (
+      !searchResult.wmsUrl ||
+      !searchResult.wmsUrl.wms_url ||
+      !searchResult.wmsUrl.available_layers ||
+      searchResult.wmsUrl.available_layers.length === 0
+    ) {
+      console.warn(
+        "[addFirstWmsLayerFromSearchResult] Search result is missing WMS URL or available layers.",
+        searchResult.wmsUrl
+      );
+      return;
+    }
+
+    const firstLayer = searchResult.wmsUrl.available_layers[0];
+    const sourceUrl = searchResult.wmsUrl.wms_url;
+    const sourceUuid = searchResult.uuid;
+    const sourceTitle = searchResult.title || "Ukjent Kilde";
+    const layerName = firstLayer.name;
+    const layerTitle = firstLayer.title || layerName;
+    const uniqueLayerId = `${sourceUuid}-${layerName}`;
+
+    const isDuplicate = activeMapLayers.some((activeLayer) => {
+      const sameUrl = activeLayer.sourceUrl === sourceUrl;
+      const sameName = activeLayer.name === layerName;
+      if (sameUrl && sameName) {
+        console.log(
+          `[addFirstWmsLayerFromSearchResult] Duplicate found: Active layer ID ${activeLayer.id} (Source: ${activeLayer.sourceTitle}) matches new layer ${layerName} from ${sourceUrl}`
+        );
+      }
+      return sameUrl && sameName;
+    });
+
+    if (isDuplicate) {
+      console.warn(
+        `[addFirstWmsLayerFromSearchResult] Layer "${layerTitle}" from WMS "${sourceUrl}" is already active. Aborting add.`
+      );
+      return;
+    }
+
+    const newLayerInfo: ActiveLayerInfo = {
+      id: uniqueLayerId,
+      name: layerName,
+      title: layerTitle,
+      sourceUrl: sourceUrl,
+      sourceTitle: sourceTitle,
+      sourceUuid: sourceUuid,
+    };
+
+    console.log(
+      "[addFirstWmsLayerFromSearchResult] Adding new layer:",
+      newLayerInfo
+    );
+    setActiveMapLayers((prevLayers) => {
+      if (prevLayers.some((l) => l.id === newLayerInfo.id)) {
+        console.warn(
+          `[addFirstWmsLayerFromSearchResult] ID collision detected for ${newLayerInfo.id}, skipping add.`
+        );
+        return prevLayers;
+      }
+      return [...prevLayers, newLayerInfo];
+    });
+  };
+
   return {
     wmsUrl,
     availableLayers,
@@ -171,5 +241,6 @@ export const useWmsManagement = () => {
     replaceIframe,
     removeTrackedDataset,
     handleLayerChangeWithDataset,
+    addFirstWmsLayerFromSearchResult,
   };
 };

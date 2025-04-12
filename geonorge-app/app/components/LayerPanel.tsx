@@ -160,19 +160,26 @@ interface LayerPanelProps {
   activeLayerIds: string[];
   onToggleLayer: (layerInfo: ActiveLayerInfo, isChecked: boolean) => void;
   onDatasetDownload: (dataset: SearchResult) => void;
+  filterType: string | null;
+  onFilterTypeChange: (newFilter: string | null) => void;
+  // Prop to receive dataset info added externally
+  newlyAddedDatasetInfo?: SearchResult | null;
 }
 
 export const LayerPanel: React.FC<LayerPanelProps> = ({
   activeLayerIds,
   onToggleLayer,
   onDatasetDownload,
+  filterType,
+  onFilterTypeChange,
+  // Destructure the new prop
+  newlyAddedDatasetInfo,
 }) => {
   const { searchResults, ws } = useWebSocket();
   const [searchTerm, setSearchTerm] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
-  const [filterType, setFilterType] = useState<string | null>(null);
   const [allWmsResultsMap, setAllWmsResultsMap] = React.useState<
     Map<string, SearchResult>
   >(new Map());
@@ -189,6 +196,36 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
   const [duplicateLayerAlertMessage, setDuplicateLayerAlertMessage] =
     React.useState("");
 
+  // Effect to update internal map when a dataset is added externally
+  useEffect(() => {
+    if (newlyAddedDatasetInfo && newlyAddedDatasetInfo.uuid) {
+      setAllWmsResultsMap((prevMap) => {
+        // Only add if it's not already known
+        if (!prevMap.has(newlyAddedDatasetInfo.uuid)) {
+          const newMap = new Map(prevMap);
+          newMap.set(newlyAddedDatasetInfo.uuid, newlyAddedDatasetInfo);
+          console.log(
+            "[LayerPanel] Ensuring dataset from external source is known:",
+            newlyAddedDatasetInfo.title
+          );
+
+          setExpandedCategories((prevExpanded) => {
+            if (!prevExpanded.includes(newlyAddedDatasetInfo.uuid)) {
+              return [...prevExpanded, newlyAddedDatasetInfo.uuid];
+            }
+            return prevExpanded;
+          });
+
+          return newMap;
+        }
+        return prevMap; // Dataset already known, no state change needed
+      });
+      // Potential Improvement: Could add a callback prop here to signal
+      // to the parent (DemoV4) that the info has been processed, allowing
+      // the parent to reset newlyAddedDatasetInfo to null. For now, this works.
+    }
+  }, [newlyAddedDatasetInfo]); // Dependency array includes the new prop
+
   const toggleCategory = (categoryId: string) => {
     setExpandedCategories((prev) =>
       prev.includes(categoryId)
@@ -199,7 +236,7 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
 
   const clearSearch = () => {
     setSearchTerm("");
-    setFilterType(null);
+    onFilterTypeChange(null);
     setHasSearched(false);
     setIsSearching(false);
     // Clear search results from the hook state if desired
@@ -312,7 +349,6 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
         payload: searchTerm,
       })
     );
-    setFilterType(null);
   };
 
   useEffect(() => {
@@ -417,7 +453,7 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
               variant={filterType === "active" ? "default" : "outline"}
               className="cursor-pointer"
               onClick={() =>
-                setFilterType(filterType === "active" ? null : "active")
+                onFilterTypeChange(filterType === "active" ? null : "active")
               }
             >
               <Eye size={14} className="mr-1" /> Aktive lag (
@@ -427,7 +463,7 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
               variant={filterType === "popular" ? "default" : "outline"}
               className="cursor-pointer"
               onClick={() =>
-                setFilterType(filterType === "popular" ? null : "popular")
+                onFilterTypeChange(filterType === "popular" ? null : "popular")
               }
             >
               <Star size={14} className="mr-1" /> Populære
@@ -614,7 +650,7 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
                                   return (
                                     <div
                                       key={uniqueLayerId}
-                                      className="flex items-center gap-2 px-2 py-1.5 hover:bg-geo-slate/50 rounded-md"
+                                      className="flex items-center gap-2 px-0 py-1.5 hover:bg-geo-slate/50 rounded-md"
                                     >
                                       <Checkbox
                                         id={uniqueLayerId}
