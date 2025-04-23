@@ -258,13 +258,16 @@ export function AppSidebar({
         "flex flex-col h-full"
       )}
     >
-      <SidebarHeader className="p-4 border-b bg-white shadow-sm flex-shrink-0">
-        <div className="flex flex-row items-center justify-between">
-          <GeoNorgeLogo className="h-auto w-40 mx-auto" />
-          <SidebarTrigger />
+      <SidebarHeader className="p-6 border-b bg-white shadow-sm flex-shrink-0">
+        <div className="flex flex-row items-center">
+          <SidebarTrigger className="ml-1 flex-shrink-0 bg-gray-100 2xl:ml-3" />
+          <div className="flex-grow flex justify-center">
+            <GeoNorgeLogo className="h-auto w-40" />
+          </div>
+          <div className="flex-shrink-0 w-8"></div>
         </div>
       </SidebarHeader>
-      <SidebarContent className="p-4 flex-grow overflow-y-auto">
+      <SidebarContent className="flex-grow overflow-y-auto p-5 2xl:px-7 2xl:py-4">
         {showResetTourView ? (
           <ResetTourView t={t} onBack={() => setShowResetTourView(false)} />
         ) : showPrivacyView ? (

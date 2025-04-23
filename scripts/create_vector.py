@@ -95,12 +95,16 @@ def fetch_embeddings(texts, model=MODEL, batch_size=10):
 
     return {"data": all_embeddings}
 
-def process_csv(file_path, output_path, columns_to_combine):
+def process_csv(file_path, output_path, columns_to_combine, limit=5):
     """
     Kombiner kolonner, hent embeddings og lagre resultatene i en ny CSV.
     """
     try:
         df = pd.read_csv(file_path, delimiter='|')
+
+        # Limit the number of rows for testing
+        df = df.head(limit)
+        print(f"TESTING MODE: Processing only the first {limit} rows")
 
         # Kombiner spesifiserte kolonner
         df['combined_text'] = df[columns_to_combine].fillna('').agg(' '.join, axis=1)
@@ -147,7 +151,8 @@ if __name__ == "__main__":
         process_csv(
             input_file,
             output_file,
-            ["title", "abstract", "keyword"]
+            ["title", "abstract", "keyword"],
+            limit=5  # Only process 5 rows for testing
         )
 
     except FileNotFoundError as e:

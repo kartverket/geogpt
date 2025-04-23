@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { VariantProps, cva } from "class-variance-authority";
-import { PanelRightOpen, Menu } from "lucide-react";
+import { Menu, ArrowLeft } from "lucide-react";
 
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
@@ -242,7 +242,7 @@ const SidebarTrigger = React.forwardRef<
             {isCollapsed ? (
               <Menu size={24} className="text-color-gn-secondary" />
             ) : (
-              <PanelRightOpen size={24} className="text-color-gn-secondary" />
+              <Menu size={24} className="text-color-gn-secondary" />
             )}
           </Button>
         </TooltipTrigger>
