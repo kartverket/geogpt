@@ -1,8 +1,9 @@
 import React, { useMemo } from "react";
-import { Star, Clock, Loader2 } from "lucide-react";
+import { Star, Clock, Loader2, Trash2, Layers2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { useWebSocket } from "./chat_components/useWebSocket";
 import { SearchResult, ActiveLayerInfo } from "./chat_components/types";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -28,6 +29,8 @@ interface LayerPanelProps {
   onFilterTypeChange: (newFilter: string | null) => void;
   // Prop to receive dataset info added externally
   newlyAddedDatasetInfo?: SearchResult | null;
+  // Add prop for removing all layers
+  onRemoveAllLayers: () => void;
 }
 
 export const LayerPanel: React.FC<LayerPanelProps> = ({
@@ -38,6 +41,7 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
   onFilterTypeChange,
   // Destructure the new prop
   newlyAddedDatasetInfo,
+  onRemoveAllLayers,
 }) => {
   const { searchResults, ws } = useWebSocket();
   const { selectedDatasetsInfo, handleSelectDataset, clearSelectedDatasets } =
@@ -136,7 +140,7 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
 
   return (
     <TooltipProvider delayDuration={100}>
-      <div className="w-full flex flex-col h-screen bg-white border-r border-gray-200 shrink-0 shadow-md">
+      <div className="w-full flex flex-col h-full bg-white border-r border-gray-200 shrink-0 shadow-md">
         {/* Header and Search */}
         <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-white to-gray-50">
           <SearchForm
@@ -201,6 +205,10 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
             value="all"
             className="flex-1 overflow-y-auto px-4 pb-4 space-y-1 relative"
           >
+            <h3 className="text-sm font-medium text-gray-800 mb-2 flex items-center gap-2 py-2">
+              <Layers2 size={16} className="text-color-gn-primary" />
+              Alle datasett
+            </h3>
             {/* Bulk Action Bar, basically multi download button */}
             <BulkActionBar
               selectedCount={selectedDatasetsInfo.size}
@@ -329,6 +337,21 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* Footer Section */}
+        {activeLayerIds.length > 0 && (
+          <div className="p-3 border-t border-gray-200 mt-auto shrink-0 bg-gray-50">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onRemoveAllLayers}
+              className="w-full text-red-600 border-red-300 hover:bg-red-50 hover:text-red-700"
+            >
+              <Trash2 size={16} className="mr-2" />
+              Fjern alle aktive kartlag ({activeLayerIds.length})
+            </Button>
+          </div>
+        )}
 
         {/* Bulk Download Dialog */}
         <BulkDownloadDialog
