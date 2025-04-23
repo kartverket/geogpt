@@ -9,7 +9,7 @@ services:
     ports:
       - "5432:5432"
     healthcheck:
-      test: [ "CMD", "pg_isready", "-U", "asd" ]
+      test: ["CMD", "pg_isready", "-U", "asd"]
       interval: 5s
       retries: 5
       timeout: 3s
@@ -26,28 +26,33 @@ services:
       - 8.8.8.8
       - 1.1.1.1
     extra_hosts:
-    - "kartai-openai.openai.azure.com:51.12.73.214"
-    - "swedencentral.api.cognitive.microsoft.com:51.12.73.214"
-    - "kartai-openai.azure.com:51.12.73.214"   
+      - "kartai-openai.openai.azure.com:51.12.73.214"
+      - "swedencentral.api.cognitive.microsoft.com:51.12.73.214"
+      - "kartai-openai.azure.com:51.12.73.214"
     command: >
       sh -c "
         echo 'Testing network...' &&
         echo '51.12.73.214 kartai-openai.openai.azure.com' >> /etc/hosts &&
         echo '51.12.73.214 kartai-openai.azure.com' >> /etc/hosts &&
         cat /etc/hosts &&
-        cd /app &&
-        python scripts/create_vector.py &&
+        cd /app && 
+        if [ ! -f 'all_columns_vectorized.csv' ]; then
+          echo 'Vector file does not exist, creating vectors...' &&
+          python scripts/create_vector.py
+        else
+          echo 'Vector file already exists, skipping vector creation...'
+        fi &&
         python scripts/insert_csv.py &&
         python geonorge-server/src/server.py
       "
     environment:
-      - DB_HOST=database  # Use the service name
+      - DB_HOST=database # Use the service name
       - DB_PORT=5432
       - DB_NAME=asd
       - DB_USER=asd
       - DB_PASSWORD=asd
       # Add your other environment variables here
-      - OPENAI_API_KEY=${OPENAI_API_KEY} 
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
       - AZURE_GPT_API_KEY=${AZURE_GPT_API_KEY}
       - AZURE_GPT_ENDPOINT=${AZURE_GPT_ENDPOINT}
       - AZURE_EMBEDDING_API_KEY=${AZURE_EMBEDDING_API_KEY}
@@ -57,7 +62,6 @@ services:
         condition: service_healthy
     ports:
       - "8080:8080"
-    
 
   frontend:
     build:
