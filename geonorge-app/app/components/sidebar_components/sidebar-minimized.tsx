@@ -18,7 +18,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-
 interface SidebarMinimizedProps {
   className?: string;
   children?: React.ReactNode;
@@ -49,12 +48,12 @@ const SidebarMinimizedButton = ({
           <button
             onClick={handleClick}
             className={cn(
-              "w-full h-auto flex flex-col items-center justify-center text-xs text-gray-500 hover:text-orange-500 transition-colors duration-200 px-2",
+              "w-full h-auto flex flex-col items-center justify-center text-xxs text-gray-500 hover:text-orange-500 transition-colors duration-200 px-2",
               isActive && "text-orange-500 bg-orange-50"
             )}
           >
             <Icon size={24} />
-            <span className="text-xs mt-1">{tooltip}</span>
+            <span className="text-xxs 2xl:text-xs mt-1">{tooltip}</span>
           </button>
         </TooltipTrigger>
         <TooltipContent
@@ -75,17 +74,17 @@ export const SidebarMinimized: React.FC<SidebarMinimizedProps> = ({
   return (
     <div
       className={cn(
-        "fixed left-0 top-0 bottom-0 flex flex-col bg-white shadow-lg rounded-omar z-50 h-full w-20 overflow-hidden",
+        "fixed left-0 top-0 bottom-0 flex flex-col bg-white shadow-lg rounded-omar z-50 h-full w-24 2xl:w-28 overflow-hidden",
         className
       )}
     >
       <div className="flex flex-col h-full py-6 justify-between">
         {/* Sidebar items */}
-        <div className="flex flex-col items-center space-y-6 ">
+        <div className="flex flex-col items-center space-y-8 ">
           <SidebarTrigger />
           <GeoNorgeIcon />
           <SidebarMinimizedButton icon={Search} tooltip="Adressesøk" />
-          <SidebarMinimizedButton icon={Map} tooltip="Kart" />
+          <SidebarMinimizedButton icon={Map} tooltip="Bakgrunnskart" />
           <SidebarMinimizedButton icon={Wrench} tooltip="Verktøy" />
           <SidebarMinimizedButton icon={HelpCircle} tooltip="Tips og triks" />
           <SidebarMinimizedButton icon={Mail} tooltip="Kontakt oss" />
