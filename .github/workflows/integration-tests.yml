@@ -4,12 +4,13 @@ name: Integration Tests
 on:
   push:
     branches:
-      - 'feat/GEON-1727-Dockerize-application-actions'
-
+      - 'feat/GEON-1790-Fjern-creation-av-embeddings'
+      
       - main
+
   pull_request:
     branches:
-      - 'feat/GEON-1727-Dockerize-application-actions'
+      - 'feat/GEON-1790-Fjern-creation-av-embeddings'
       - main
 
 jobs:
@@ -84,14 +85,16 @@ jobs:
           echo "Checking for vector extension..."
           docker-compose exec -T database psql -U asd -d asd -c "SELECT extname FROM pg_extension WHERE extname = 'vector';"
 
+      - name: Validate file location
+        run: |
+          docker-compose exec -T backend ls 
+
       - name: Run vector creation scripts
         run: |
           # Make sure the vectors are created and inserted
-          docker-compose exec -T backend python /app/scripts/create_vector.py
           docker-compose exec -T backend python /app/scripts/insert_csv.py
           docker-compose exec -T database psql -U asd -d asd -c "SELECT COUNT(*) FROM text_embedding_3_large;"
 
-    
           # Verify table was created
           docker-compose exec -T database psql -U asd -d asd -c "SELECT COUNT(*) FROM text_embedding_3_large;"
 

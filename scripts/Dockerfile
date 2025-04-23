@@ -13,6 +13,6 @@ COPY . .
 COPY ./cleaned_metadata.csv /app/cleaned_metadata.csv
 
 #kommando som kjører skript
-CMD ["sh", "-c", "python create_vector.py $$ python insert_csv.py"]
+CMD ["sh", "-c", "python insert_csv.py"]
 
 
