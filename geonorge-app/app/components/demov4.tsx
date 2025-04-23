@@ -254,6 +254,11 @@ const DemoV4 = () => {
     });
   };
 
+  // Remove all layers
+  const removeAllLayers = () => {
+    setActiveMapLayers([]);
+  };
+
   // Create a memoized list of active layer IDs for LayerPanel prop
   const activeLayerIds = useMemo(
     () => activeMapLayers.map((layer) => layer.id),
@@ -420,7 +425,7 @@ const DemoV4 = () => {
                 <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 overflow-y-auto">
               <LayerPanel
                 activeLayerIds={activeLayerIds}
                 onToggleLayer={handleToggleLayerFromPanel}
@@ -429,6 +434,8 @@ const DemoV4 = () => {
                 onFilterTypeChange={setLayerPanelFilter}
                 // Pass the newly added dataset info
                 newlyAddedDatasetInfo={datasetJustAddedFromChat}
+                // Pass the remove all function
+                onRemoveAllLayers={removeAllLayers}
               />
             </div>
           </div>
