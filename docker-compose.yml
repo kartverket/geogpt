@@ -21,6 +21,7 @@ services:
     volumes:
       - .:/app
       - ./cleaned_metadata.csv:/app/../cleaned_metadata.csv
+      - ./all_columns_vectorized.csv:/app/geonorge-server/all_columns_vectorized.csv
     working_dir: /app/geonorge-server
     dns:
       - 8.8.8.8
@@ -36,7 +37,6 @@ services:
         echo '51.12.73.214 kartai-openai.azure.com' >> /etc/hosts &&
         cat /etc/hosts &&
         cd /app &&
-        python scripts/create_vector.py &&
         python scripts/insert_csv.py &&
         python geonorge-server/src/server.py
       "
