@@ -1,10 +1,9 @@
 import * as React from "react";
-import { Map, Layers2, Wrench } from "lucide-react";
+import { Map, Wrench, Search } from "lucide-react";
 import { Section } from "@/app/components/sidebar_components/Section";
 import { BaseMapSelector } from "@/app/components/sidebar_components/BaseMapSelector";
-import { SearchInput } from "@/app/components/sidebar_components/SearchInput";
-import { DeselectAllButton } from "@/app/components/sidebar_components/DeselectAllButton";
-import { DatasetList } from "@/app/components/sidebar_components/DatasetList";
+import { AddressSearch } from "@/app/components/sidebar_components/AddressSearch";
+
 import { ActionItem } from "@/app/components/sidebar_components/ActionItem";
 import { TranslationKey } from "@/i18n/translations";
 import { TOUR_STEP_IDS } from "@/lib/tour-constants";
@@ -41,43 +40,40 @@ interface Props {
   isBaseMapSectionVisible: boolean;
   isLayerSectionVisible: boolean;
   isActionSectionVisible: boolean;
+  isAddressSectionVisible: boolean;
   setIsBaseMapSectionVisible: (val: boolean) => void;
   setIsLayerSectionVisible: (val: boolean) => void;
   setIsActionSectionVisible: (val: boolean) => void;
+  setIsAddressSectionVisible: (val: boolean) => void;
   data: {
     actions: {
       title: string;
       url: string;
       icon: React.ElementType;
+      disabled?: boolean;
+      disabledMessage?: string;
     }[];
   };
+  setSearchMarker: (marker: { lat: number; lng: number } | null) => void;
 }
 
 export const Temakart: React.FC<Props> = ({
   t,
   layerSearch,
-  setLayerSearch,
-  filteredDatasets,
-  trackedDatasets,
-  expandedDatasets,
-  setExpandedDatasets,
-  datasetScrollContainerRef,
-  datasetScrollPositionRef,
-  mainScrollPositionRef,
-  hasSelectedLayers,
-  handleDeselectAllLayers,
-  onLayerChangeWithDataset,
-  onRemoveDataset,
+
   onChangeBaseLayer,
   selectedBaseMap,
   setSelectedBaseMap,
   isBaseMapSectionVisible,
-  isLayerSectionVisible,
+
   isActionSectionVisible,
+  isAddressSectionVisible,
   setIsBaseMapSectionVisible,
-  setIsLayerSectionVisible,
+
   setIsActionSectionVisible,
+  setIsAddressSectionVisible,
   data,
+  setSearchMarker,
 }) => {
   // State to track if we're displaying search results
   const [isSearching, setIsSearching] = React.useState(false);
@@ -90,11 +86,21 @@ export const Temakart: React.FC<Props> = ({
   return (
     <div className="space-y-4">
       <Section
+        id="address"
+        collapsible
+        title={t("search_address")}
+        icon={Search}
+        isOpen={!isAddressSectionVisible}
+        onToggle={() => setIsAddressSectionVisible(!isAddressSectionVisible)}
+      >
+        <AddressSearch setSearchMarker={setSearchMarker} t={t} />
+      </Section>
+      <Section
         id="basemap"
         collapsible
         title={t("background_map")}
         icon={Map}
-        isOpen={isBaseMapSectionVisible}
+        isOpen={!isBaseMapSectionVisible}
         onToggle={() => setIsBaseMapSectionVisible(!isBaseMapSectionVisible)}
       >
         {onChangeBaseLayer && (
@@ -106,104 +112,14 @@ export const Temakart: React.FC<Props> = ({
           />
         )}
       </Section>
-      <div id={TOUR_STEP_IDS.APP_SIDEBAR}>
-        <Section
-          id="layers"
-          title={t("theme_maps")}
-          icon={Layers2}
-          collapsible
-          isOpen={isLayerSectionVisible}
-          onToggle={() => setIsLayerSectionVisible(!isLayerSectionVisible)}
-        >
-          <div className="space-y-3">
-            <SearchInput
-              layerSearch={layerSearch}
-              setLayerSearch={setLayerSearch}
-              t={t}
-            />
-
-            {/* Display search results when searching */}
-            {isSearching ? (
-              <div className="space-y-4">
-                {/* Show filtered datasets results */}
-                {filteredDatasets.length > 0 && (
-                  <div className="mb-4">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="font-medium text-sm text-gray-700 ml-1">
-                        {t("active_datasets")}
-                      </span>
-                    </div>
-                    <DatasetList
-                      trackedDatasets={filteredDatasets}
-                      expandedDatasets={{
-                        ...expandedDatasets,
-                        ...filteredDatasets.reduce(
-                          (acc, dataset) => ({
-                            ...acc,
-                            [dataset.id]: true, // Auto-expand search results
-                          }),
-                          {}
-                        ),
-                      }}
-                      datasetScrollContainerRef={datasetScrollContainerRef}
-                      datasetScrollPositionRef={datasetScrollPositionRef}
-                      mainScrollPositionRef={mainScrollPositionRef}
-                      onLayerChangeWithDataset={onLayerChangeWithDataset}
-                      onRemoveDataset={onRemoveDataset}
-                      setExpandedDatasets={setExpandedDatasets}
-                      t={t}
-                      highlightSearchTerm={layerSearch}
-                    />
-                  </div>
-                )}
-
-                {/* Show "no results found" when appropriate */}
-                {filteredDatasets.length === 0 && (
-                  <div className="p-4 text-center border border-gray-200 bg-white rounded-omar">
-                    <p className="text-sm text-gray-500">
-                      {t("no_layers_found")}
-                    </p>
-                  </div>
-                )}
-              </div>
-            ) : (
-              /* Show regular active datasets when not searching */
-              trackedDatasets.length > 0 && (
-                <div className="mb-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="font-medium text-sm text-gray-700 ml-1">
-                      {t("active_datasets")}
-                    </span>
-                    <DeselectAllButton
-                      hasSelectedLayers={hasSelectedLayers}
-                      handleDeselectAllLayers={handleDeselectAllLayers}
-                      t={t}
-                    />
-                  </div>
-                  <DatasetList
-                    trackedDatasets={trackedDatasets}
-                    expandedDatasets={expandedDatasets}
-                    datasetScrollContainerRef={datasetScrollContainerRef}
-                    datasetScrollPositionRef={datasetScrollPositionRef}
-                    mainScrollPositionRef={mainScrollPositionRef}
-                    onLayerChangeWithDataset={onLayerChangeWithDataset}
-                    onRemoveDataset={onRemoveDataset}
-                    setExpandedDatasets={setExpandedDatasets}
-                    t={t}
-                  />
-                </div>
-              )
-            )}
-          </div>
-        </Section>
-      </div>
+      <div id={TOUR_STEP_IDS.APP_SIDEBAR}></div>
 
       <Section
         id="actions"
         title={t("tool")}
         icon={Wrench}
         collapsible
-        isOpen={isActionSectionVisible}
+        isOpen={!isActionSectionVisible}
         onToggle={() => setIsActionSectionVisible(!isActionSectionVisible)}
       >
         <div className="space-y-1">
@@ -213,6 +129,8 @@ export const Temakart: React.FC<Props> = ({
               icon={action.icon}
               title={action.title}
               url={action.url}
+              disabled={action.disabled}
+              disabledMessage={action.disabledMessage}
             />
           ))}
         </div>
