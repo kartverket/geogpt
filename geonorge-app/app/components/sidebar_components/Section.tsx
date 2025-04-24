@@ -35,7 +35,7 @@ export const Section: React.FC<SectionProps> = ({
     >
       <div
         className={`flex items-center gap-3 p-3 transition-colors ${
-          collapsible ? "cursor-pointer hover:bg-gray-50" : ""
+          collapsible ? "cursor-pointer hover:bg-gray-100 " : ""
         }`}
         onClick={(e) => {
           e.stopPropagation();
@@ -43,13 +43,13 @@ export const Section: React.FC<SectionProps> = ({
         }}
       >
         {Icon && (
-          <div className="rounded-omar p-1.5 flex items-center justify-center transition-colors bg-color-gn-primary/5">
+          <div className="rounded-md p-1.5 flex items-center justify-center transition-colors bg-color-gn-primary/5">
             <Icon className="h-5 w-5 text-color-gn-primary" />
           </div>
         )}
         <h3
           className={`font-medium flex-1 ${
-            collapsible && isOpen ? "text-color-gn-primary" : "text-gray-800"
+            collapsible && isOpen ? "text-color-gn-primary" : "text-color-gn-secondary"
           }`}
         >
           {title}
