@@ -1,12 +1,6 @@
 import React from "react";
+import { X, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Download, Trash2 } from "lucide-react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 interface BulkActionBarProps {
   selectedCount: number;
@@ -20,43 +14,34 @@ const BulkActionBar: React.FC<BulkActionBarProps> = ({
   onInitiateDownload,
 }) => {
   if (selectedCount === 0) {
-    return null; // Don't render if nothing is selected
+    return null;
   }
 
   return (
-    // Wrap TooltipProvider here if not already provided by parent
-    <TooltipProvider delayDuration={100}>
-      <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-2 flex justify-between items-center shadow-sm mb-2">
-        <div className="flex items-center gap-2">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                onClick={onClearSelection}
-                size="sm"
-                variant="outline"
-                className="h-8 w-8 p-0 text-red-600 hover:text-red-700 border-gray-300"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent className="bg-white text-gray-800 shadow-lg rounded-md">
-              <p>Fjern valg</p>
-            </TooltipContent>
-          </Tooltip>
-          <span className="text-sm font-medium text-gray-700">
-            {selectedCount} valgt
-          </span>
-        </div>
+    <div className="sticky top-0 left-0 right-0 z-20 bg-white shadow-md border-b px-4 py-2 flex justify-between items-center">
+      <div className="flex items-center gap-2">
         <Button
-          onClick={onInitiateDownload}
+          variant="ghost"
           size="sm"
-          className="px-3 py-1.5 text-sm border shadow-sm bg-color-gn-primary hover:bg-color-gn-primary/90 text-white rounded-md transition-all"
+          className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700"
+          onClick={onClearSelection}
         >
-          <Download className="h-4 w-4 mr-1" />
-          Last ned valgte
+          <X className="h-4 w-4" />
         </Button>
+        <span className="text-sm text-gray-700">
+          <span className="font-medium">{selectedCount}</span> datasett valgt
+        </span>
       </div>
-    </TooltipProvider>
+      <Button
+        variant="outline"
+        size="sm"
+        className="h-8 bg-color-gn-primary hover:bg-color-gn-primarylight hover:text-white text-white"
+        onClick={onInitiateDownload}
+      >
+        <Download className="h-4 w-4 mr-1" />
+        Last ned
+      </Button>
+    </div>
   );
 };
 

@@ -1,8 +1,17 @@
 import {
   ChatMessage,
   type ChatMessageProps,
-  type Message,
+  type Message as BaseMessage,
 } from "@/components/ui/chat-message";
+
+interface Message extends BaseMessage {
+  uuid?: string;
+  title?: string;
+  wmsUrl?: any;
+  downloadUrl?: string;
+  downloadFormats?: string[];
+  imageUrl?: string;
+}
 import { TypingIndicator } from "@/components/ui/typing-indicator";
 import { Button } from "@/components/ui/button";
 import { Download, Eye } from "lucide-react";
@@ -17,7 +26,7 @@ interface MessageListProps {
   messageOptions?:
     | AdditionalMessageOptions
     | ((message: Message) => AdditionalMessageOptions);
-  onWmsClick?: (url: string) => void;
+  onWmsClick?: (searchResult: any) => void;
   onDownloadClick?: (url: string) => void;
   onExitFullScreen?: () => void;
 }
@@ -31,8 +40,15 @@ export function MessageList({
   onDownloadClick,
   onExitFullScreen,
 }: MessageListProps) {
-  const isValidWmsUrl = (url: string | undefined | null): boolean => {
-    return url !== undefined && url !== null && url !== "None";
+  const isValidWmsUrl = (wmsInfo: any): boolean => {
+    return (
+      wmsInfo &&
+      wmsInfo !== "None" &&
+      typeof wmsInfo === "object" &&
+      "wms_url" in wmsInfo &&
+      wmsInfo.wms_url &&
+      wmsInfo.wms_url !== "None"
+    );
   };
 
   return (
@@ -57,7 +73,14 @@ export function MessageList({
                 <Button
                   onClick={() => {
                     if (isValidWmsUrl(message.wmsUrl)) {
-                      onWmsClick?.(message.wmsUrl!);
+                      const searchResult = {
+                        uuid: message.uuid || `msg-${Date.now()}`,
+                        title: message.wmsUrl.title,
+                        wmsUrl: message.wmsUrl,
+                        downloadUrl: message.downloadUrl || null,
+                        downloadFormats: message.downloadFormats || [],
+                      };
+                      onWmsClick?.(searchResult);
                       onExitFullScreen?.();
                     }
                   }}

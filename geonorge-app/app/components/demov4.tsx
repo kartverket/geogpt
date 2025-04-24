@@ -1,7 +1,6 @@
 "use client";
 import React, { useState, useEffect, useMemo } from "react";
-import { Send, X, Database } from "lucide-react";
-import Image from "next/image";
+import { Send, X, Database, Bot as BotIcon } from "lucide-react";
 import "leaflet/dist/leaflet.css";
 import { LayerPanel } from "@/app/components/LayerPanel";
 import { AppSidebar } from "@/app/components/app-sidebar";
@@ -21,7 +20,6 @@ import { useDownloadManagement } from "@/hooks/useDownloadManagement";
 import { useBaseLayerManagement } from "@/hooks/useBaseLayerManagement";
 import { useMapState } from "@/hooks/useMapState";
 import dynamic from "next/dynamic";
-import hodetTilOmar from "@/app/components/Skjermbilde 2025-04-10 kl. 14.45.23.png";
 import FileDownloadModal from "@/app/components/FileDownloadModal/FileDownloadModal";
 import { SidebarMinimized } from "./sidebar_components/sidebar-minimized";
 
@@ -209,12 +207,17 @@ const DemoV4 = () => {
   const openChatPanel = () => {
     setIsChatOpen(true);
     setIsLayerPanelOpen(false);
+    setShowInitialInput(false); // Hide the initial input when opening chat panel
   };
 
   const openLayerPanel = () => {
     setIsLayerPanelOpen(true);
     setIsChatOpen(false);
   };
+
+  const smoothHoverTransition =
+    "transform transition-transform duration-300 ease-out";
+  const smoothHoverEffect = "group-hover:-translate-y-2 group-hover:scale-110";
 
   // Create a wrapper function for handling WMS clicks from chat
   const handleWmsClickFromChat = (searchResult: SearchResult) => {
@@ -224,7 +227,6 @@ const DemoV4 = () => {
       activeMapLayers,
       setActiveMapLayers
     );
-
     // 2. Open the Layer Panel
     setIsLayerPanelOpen(true);
     setIsChatOpen(false); // Optionally close chat panel
@@ -291,7 +293,6 @@ const DemoV4 = () => {
             setSearchMarker={mapState.setSearchMarker}
           />
         </div>
-
         {/* Main Content Area */}
         <div
           className={`flex-1 relative bg-gray-100 transition-all duration-300 ${
@@ -316,7 +317,7 @@ const DemoV4 = () => {
           <SidebarMinimized />
 
           {/* Initial Chat Input - Repositioned */}
-          {showInitialInput && !chatManagement.isFullScreen && (
+          {showInitialInput && !chatManagement.isFullScreen && !isChatOpen && (
             <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 w-[600px] z-50 px-4">
               <div className="relative bg-white/80 backdrop-blur-sm rounded-lg shadow-lg hover:bg-white transition-colors duration-200">
                 <input
@@ -342,50 +343,76 @@ const DemoV4 = () => {
               </div>
             </div>
           )}
-
           {!chatManagement.isFullScreen && (
             <div className="absolute right-8 top-1/2 transform -translate-y-1/2 flex flex-col space-y-4 z-50">
               <button
                 onClick={openChatPanel}
-                className={`bg-white shadow-lg rounded-xl p-4 hover:bg-orange-50 transition-all duration-300 group ${
-                  isChatOpen ? "bg-orange-50" : ""
-                }`}
+                className={`${
+                  isChatOpen
+                    ? "bg-white shadow-lg ring-2 ring-orange-500 ring-opacity-30"
+                    : "bg-white shadow-lg hover:bg-orange-50"
+                } rounded-xl p-4 transition-all duration-300 group`}
               >
                 <div className="flex flex-col items-center space-y-2">
                   <div className="relative">
-                    <Image
-                      src={hodetTilOmar}
-                      alt="Hodet til Omar"
-                      width={32}
-                      height={32}
-                      className="group-hover:rotate-45 transition-transform duration-300"
+                    <BotIcon
+                      className={`w-8 h-8 text-orange-500 ${smoothHoverTransition} ${smoothHoverEffect}`}
                     />
-                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full"></div>
+                    <div
+                      className={`absolute -top-1 -right-1 w-3 h-3  bg-green-300 rounded-full`}
+                    ></div>
                   </div>
                   <div className="text-center">
-                    <p className="font-medium text-gray-800">Kartassistent</p>
-                    <p className="text-xs text-gray-500">AI-drevet hjelp</p>
+                    <p
+                      className={`font-medium ${
+                        isChatOpen ? "text-orange-800" : "text-gray-800"
+                      }`}
+                    >
+                      Kartassistent
+                    </p>
+                    <p
+                      className={`text-xs ${
+                        isChatOpen ? "text-orange-700" : "text-gray-500"
+                      }`}
+                    >
+                      AI-drevet hjelp
+                    </p>
                   </div>
                 </div>
               </button>
               <button
                 onClick={openLayerPanel}
-                className={`bg-white shadow-lg rounded-xl p-4 hover:bg-blue-50 transition-all duration-300 group ${
-                  isLayerPanelOpen ? "bg-blue-50" : ""
-                }`}
+                className={`${
+                  isLayerPanelOpen
+                    ? "bg-white shadow-lg ring-2 ring-blue-500 ring-opacity-30"
+                    : "bg-white shadow-lg hover:bg-blue-50"
+                } rounded-xl p-4 transition-all duration-300 group`}
               >
                 <div className="flex flex-col items-center space-y-2">
-                  <Database className="w-8 h-8 text-blue-500 group-hover:scale-110 transition-transform duration-300" />
+                  <Database
+                    className={`w-8 h-8 text-blue-500 group-hover:scale-110 transition-transform duration-300`}
+                  />
                   <div className="text-center">
-                    <p className="font-medium text-gray-800">Kartkatalog</p>
-                    <p className="text-xs text-gray-500">Datasett og API-er</p>
+                    <p
+                      className={`font-medium ${
+                        isLayerPanelOpen ? "text-blue-800" : "text-gray-800"
+                      }`}
+                    >
+                      Kartkatalog
+                    </p>
+                    <p
+                      className={`text-xs ${
+                        isLayerPanelOpen ? "text-blue-700" : "text-gray-500"
+                      }`}
+                    >
+                      Datasett og API-er
+                    </p>
                   </div>
                 </div>
               </button>
             </div>
           )}
         </div>
-
         {/* Chat Panel - Use ChatWindow */}
         <div
           className={`fixed right-0 top-0 bottom-0 w-96 bg-white shadow-lg z-20 transition-transform duration-300 ${
@@ -406,7 +433,6 @@ const DemoV4 = () => {
             />
           )}
         </div>
-
         <div
           className={`fixed right-0 top-0 bottom-0 w-96 bg-white shadow-lg z-20 transition-transform duration-300 ${
             isLayerPanelOpen ? "translate-x-0" : "translate-x-full"
@@ -414,9 +440,12 @@ const DemoV4 = () => {
         >
           <div className="flex flex-col h-full">
             <div className="p-4 border-b border-gray-100 flex justify-between items-center shrink-0">
-              <h2 className="text-lg font-semibold text-gray-800">
-                Kartkatalog
-              </h2>
+              <div className="flex items-center gap-2">
+                <Database className="w-5 h-5 text-orange-500" />
+                <h2 className="text-lg font-semibold text-gray-800">
+                  Kartkatalog
+                </h2>
+              </div>
               <button
                 onClick={() => setIsLayerPanelOpen(false)}
                 className="p-1 hover:bg-gray-100 rounded-full"
@@ -439,7 +468,6 @@ const DemoV4 = () => {
             </div>
           </div>
         </div>
-
         {/* Full Screen Chat UI */}
         {chatManagement.isFullScreen && (
           <FullScreenChatView
@@ -455,7 +483,6 @@ const DemoV4 = () => {
             exitFullScreen={chatManagement.exitFullScreen}
           />
         )}
-
         {/* Render the FileDownloadModal */}
         <FileDownloadModal
           isOpen={isFileDownloadModalOpen}
