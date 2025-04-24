@@ -17,6 +17,13 @@ import { Button } from "@/components/ui/button";
 import { Download, Eye } from "lucide-react";
 import Image from "next/image";
 
+interface DownloadInfo {
+  uuid: string;
+  title: string;
+  downloadUrl: string;
+  downloadFormats: any[];
+}
+
 type AdditionalMessageOptions = Omit<ChatMessageProps, keyof Message>;
 
 interface MessageListProps {
@@ -27,7 +34,7 @@ interface MessageListProps {
     | AdditionalMessageOptions
     | ((message: Message) => AdditionalMessageOptions);
   onWmsClick?: (searchResult: any) => void;
-  onDownloadClick?: (url: string) => void;
+  onDownloadClick?: (info: DownloadInfo) => void; // Updated type
   onExitFullScreen?: () => void;
 }
 
@@ -74,7 +81,7 @@ export function MessageList({
                   onClick={() => {
                     if (isValidWmsUrl(message.wmsUrl)) {
                       const searchResult = {
-                        uuid: message.uuid || `msg-${Date.now()}`,
+                        uuid: message.id || `msg-${Date.now()}`,
                         title: message.wmsUrl.title,
                         wmsUrl: message.wmsUrl,
                         downloadUrl: message.downloadUrl || null,
@@ -95,7 +102,18 @@ export function MessageList({
                 </Button>
                 {message.downloadUrl && (
                   <Button
-                    onClick={() => onDownloadClick?.(message.downloadUrl!)}
+                    onClick={() => {
+                      const downloadInfo: DownloadInfo = {
+                        uuid: message.uuid || `download-${Date.now()}`,
+                        title:
+                          message.title ||
+                          message.wmsUrl?.title ||
+                          "Ukjent datasett",
+                        downloadUrl: message.downloadUrl!,
+                        downloadFormats: message.downloadFormats || [],
+                      };
+                      onDownloadClick?.(downloadInfo);
+                    }}
                     variant="download"
                   >
                     <Download className="h-4 w-4" />
