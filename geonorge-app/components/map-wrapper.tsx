@@ -18,22 +18,13 @@ import {
 } from "react-leaflet";
 
 // UI Components import
-import { SidebarTrigger } from "@/components/ui/sidebar";
 
 // Icons
-import { Compass, Loader2, Search, X, Plus, Minus } from "lucide-react";
+import { Compass, Loader2, Plus, Minus } from "lucide-react";
 
 import { TrackedDataset } from "@/hooks/useWmsManagement";
 import { ActiveLayerInfo } from "@/app/components/LayerPanel";
 
-interface Address {
-  adressetekst: string;
-  poststed?: string;
-  representasjonspunkt: {
-    lat: number;
-    lon: number;
-  };
-}
 
 // Enhanced hook to handle all Leaflet event propagation
 function useLeafletEventPropagation<T extends HTMLElement>() {
@@ -166,142 +157,6 @@ function ZoomControl() {
   );
 }
 
-function AddressSearch({
-  setSearchMarker,
-}: {
-  setSearchMarker: (marker: { lat: number; lng: number } | null) => void;
-}) {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<Address[]>([]);
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const searchContainerRef = useLeafletEventPropagation<HTMLDivElement>();
-  const map = useMap();
-
-  // Address fetching
-  useEffect(() => {
-    const fetchAddresses = async () => {
-      if (!searchQuery || searchQuery.length < 3) {
-        setSearchResults([]);
-        return;
-      }
-
-      try {
-        const response = await fetch(
-          `https://ws.geonorge.no/adresser/v1/sok?sok=${searchQuery}&treffPerSide=8`
-        );
-        if (!response.ok) throw new Error("Feil ved henting av adresser");
-        const data = await response.json();
-        setSearchResults(data.adresser || []);
-      } catch (error) {
-        console.error("Feil ved søk:", error);
-        setSearchResults([]);
-      }
-    };
-
-    const timeoutId = setTimeout(fetchAddresses, 300);
-    return () => clearTimeout(timeoutId);
-  }, [searchQuery]);
-
-  // Focus search input on mount
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "/" && document.activeElement !== searchInputRef.current) {
-        e.preventDefault();
-        searchInputRef.current?.focus();
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, []);
-
-  const selectAddress = (address: Address) => {
-    const { lat, lon } = address.representasjonspunkt;
-    setSearchMarker({ lat, lng: lon });
-    map.setView([lat, lon], 14);
-    setSearchQuery(address.adressetekst);
-    setSearchResults([]);
-  };
-
-  const clearSearch = () => {
-    setSearchQuery("");
-    setSearchResults([]);
-    searchInputRef.current?.focus();
-  };
-
-  return (
-    <div
-      className="absolute inset-x-0 top-4 z-[1000] flex justify-center mx-auto"
-      ref={searchContainerRef}
-    >
-      <div className="w-96 flex">
-        {/* Sidebar trigger */}
-        <SidebarTrigger
-          className="bg-color-gn-primary hover:bg-color-gn-primarylight text-white 
-            h-12 w-12 rounded-omar flex-shrink-0 
-            flex items-center justify-center mr-2"
-        />{" "}
-        <div className="relative w-full ">
-          {/* Search input */}
-          <div className="flex items-center relative ">
-            <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 pointer-events-none">
-              <Search size={18} className="text-color-gn-primary" />
-            </div>
-            <input
-              ref={searchInputRef}
-              type="text"
-              value={searchQuery}
-              placeholder="Søk etter adresse... (trykk / for å søke)"
-              onChange={(e) => setSearchQuery(e.target.value)}
-              aria-label="Address search"
-              className="w-full h-12 pl-10 pr-10 py-2 text-sm bg-white border border-gray-300 rounded- placeholder:text-gray-400 text-gray-800 focus:outline-none focus:border-color-gn-primary"
-            />
-
-            {/* Clear button */}
-            {searchQuery && (
-              <button
-                onClick={clearSearch}
-                aria-label="Clear search"
-                className="absolute right-2 text-gray-500"
-              >
-                <X size={16} />
-              </button>
-            )}
-          </div>
-
-          {/* Search results */}
-          {searchResults.length > 0 && (
-            <div
-              className="absolute top-full mt-1 w-full border border-gray-200 bg-white rounded-md shadow-lg max-h-80 overflow-y-auto z-[9999]"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {searchResults.map((addr, index) => (
-                <div
-                  key={index}
-                  onClick={() => selectAddress(addr)}
-                  className="p-2 hover:bg-gray-50 cursor-pointer"
-                  tabIndex={0}
-                  role="option"
-                  aria-selected="false"
-                >
-                  <div className="text-sm text-gray-800 truncate">
-                    {addr.adressetekst}
-                  </div>
-                  {addr.poststed && (
-                    <div className="text-xs text-gray-500 truncate">
-                      {addr.poststed}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // Map controller component to handle map references and state access
 function MapController({
   onMapReady,
@@ -418,7 +273,6 @@ interface MapWrapperProps {
   setUserMarker: (marker: { lat: number; lng: number } | null) => void;
   setSearchMarker: (marker: { lat: number; lng: number } | null) => void;
   onMapReady: (map: LeafletMap) => void;
-  showAddressSearch?: boolean;
 }
 
 const MapWrapper: React.FC<MapWrapperProps> = ({
@@ -434,7 +288,6 @@ const MapWrapper: React.FC<MapWrapperProps> = ({
   setUserMarker,
   setSearchMarker,
   onMapReady,
-  showAddressSearch = true,
 }) => {
   // Move the Leaflet icon setup inside the component
   useEffect(() => {
@@ -515,13 +368,12 @@ const MapWrapper: React.FC<MapWrapperProps> = ({
       zoom={zoom}
       style={{ height: "100%", width: "100%" }}
       zoomControl={false}
-      attributionControl={true}
+      attributionControl={false}
       className="z-0"
       doubleClickZoom={false}
     >
       <MapController onMapReady={onMapReady} />
 
-      {showAddressSearch && <AddressSearch setSearchMarker={setSearchMarker} />}
       {currentBaseLayer === "topo" && (
         <TileLayer
           url="https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png"

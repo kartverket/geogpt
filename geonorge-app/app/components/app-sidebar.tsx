@@ -13,11 +13,14 @@ import {
   Sidebar,
   SidebarContent,
   SidebarHeader,
+  SidebarTrigger,
 } from "@/components/ui/sidebar";
 
 import { SidebarFooter } from "@/app/components/sidebar_components/SidebarFooter";
 import { Temakart } from "@/app/components/sidebar_components/Temakart";
 import { ResetTourView } from "@/app/components/sidebar_components/ResetTourView";
+import { PrivacyView } from "@/app/components/sidebar_components/PrivacyView";
+import { ContactUsView } from "@/app/components/sidebar_components/ContactUsView";
 
 // Translation
 import { Language } from "@/i18n/translations";
@@ -44,14 +47,7 @@ interface TrackedDataset {
   titleMatch?: boolean;
 }
 
-export function AppSidebar({
-  availableLayers = [],
-  trackedDatasets = [],
-  onLayerChangeWithDataset,
-  onRemoveDataset,
-  onChangeBaseLayer,
-  ...props
-}: React.ComponentProps<typeof Sidebar> & {
+interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   availableLayers?: WMSLayer[];
   trackedDatasets?: TrackedDataset[];
   onLayerChangeWithDataset?: (
@@ -61,11 +57,23 @@ export function AppSidebar({
   ) => void;
   onRemoveDataset?: (datasetId: string) => void;
   onChangeBaseLayer?: LayerChangeFunctions;
-}) {
+  setSearchMarker: (marker: { lat: number; lng: number } | null) => void;
+}
+
+export function AppSidebar({
+  availableLayers = [],
+  trackedDatasets = [],
+  onLayerChangeWithDataset,
+  onRemoveDataset,
+  onChangeBaseLayer,
+  setSearchMarker,
+  ...props
+}: AppSidebarProps) {
   const { language, setLanguage, t } = useLanguage();
   const [layerSearch, setLayerSearch] = React.useState("");
   const [isLayerSectionVisible, setIsLayerSectionVisible] = useState(true);
   const [isActionSectionVisible, setIsActionSectionVisible] = useState(true);
+  const [isAddressSectionVisible, setIsAddressSectionVisible] = useState(true);
   const [selectedBaseMap, setSelectedBaseMap] = useState<string>("landskart");
   const [isBaseMapSectionVisible, setIsBaseMapSectionVisible] = useState(true);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
@@ -73,6 +81,8 @@ export function AppSidebar({
     Record<string, boolean>
   >({});
   const [showResetTourView, setShowResetTourView] = useState(false);
+  const [showPrivacyView, setShowPrivacyView] = useState(false);
+  const [showContactUsView, setShowContactUsView] = useState(false);
 
   // Add refs to track scroll positions
   const datasetScrollContainerRef = useRef<HTMLDivElement | null>(null);
@@ -135,18 +145,21 @@ export function AppSidebar({
     actions: [
       {
         title: t("draw_and_measure"),
-        url: "#",
         icon: PenTool,
+        disabled: true,
+        disabledMessage: t("feature_not_available"),
       },
       {
         title: t("share_map"),
-        url: "#",
         icon: Share2,
+        disabled: true,
+        disabledMessage: t("feature_not_available"),
       },
       {
         title: t("create_elevation_profile"),
-        url: "#",
         icon: LineChart,
+        disabled: true,
+        disabledMessage: t("feature_not_available"),
       },
     ],
   };
@@ -215,6 +228,22 @@ export function AppSidebar({
   // Handler to switch to the reset view
   const handleShowResetTour = () => {
     setShowResetTourView(true);
+    setShowPrivacyView(false);
+    setShowContactUsView(false);
+  };
+
+  // Handler for privacy view
+  const handleShowPrivacy = () => {
+    setShowPrivacyView(true);
+    setShowResetTourView(false);
+    setShowContactUsView(false);
+  };
+
+  // Handler for contact us view
+  const handleShowContactUs = () => {
+    setShowContactUsView(true);
+    setShowResetTourView(false);
+    setShowPrivacyView(false);
   };
 
   return (
@@ -222,22 +251,33 @@ export function AppSidebar({
       variant="inset"
       {...props}
       className={cn(
-        "border-r border-gray-200 shadow-lg w-[350px] max-w-[90vw] bg-gray-50",
+        "border-r border-gray-200 shadow-lg w-[350px] 2xl:w-[400px] max-w-[90vw] bg-gray-100",
         "data-[state=open]:translate-x-0",
         "data-[state=closed]:-translate-x-full",
         "transition-transform duration-300 ease-in-out",
         "flex flex-col h-full"
       )}
     >
-      <SidebarHeader className="p-4 border-b bg-white shadow-sm flex-shrink-0">
-        <GeoNorgeLogo className="h-auto w-40 mx-auto" />
+      <SidebarHeader className="p-6 border-b bg-white shadow-sm flex-shrink-0">
+        <div className="flex flex-row items-center">
+          <SidebarTrigger className="ml-1 flex-shrink-0 bg-gray-100 2xl:ml-3" />
+          <div className="flex-grow flex justify-center">
+            <GeoNorgeLogo className="h-auto w-40" />
+          </div>
+          <div className="flex-shrink-0 w-8"></div>
+        </div>
       </SidebarHeader>
-      <SidebarContent className="p-4 flex-grow overflow-y-auto">
+      <SidebarContent className="flex-grow overflow-y-auto p-5 2xl:px-7 2xl:py-4">
         {showResetTourView ? (
           <ResetTourView t={t} onBack={() => setShowResetTourView(false)} />
+        ) : showPrivacyView ? (
+          <PrivacyView t={t} onBack={() => setShowPrivacyView(false)} />
+        ) : showContactUsView ? (
+          <ContactUsView t={t} onBack={() => setShowContactUsView(false)} />
         ) : (
           <Temakart
             t={t}
+            setSearchMarker={setSearchMarker} // Ensure this prop is passed
             layerSearch={layerSearch}
             setLayerSearch={setLayerSearch}
             filteredLayers={filteredLayers}
@@ -258,9 +298,11 @@ export function AppSidebar({
             isBaseMapSectionVisible={isBaseMapSectionVisible}
             isLayerSectionVisible={isLayerSectionVisible}
             isActionSectionVisible={isActionSectionVisible}
+            isAddressSectionVisible={isAddressSectionVisible}
             setIsBaseMapSectionVisible={setIsBaseMapSectionVisible}
             setIsLayerSectionVisible={setIsLayerSectionVisible}
             setIsActionSectionVisible={setIsActionSectionVisible}
+            setIsAddressSectionVisible={setIsAddressSectionVisible}
             data={data}
           />
         )}
@@ -270,6 +312,8 @@ export function AppSidebar({
         handleLanguageChange={handleLanguageChange}
         t={t}
         onShowResetTour={handleShowResetTour}
+        onShowPrivacy={handleShowPrivacy}
+        onShowContactUs={handleShowContactUs}
       />
     </Sidebar>
   );
