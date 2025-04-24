@@ -1,16 +1,16 @@
 import React from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  ActiveLayerInfo,
   SearchResult,
   WMSLayer,
+  ActiveLayerInfo,
 } from "../../chat_components/types";
 
 interface LayerListItemProps {
   layer: WMSLayer;
-  layerInfo: ActiveLayerInfo; // Contains pre-calculated ID and source details
+  layerInfo: ActiveLayerInfo;
   isChecked: boolean;
-  parentSearchResult: SearchResult; // The dataset this layer belongs to
+  parentSearchResult: SearchResult;
   onToggleLayerRequest: (
     layerInfo: ActiveLayerInfo,
     isChecked: boolean,
@@ -26,29 +26,32 @@ const LayerListItem: React.FC<LayerListItemProps> = ({
   onToggleLayerRequest,
 }) => {
   return (
-    <div
-      key={layerInfo.id} // Key is essential here within the map in the parent
-      className={`flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors duration-200 ${
-        isChecked
-          ? "bg-color-gn-primary/10 border border-color-gn-primary/30"
-          : "hover:bg-gray-100"
-      }`}
-    >
+    <div className="flex items-start gap-2 py-1 px-2 rounded hover:bg-gray-100">
       <Checkbox
         id={layerInfo.id}
         checked={isChecked}
-        onCheckedChange={(checkedState) => {
-          // Call the handler passed all the way from LayerPanel
-          onToggleLayerRequest(layerInfo, !!checkedState, parentSearchResult);
+        onCheckedChange={(checked) => {
+          // Boolean or 'indeterminate', we only handle boolean
+          if (typeof checked === "boolean") {
+            onToggleLayerRequest(layerInfo, checked, parentSearchResult);
+          }
         }}
-        className="data-[state=checked]:bg-color-gn-primary"
+        aria-label={`Toggle layer ${layerInfo.title}`}
+        className="mt-0.5 data-[state=checked]:bg-color-gn-primary data-[state=checked]:text-white"
       />
       <label
         htmlFor={layerInfo.id}
-        className="flex-1 text-sm text-gray-700 cursor-pointer"
+        className={`text-sm cursor-pointer break-words ${
+          isChecked ? "font-medium text-color-gn-primary" : "text-gray-700"
+        }`}
+        style={{
+          wordBreak: "break-word",
+          whiteSpace: "normal",
+          hyphens: "auto",
+          maxWidth: "calc(100% - 28px)", // Accounting for checkbox width and gap
+        }}
       >
-        {layerInfo.title}{" "}
-        {/* Use title from layerInfo which handles fallback */}
+        {layer.title || layer.name}
       </label>
     </div>
   );

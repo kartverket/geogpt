@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { ChatMessage as ChatMessageType } from "./types";
+import { ChatMessage as ChatMessageType, SearchResult } from "./types";
 import { Download, Eye } from "lucide-react";
 import {
   Tooltip,
@@ -11,7 +11,7 @@ import {
 
 interface ChatMessageProps {
   message: ChatMessageType;
-  onWmsClick: (url: string, title?: string) => void;
+  onWmsClick: (searchResult: SearchResult) => void;
   onDownloadClick: (url: string) => void;
 }
 
@@ -20,12 +20,6 @@ export const ChatMessage = ({
   onWmsClick,
   onDownloadClick,
 }: ChatMessageProps) => {
-  // Helper function to ensure URLs start with https
-  const ensureHttps = (url: string): string => {
-    if (!url) return url;
-    return url.startsWith("http://") ? url.replace("http://", "https://") : url;
-  };
-
   if (message.type === "image" && message.imageUrl) {
     return (
       <div className="flex flex-col space-y-2 my-2">
@@ -44,21 +38,54 @@ export const ChatMessage = ({
                   <Button
                     variant="show"
                     onClick={() => {
-                      if (message.wmsUrl && message.wmsUrl !== "None") {
-                        onWmsClick(
-                          ensureHttps(message.wmsUrl as string),
-                          message.title
+                      const wmsInfo = message.wmsUrl;
+                      if (
+                        wmsInfo &&
+                        wmsInfo !== "None" &&
+                        typeof wmsInfo === "object" &&
+                        "wms_url" in wmsInfo &&
+                        wmsInfo.wms_url &&
+                        wmsInfo.wms_url !== "None"
+                      ) {
+                        const searchResult: SearchResult = {
+                          uuid: message.uuid || `msg-${Date.now()}`,
+                          title: message.title || "Ukjent datasett",
+                          wmsUrl: wmsInfo,
+                          downloadUrl: message.downloadUrl || null,
+                          downloadFormats: message.downloadFormats || [],
+                        };
+                        onWmsClick(searchResult);
+                      } else {
+                        console.warn(
+                          "WMS data missing or in unexpected format on message:",
+                          message
                         );
                       }
                     }}
-                    disabled={!message.wmsUrl || message.wmsUrl === "None"}
+                    disabled={
+                      !(
+                        message.wmsUrl &&
+                        message.wmsUrl !== "None" &&
+                        typeof message.wmsUrl === "object" &&
+                        "wms_url" in message.wmsUrl &&
+                        message.wmsUrl.wms_url &&
+                        message.wmsUrl.wms_url !== "None"
+                      )
+                    }
                   >
                     <Eye className="h-4 w-4 mr-2" />
                     Vis på kart
                   </Button>
                 </div>
               </TooltipTrigger>
-              {(!message.wmsUrl || message.wmsUrl === "None") && (
+              {!(
+                message.wmsUrl &&
+                message.wmsUrl !== "None" &&
+                typeof message.wmsUrl === "object" &&
+                "wms_url" in message.wmsUrl &&
+                message.wmsUrl.wms_url &&
+                message.wmsUrl.wms_url !== "None"
+              ) && (
                 <TooltipContent className="bg-white p-2 shadow-md rounded border text-sm">
                   <p>WMS URL er ikke tilgjengelig for dette datasettet</p>
                 </TooltipContent>
@@ -68,7 +95,7 @@ export const ChatMessage = ({
           {message.downloadUrl && (
             <Button
               variant="download"
-              onClick={() => onDownloadClick(ensureHttps(message.downloadUrl!))}
+              onClick={() => onDownloadClick(message.downloadUrl!)}
             >
               <Download className="h-4 w-4 mr-2" />
               Last ned datasett
@@ -91,32 +118,45 @@ export const ChatMessage = ({
   // Format bold text
   content = content.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
 
-  // Format URLs, specifically handling geonorge catalog links
   content = content.replace(
-    /\[([^\]]+)\]\((https?:\/\/kartkatalog\.geonorge\.no\/metadata\/[^)]+)\)/g,
-    '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-black hover:underline">$1</a>'
+    /(https?:\/\/[^\s]+)/g,
+    '<a href="$1" target="_blank" rel="noopener noreferrer" class="underline break-all">$1</a>'
   );
 
-  // Format other URLs
+  // Format URLs with better styling
   content = content.replace(
-    /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g,
-    '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-black hover:underline">$1</a>'
+    /\[([^\]]+)\]\(([^)]+)\)/g,
+    '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-black hover:underline break-words">$1</a>'
   );
 
-  // Format plain URLs that aren't already wrapped in markdown format
-  content = content.replace(
-    /(^|\s)(https?:\/\/[^\s]+)(?!\])/g,
-    '$1<a href="$2" target="_blank" rel="noopener noreferrer" class="text-black hover:underline">$2</a>'
-  );
+  // Format bullet points (asterisks)
+  content = content.replace(/^\s*\*\s+(.+)$/gm, "<li>$1</li>");
+
+  // Wrap lists in ul tags with better styling for nested content
+  if (content.includes("<li>")) {
+    content = content.replace(
+      /(<li>.*?<\/li>)+/gs,
+      '<ul class="list-disc pl-5 my-2 space-y-1">$&</ul>'
+    );
+  }
+
+  // Add paragraph breaks for better readability
+  content = content.replace(/\n\n+/g, '</p><p class="my-2">');
+  if (!content.startsWith("<ul") && !content.startsWith("<p")) {
+    content = "<p>" + content + "</p>";
+  }
 
   return (
-    <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
+    <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-3`}>
       <div
-        className={`max-w-[80%] p-2 rounded text-sm whitespace-pre-wrap ${
+        className={`max-w-[80%] p-3 rounded-md text-sm break-words ${
           isUser ? "bg-orange-50" : "bg-gray-100"
         }`}
       >
-        <span dangerouslySetInnerHTML={{ __html: content }} />
+        <div
+          className="chat-content"
+          dangerouslySetInnerHTML={{ __html: content }}
+        />
       </div>
     </div>
   );
