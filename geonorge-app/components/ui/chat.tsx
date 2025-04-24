@@ -12,6 +12,15 @@ import { MessageInput } from "@/components/ui/message-input";
 import { MessageList } from "@/components/ui/message-list";
 import { PromptSuggestions } from "@/components/ui/prompt-suggestions";
 
+// Import or define DownloadInfo type (assuming it's defined in message-list or a shared types file)
+// If not defined elsewhere, define it here:
+interface DownloadInfo {
+  uuid: string;
+  title: string;
+  downloadUrl: string;
+  downloadFormats: any[];
+}
+
 interface ChatPropsBase {
   handleSubmit: (
     event?: { preventDefault?: () => void },
@@ -28,7 +37,7 @@ interface ChatPropsBase {
     rating: "thumbs-up" | "thumbs-down"
   ) => void;
   onWmsClick?: (url: string) => void;
-  onDownloadClick?: (url: string) => void;
+  onDownloadClick?: (info: DownloadInfo) => void;
   onExitFullScreen?: () => void;
 }
 
@@ -101,7 +110,12 @@ export function Chat({
   );
 
   return (
-    <ChatContainer className={cn("overflow-y-auto container mx-auto max-w-4xl flex flex-col justify-end mt-5", className)}>
+    <ChatContainer
+      className={cn(
+        "overflow-y-auto container mx-auto max-w-4xl flex flex-col justify-end mt-5",
+        className
+      )}
+    >
       {isEmpty && append && suggestions ? (
         <PromptSuggestions
           label="Prøv noen av disse ✨"
@@ -171,19 +185,19 @@ export function ChatMessages({
       </div>
 
       <div className="flex flex-1 items-end justify-end [grid-column:1/1] [grid-row:1/1]"></div>
-        {!shouldAutoScroll && (
-          <div className="sticky bottom-0 left-0 flex w-full justify-end">
-            <Button
-              onClick={scrollToBottom}
-              className="h-8 w-8 rounded-full ease-in-out animate-in fade-in-0 slide-in-from-bottom-1"
-              size="icon"
-              variant="ghost"
-            >
-              <ArrowDown className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
-      </div>
+      {!shouldAutoScroll && (
+        <div className="sticky bottom-0 left-0 flex w-full justify-end">
+          <Button
+            onClick={scrollToBottom}
+            className="h-8 w-8 rounded-full ease-in-out animate-in fade-in-0 slide-in-from-bottom-1"
+            size="icon"
+            variant="ghost"
+          >
+            <ArrowDown className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -233,10 +247,14 @@ export const ChatForm = forwardRef<HTMLFormElement, ChatFormProps>(
     };
 
     return (
-      <form 
-        ref={ref} 
-        onSubmit={onSubmit} 
-        className={cn("sticky bottom-0 bg-background w-full mt-auto py-4 shadow-md", className)}>
+      <form
+        ref={ref}
+        onSubmit={onSubmit}
+        className={cn(
+          "sticky bottom-0 bg-background w-full mt-auto py-4 shadow-md",
+          className
+        )}
+      >
         {children({ files, setFiles })}
       </form>
     );
