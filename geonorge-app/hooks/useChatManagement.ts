@@ -2,6 +2,14 @@ import { useState, useEffect } from "react";
 import { SearchResult } from "@/app/components/chat_components/types";
 import { usePopoverBlocker } from "./usePopoverBlocker";
 
+// Define or import DownloadInfo
+interface DownloadInfo {
+  uuid: string;
+  title: string;
+  downloadUrl: string;
+  downloadFormats: any[];
+}
+
 interface ChatManagementProps {
   messages: any[];
   isStreaming: boolean;
@@ -70,23 +78,16 @@ export const useChatManagement = ({
     setChatInput(value);
   };
 
-  const handleFullScreenDownload = (url: string) => {
-    // Find message with matching URL from messages array
-    const messageWithUrl = messages.find((msg) => msg.downloadUrl === url);
-    if (messageWithUrl) {
-      // Create a SearchResult object from the message data
-      const datasetObject: SearchResult = {
-        uuid: messageWithUrl.uuid || "",
-        title: messageWithUrl.title || "",
-        downloadFormats: messageWithUrl.downloadFormats || [],
-        downloadUrl: messageWithUrl.downloadUrl,
-      };
+  const handleFullScreenDownload = (info: DownloadInfo) => {
+    const datasetObject: SearchResult = {
+      uuid: info.uuid,
+      title: info.title,
+      downloadFormats: info.downloadFormats,
+      downloadUrl: info.downloadUrl,
+    };
 
-      // Execute the download
-      executeDatasetDownload(datasetObject);
-    } else {
-      console.warn("No message found with the provided download URL");
-    }
+    // Execute the download
+    executeDatasetDownload(datasetObject);
   };
 
   const handleAppend = (message: { role: "user"; content: string }) => {
@@ -97,12 +98,13 @@ export const useChatManagement = ({
     return messages.map((msg, idx) => {
       if (msg.type === "image" && msg.imageUrl) {
         return {
-          id: `msg-${idx}`,
+          id: msg.uuid,
           type: "image" as const,
           role: "assistant" as const,
           imageUrl: msg.imageUrl,
           wmsUrl: msg.wmsUrl || undefined,
           downloadUrl: msg.downloadUrl || undefined,
+          downloadFormats: msg.downloadFormats || undefined,
           content: "",
         };
       }
@@ -118,7 +120,7 @@ export const useChatManagement = ({
       }
 
       return {
-        id: `msg-${idx}`,
+        id: msg.uuid,
         role,
         content,
         type: "text" as const,
