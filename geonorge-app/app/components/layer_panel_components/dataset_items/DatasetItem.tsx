@@ -14,6 +14,7 @@ import {
   Download,
   Loader2,
   MapIcon,
+  Eye,
 } from "lucide-react";
 import {
   HoverCard,
@@ -262,9 +263,10 @@ const DatasetItem: React.FC<DatasetItemProps> = (props) => {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-7 text-xs text-gray-600 hover:text-color-gn-primary border-gray-200 transition-colors duration-200 whitespace-nowrap"
+                  className="h-7 px-2 text-xs text-color-kv-primary hover:text-color-gn-primary border-gray-200 transition-colors duration-200 whitespace-nowrap"
                   onClick={handleShowOnMap}
                 >
+                  <Eye size={14} />
                   Vis på kart
                 </Button>
               )}
@@ -273,13 +275,13 @@ const DatasetItem: React.FC<DatasetItemProps> = (props) => {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-7 text-xs text-gray-600 hover:text-color-gn-primary border-gray-200 transition-colors duration-200 whitespace-nowrap"
+                  className="h-7 px-2 text-xs text-black hover:text-color-gn-primary border-gray-200 transition-colors duration-200 whitespace-nowrap"
                   onClick={(e) => {
                     e.stopPropagation();
                     onDownloadDataset(searchResult);
                   }}
                 >
-                  <Download size={14} className="mr-1" />
+                  <Download size={14} />
                   Last ned
                 </Button>
               )}
