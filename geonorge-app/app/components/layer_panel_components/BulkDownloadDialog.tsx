@@ -47,7 +47,7 @@ const BulkDownloadDialog: React.FC<BulkDownloadDialogProps> = ({
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirmDownload}
-            className="rounded-lg bg-color-gn-primary hover:bg-color-gn-primary/90 text-white transition-colors"
+            className="rounded-omar bg-color-gn-primary hover:bg-color-gn-primary/90 text-white transition-colors"
           >
             <Download className="h-4 w-4 mr-2" />
             Start nedlasting
