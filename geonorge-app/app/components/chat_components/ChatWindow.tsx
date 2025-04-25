@@ -16,7 +16,7 @@ interface ChatWindowProps {
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   isGenerating: boolean;
   onWmsClick: (searchResult: SearchResult) => void;
-  onDownloadClick: (url: string) => void;
+  onDownloadClick: (info: SearchResult) => void;
   onEnterFullScreen: () => void;
   onClose: () => void;
 }
