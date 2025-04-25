@@ -12,7 +12,7 @@ import {
 interface ChatMessageProps {
   message: ChatMessageType;
   onWmsClick: (searchResult: SearchResult) => void;
-  onDownloadClick: (url: string) => void;
+  onDownloadClick: (info: SearchResult) => void;
 }
 
 export const ChatMessage = ({
@@ -95,7 +95,19 @@ export const ChatMessage = ({
           {message.downloadUrl && (
             <Button
               variant="download"
-              onClick={() => onDownloadClick(message.downloadUrl!)}
+              onClick={() => {
+                const downloadInfo: SearchResult = {
+                  uuid: message.uuid || `msg-${Date.now()}`,
+                  title: message.title || "Ukjent datasett",
+                  downloadUrl: message.downloadUrl!,
+                  downloadFormats: message.downloadFormats || [],
+                  wmsUrl:
+                    message.wmsUrl && typeof message.wmsUrl === "object"
+                      ? message.wmsUrl
+                      : undefined,
+                };
+                onDownloadClick(downloadInfo);
+              }}
             >
               <Download className="h-4 w-4 mr-2" />
               Last ned datasett
