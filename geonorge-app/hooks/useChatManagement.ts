@@ -78,16 +78,8 @@ export const useChatManagement = ({
     setChatInput(value);
   };
 
-  const handleFullScreenDownload = (info: DownloadInfo) => {
-    const datasetObject: SearchResult = {
-      uuid: info.uuid,
-      title: info.title,
-      downloadFormats: info.downloadFormats,
-      downloadUrl: info.downloadUrl,
-    };
-
-    // Execute the download
-    executeDatasetDownload(datasetObject);
+  const handleFullScreenDownload = (searchResult: SearchResult) => {
+    executeDatasetDownload(searchResult);
   };
 
   const handleAppend = (message: { role: "user"; content: string }) => {
