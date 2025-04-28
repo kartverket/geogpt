@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { WMSLayer, SearchResult } from "@/app/components/chat_components/types";
-import { ActiveLayerInfo } from "@/app/components/chat_components/types";
+import { ActiveLayerInfo } from "@/app/components/LayerPanel";
 
 export interface TrackedDataset {
   id: string;

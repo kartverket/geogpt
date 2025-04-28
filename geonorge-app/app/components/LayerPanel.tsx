@@ -1,8 +1,6 @@
 import React, { useMemo } from "react";
 import { Star, Clock, Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { useWebSocket } from "./chat_components/useWebSocket";
 import { SearchResult, ActiveLayerInfo } from "./chat_components/types";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -78,8 +76,6 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
     currentSearchResults,
     handleSearchSubmit,
     clearSearch,
-    searchMethod,
-    setSearchMethod,
   } = useSearchManagement({
     ws,
     updateWmsResultsMap,
@@ -147,30 +143,12 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
             onSubmitSearch={handleSearchSubmit}
             onClearSearch={clearSearch}
           />
-          <div className="flex gap-2 items-center justify-between">
-            <FilterControls
-              filterType={filterType}
-              activeLayerCount={activeLayerIds.length}
-              onFilterTypeChange={onFilterTypeChange}
-            />
-            {/* Filter Controls */}
-            <div className="flex items-center space-x-2 justify-end">
-              <Label
-                htmlFor="search-method-toggle"
-                className="text-xs text-gray-600"
-              >
-                Geonorge Standard Søk
-              </Label>
-              <Switch
-                id="search-method-toggle"
-                checked={searchMethod === "http"}
-                onCheckedChange={(checked) =>
-                  setSearchMethod(checked ? "http" : "websocket")
-                }
-                aria-label="Toggle search method between WebSocket and HTTP API"
-              />
-            </div>
-          </div>
+          {/* Filter Controls */}
+          <FilterControls
+            filterType={filterType}
+            activeLayerCount={activeLayerIds.length}
+            onFilterTypeChange={onFilterTypeChange}
+          />
         </div>
 
         {/* Tabs */}
