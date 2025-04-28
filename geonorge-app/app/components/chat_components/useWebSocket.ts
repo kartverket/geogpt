@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { ChatMessage, WebSocketMessage, SearchResult, WMSLayer } from "./types";
+import { ChatMessage, WebSocketMessage, SearchResult } from "./types";
 
 export const useWebSocket = () => {
   const [ws, setWs] = useState<WebSocket | null>(null);
@@ -214,19 +214,17 @@ export const useWebSocket = () => {
 
             setDatasetName(datasetObject.title || "");
 
-            const rawGeoAreas = datasetObject.downloadFormats.map(
-              (fmt: any) => ({
-                type: fmt.type,
-                name: fmt.name,
-                code: fmt.code,
-              })
-            );
+            const rawGeoAreas = datasetObject.downloadFormats.map((fmt) => ({
+              type: fmt.type,
+              name: fmt.name,
+              code: fmt.code,
+            }));
             setGeographicalAreas(dedupeAreas(rawGeoAreas));
 
             const rawProjections = datasetObject.downloadFormats.flatMap(
-              (fmt: any) =>
+              (fmt) =>
                 fmt.projections
-                  ? fmt.projections.map((proj: any) => ({
+                  ? fmt.projections.map((proj) => ({
                       name: proj.name,
                       code: proj.code,
                     }))
@@ -234,9 +232,8 @@ export const useWebSocket = () => {
             );
             setProjections(dedupeProjections(rawProjections));
 
-            const rawFormats = datasetObject.downloadFormats.flatMap(
-              (fmt: any) =>
-                fmt.formats ? fmt.formats.map((format: any) => format.name) : []
+            const rawFormats = datasetObject.downloadFormats.flatMap((fmt) =>
+              fmt.formats ? fmt.formats.map((format) => format.name) : []
             );
             setFormats(dedupeFormats(rawFormats));
           }
