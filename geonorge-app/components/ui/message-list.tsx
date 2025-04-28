@@ -5,8 +5,6 @@ import {
 } from "@/components/ui/chat-message";
 import { TypingIndicator } from "@/components/ui/typing-indicator";
 import { Button } from "@/components/ui/button";
-import { Download, Eye } from "lucide-react";
-import Image from "next/image";
 
 type AdditionalMessageOptions = Omit<ChatMessageProps, keyof Message>;
 
@@ -46,12 +44,10 @@ export function MessageList({
         if (message.type === "image" && message.imageUrl) {
           return (
             <div key={index} className="flex flex-col items-start space-y-2">
-              <Image
+              <img
                 src={message.imageUrl}
                 alt="Dataset visualization"
                 className="max-w-[300px] h-auto rounded"
-                width={1080}
-                height={1080}
               />
               <div className="flex gap-2 z-10">
                 <Button
@@ -61,21 +57,22 @@ export function MessageList({
                       onExitFullScreen?.();
                     }
                   }}
-                  variant="show"
+                  variant="secondary"
                   className={`transition-colors relative ${
-                    isValidWmsUrl(message.wmsUrl) ? "" : " cursor-not-allowed"
+                    isValidWmsUrl(message.wmsUrl)
+                      ? "rounded-omar bg-[#FF8B65] hover:bg-[#FE642F] text-white"
+                      : "rounded-omar bg-gray-300 text-gray-500 cursor-not-allowed"
                   }`}
                   disabled={!isValidWmsUrl(message.wmsUrl)}
                 >
-                  <Eye className="h-4 w-4" />
-                  Vis på kart
+                  Vis
                 </Button>
                 {message.downloadUrl && (
                   <Button
                     onClick={() => onDownloadClick?.(message.downloadUrl!)}
-                    variant="download"
+                    variant="secondary"
+                    className="rounded-omar bg-[#404041] text-white hover:bg-[#5c5c5d transition-colors relative"
                   >
-                    <Download className="h-4 w-4" />
                     Last ned datasett
                   </Button>
                 )}

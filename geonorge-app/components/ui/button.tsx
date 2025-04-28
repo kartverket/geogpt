@@ -11,18 +11,17 @@ const buttonVariants = cva(
       variant: {
         default:
           "bg-primary text-primary-foreground shadow hover:bg-primary/90",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        standard:
-          "flex min-w-[140px] items-center justify-center gap-1 rounded-omar border bg-white px-3 py-1.5 text-sm shadow-sm transition-all hover:bg-gray-100",
+        next: "bg-color-kv-secondary text-primary-foreground shadow hover:bg-color-kv-secondary/90",
         destructive:
           "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
         outline:
-          "border border-input bg-background shadow-sm rounded-omar hover:bg-accent hover:text-accent-foreground",
-        continue:
-          "flex min-w-[140px] items-center justify-center gap-1 rounded-omar border bg-white px-3 py-1.5 text-sm text-color-kv-secondary shadow-sm transition-all hover:bg-gray-100",
+          "border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground",
+        secondary:
+          "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80",
+        ghost: "hover:bg-accent hover:text-accent-foreground",
+        link: "text-primary underline-offset-4 hover:underline",
         download:
-          "flex min-w-[140px] items-center justify-center gap-1 rounded-omar border bg-white px-3 py-1.5 text-sm shadow-sm transition-all hover:bg-gray-100",
-        show: "flex min-w-[140px] items-center justify-center gap-1 rounded-omar border bg-white px-3 py-1.5 text-sm text-color-kv-primary shadow-sm transition-all hover:bg-gray-100",
+          "bg-color-kv-primary text-primary-foreground shadow hover:bg-color-kv-primary/90",
       },
       size: {
         default: "h-9 px-4 py-2",

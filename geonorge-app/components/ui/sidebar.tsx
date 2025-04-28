@@ -22,6 +22,7 @@ import {
 const SIDEBAR_COOKIE_NAME = "sidebar_state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 const SIDEBAR_WIDTH = "22rem";
+const SIDEBAR_WIDTH_MOBILE = "18rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
 
@@ -56,7 +57,7 @@ const SidebarProvider = React.forwardRef<
 >(
   (
     {
-      defaultOpen = false,
+      defaultOpen = true,
       open: openProp,
       onOpenChange: setOpenProp,
       className,
@@ -195,11 +196,10 @@ const Sidebar = React.forwardRef<
     }
 
     return (
-      // Sidebar pushed out when collapsed.
       <div
         ref={ref}
         className={cn(
-          "fixed top-0 left-0 h-full z-20 bg-white transition-transform duration-300",
+          "fixed top-0 left-0 h-full z-50 bg-white transition-transform duration-300",
           state === "collapsed" && "-translate-x-full",
           className
         )}
@@ -216,44 +216,24 @@ const SidebarTrigger = React.forwardRef<
   React.ElementRef<typeof Button>,
   React.ComponentProps<typeof Button>
 >(({ className, onClick, ...props }, ref) => {
-  const { toggleSidebar, state } = useSidebar();
-  const isCollapsed = state === "collapsed";
+  const { toggleSidebar } = useSidebar();
 
   return (
-    <TooltipProvider delayDuration={100}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            ref={ref}
-            data-sidebar="trigger"
-            variant="ghost"
-            size="icon"
-            className={cn(
-              "h-10 w-10",
-              isCollapsed ? "bg-gray-100" : "bg-gray-100",
-              className
-            )}
-            onClick={(event) => {
-              onClick?.(event);
-              toggleSidebar();
-            }}
-            {...props}
-          >
-            {isCollapsed ? (
-              <Menu size={24} className="text-color-gn-secondary" />
-            ) : (
-              <Menu size={24} className="text-color-gn-secondary" />
-            )}
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent
-          className="bg-white border text-color-gn-secondary shadow-lg"
-          side="right"
-        >
-          <p>{isCollapsed ? "Åpne Sidebar" : "Lukk Sidebar"}</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <Button
+      ref={ref}
+      data-sidebar="trigger"
+      variant="ghost"
+      size="icon"
+      className={cn("h-10 w-10", className)}
+      onClick={(event) => {
+        onClick?.(event);
+        toggleSidebar();
+      }}
+      {...props}
+    >
+      <Menu className="text-white" />
+      <span className="sr-only">Open/Close Sidebar</span>
+    </Button>
   );
 });
 SidebarTrigger.displayName = "SidebarTrigger";

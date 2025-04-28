@@ -30,29 +30,11 @@ export const useMapState = () => {
     label?: string;
   }) => {
     setSearchMarkers((prev) => [...prev, marker]);
-    // Also update the map center to focus on the marker
-    if (marker && map) {
-      map.setView([marker.lat, marker.lng], 14); // 14 zoom level
-    }
   };
 
   // Function to clear all search markers
   const clearSearchMarkers = () => {
     setSearchMarkers([]);
-  };
-
-  // setSearchMarker that also centers the map
-  const setSearchMarkerWithCenter = (
-    marker: {
-      lat: number;
-      lng: number;
-    } | null
-  ) => {
-    setSearchMarker(marker);
-    // Center the map on the marker if it exists
-    if (marker && map) {
-      map.setView([marker.lat, marker.lng], 14); // 14 zoom level
-    }
   };
 
   return {
@@ -64,7 +46,7 @@ export const useMapState = () => {
     setMap,
     setWmsLayer,
     setUserMarker,
-    setSearchMarker: setSearchMarkerWithCenter,
+    setSearchMarker,
     setSearchMarkers,
     addSearchMarker,
     clearSearchMarkers,
