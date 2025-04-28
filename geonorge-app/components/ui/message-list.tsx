@@ -3,24 +3,19 @@ import {
   type ChatMessageProps,
   type Message as BaseMessage,
 } from "@/components/ui/chat-message";
-import { SearchResult, WMSLayer } from "@/app/components/chat_components/types";
+
+interface Message extends BaseMessage {
+  uuid?: string;
+  title?: string;
+  wmsUrl?: any;
+  downloadUrl?: string;
+  downloadFormats?: string[];
+  imageUrl?: string;
+}
 import { TypingIndicator } from "@/components/ui/typing-indicator";
 import { Button } from "@/components/ui/button";
 import { Download, Eye } from "lucide-react";
 import Image from "next/image";
-
-interface Message {
-  id: string;
-  uuid?: string;
-  role: "user" | "assistant" | "system";
-  content: string;
-  type?: "image" | "text";
-  title?: string;
-  wmsUrl?: SearchResult["wmsUrl"];
-  downloadUrl?: SearchResult["downloadUrl"];
-  downloadFormats?: SearchResult["downloadFormats"];
-  imageUrl?: string;
-}
 
 interface DownloadInfo {
   uuid: string;
@@ -39,7 +34,7 @@ interface MessageListProps {
     | AdditionalMessageOptions
     | ((message: Message) => AdditionalMessageOptions);
   onWmsClick?: (searchResult: any) => void;
-  onDownloadClick?: (info: SearchResult) => void;
+  onDownloadClick?: (info: DownloadInfo) => void; // Updated type
   onExitFullScreen?: () => void;
 }
 
@@ -87,7 +82,7 @@ export function MessageList({
                     if (isValidWmsUrl(message.wmsUrl)) {
                       const searchResult = {
                         uuid: message.id || `msg-${Date.now()}`,
-                        title: message.wmsUrl?.title,
+                        title: message.wmsUrl.title,
                         wmsUrl: message.wmsUrl,
                         downloadUrl: message.downloadUrl || null,
                         downloadFormats: message.downloadFormats || [],
@@ -108,25 +103,16 @@ export function MessageList({
                 {message.downloadUrl && (
                   <Button
                     onClick={() => {
-                      const searchResult: SearchResult = {
-                        uuid:
-                          message.uuid ||
-                          message.id ||
-                          `download-${Date.now()}`,
+                      const downloadInfo: DownloadInfo = {
+                        uuid: message.uuid || `download-${Date.now()}`,
                         title:
                           message.title ||
                           message.wmsUrl?.title ||
                           "Ukjent datasett",
                         downloadUrl: message.downloadUrl!,
                         downloadFormats: message.downloadFormats || [],
-                        wmsUrl:
-                          message.wmsUrl &&
-                          typeof message.wmsUrl === "object" &&
-                          "wms_url" in message.wmsUrl
-                            ? message.wmsUrl
-                            : undefined,
                       };
-                      onDownloadClick?.(searchResult);
+                      onDownloadClick?.(downloadInfo);
                     }}
                     variant="download"
                   >
@@ -139,13 +125,11 @@ export function MessageList({
           );
         }
 
-        const { wmsUrl, downloadUrl, ...restOfMessage } = message;
-
         return (
           <ChatMessage
             key={index}
             showTimeStamp={showTimeStamps}
-            {...restOfMessage}
+            {...message}
             {...additionalOptions}
           />
         );

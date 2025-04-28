@@ -172,15 +172,7 @@ export const useWebSocket = () => {
           wmsUrl,
           datasetTitle,
           datasetUuid,
-          downloadFormats,
         } = payload;
-        setSpecificObject({
-          uuid: datasetUuid,
-          title: datasetTitle,
-          downloadUrl: datasetDownloadUrl,
-          wmsUrl: wmsUrl,
-          downloadFormats: downloadFormats,
-        });
         setMessages((prev) => [
           ...prev,
           {
@@ -190,42 +182,71 @@ export const useWebSocket = () => {
             downloadUrl: datasetDownloadUrl,
             wmsUrl: wmsUrl,
             uuid: datasetUuid,
-            downloadFormats: downloadFormats || [],
           },
         ]);
+        break;
 
-        if (downloadFormats) {
-          setUuidToFind(datasetUuid);
-          setSpecificObject({
-            uuid: datasetUuid,
-            title: datasetTitle,
-            downloadUrl: datasetDownloadUrl,
-            wmsUrl: wmsUrl,
-            downloadFormats: downloadFormats,
-          });
-          setDatasetName(datasetTitle || "");
+      case "chatDatasets":
+        if (payload && Array.isArray(payload)) {
+          const firstUuid = payload[0].uuid;
+          setUuidToFind(firstUuid);
 
-          const rawGeoAreas = downloadFormats.map((fmt: any) => ({
-            type: fmt.type,
-            name: fmt.name,
-            code: fmt.code,
-          }));
-          setGeographicalAreas(dedupeAreas(rawGeoAreas));
-
-          const rawProjections = downloadFormats.flatMap((fmt: any) =>
-            fmt.projections
-              ? fmt.projections.map((proj: any) => ({
-                  name: proj.name,
-                  code: proj.code,
-                }))
-              : []
+          const datasetObject = payload.find(
+            (item: SearchResult) => item.uuid === firstUuid
           );
-          setProjections(dedupeProjections(rawProjections));
 
-          const rawFormats = downloadFormats.flatMap((fmt: any) =>
-            fmt.formats ? fmt.formats.map((format: any) => format.name) : []
-          );
-          setFormats(dedupeFormats(rawFormats));
+          setSpecificObject(datasetObject || null);
+
+          if (datasetObject) {
+            setMessages((prev) => {
+              const lastIndex = prev.length - 1;
+              for (let i = lastIndex; i >= 0; i--) {
+                if (
+                  prev[i].type === "image" &&
+                  (!prev[i].downloadFormats ||
+                    prev[i].downloadFormats?.length === 0)
+                ) {
+                  const updatedMessages = [...prev];
+                  updatedMessages[i] = {
+                    ...updatedMessages[i],
+                    downloadFormats: datasetObject.downloadFormats || [],
+                    title: datasetObject.title || "",
+                    uuid: datasetObject.uuid,
+                  };
+                  return updatedMessages;
+                }
+              }
+              return prev;
+            });
+
+            setDatasetName(datasetObject.title || "");
+
+            const rawGeoAreas = datasetObject.downloadFormats.map(
+              (fmt: any) => ({
+                type: fmt.type,
+                name: fmt.name,
+                code: fmt.code,
+              })
+            );
+            setGeographicalAreas(dedupeAreas(rawGeoAreas));
+
+            const rawProjections = datasetObject.downloadFormats.flatMap(
+              (fmt: any) =>
+                fmt.projections
+                  ? fmt.projections.map((proj: any) => ({
+                      name: proj.name,
+                      code: proj.code,
+                    }))
+                  : []
+            );
+            setProjections(dedupeProjections(rawProjections));
+
+            const rawFormats = datasetObject.downloadFormats.flatMap(
+              (fmt: any) =>
+                fmt.formats ? fmt.formats.map((format: any) => format.name) : []
+            );
+            setFormats(dedupeFormats(rawFormats));
+          }
         }
         break;
 
