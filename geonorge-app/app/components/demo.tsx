@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { MessageSquare } from "lucide-react";
 import dynamic from "next/dynamic";
 
@@ -14,7 +14,10 @@ import { useMapState } from "@/hooks/useMapState";
 import { useTour } from "@/components/tour";
 
 import { AppSidebar } from "@/app/components/app-sidebar";
-import { KartkatalogTab } from "@/app/components/kartkatalog-tab";
+import {
+  KartkatalogTab,
+  KartkatalogTabHandle,
+} from "@/app/components/kartkatalog-tab";
 import FileDownloadModal from "@/app/components/FileDownloadModal/FileDownloadModal";
 import FullScreenChatView from "@/app/components/chat_components/FullScreenChatView";
 import { ChatWindow } from "./chat_components";
@@ -73,6 +76,9 @@ const DemoV3 = () => {
 
   // Use the WebSocket hook
   const { messages, isStreaming, sendMessage, ws, mapUpdates } = useWebSocket();
+
+  // Create ref for KartkatalogTab
+  const kartkatalogTabRef = useRef<KartkatalogTabHandle>(null);
 
   // Use chat management hook
   const chatManagement = useChatManagement({
@@ -237,6 +243,11 @@ const DemoV3 = () => {
     },
   };
 
+  // Function to trigger Kartkatalog search from AddressSearch
+  const handleKartkatalogSearchRequest = (query: string) => {
+    kartkatalogTabRef.current?.search(query);
+  };
+
   return (
     <>
       <div className="flex flex-col h-screen w-full overflow-hidden">
@@ -255,12 +266,14 @@ const DemoV3 = () => {
               setUserMarker={mapState.setUserMarker}
               setSearchMarker={mapState.setSearchMarker}
               onMapReady={mapState.handleMapReady}
+              onKartkatalogSearchRequest={handleKartkatalogSearchRequest}
               showAddressSearch={true}
             />
 
             {/* KartkatalogTab */}
             <div className="fixed top-[25%] right-0 -translate-y-0 max-h-[450px]">
               <KartkatalogTab
+                ref={kartkatalogTabRef}
                 onReplaceIframe={replaceIframe}
                 onDatasetDownload={executeDatasetDownload}
                 ws={ws}
