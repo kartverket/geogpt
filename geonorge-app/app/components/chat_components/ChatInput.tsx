@@ -5,7 +5,7 @@ import { Send } from "lucide-react";
 interface ChatInputProps {
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onSubmit: (e: FormEvent<HTMLFormElement>) => void;
+  onSubmit: (e: FormEvent) => void;
   isStreaming: boolean;
 }
 

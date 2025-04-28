@@ -3,7 +3,7 @@ import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
 import { Button } from "@/components/ui/button";
 import { Maximize, X } from "lucide-react";
-import { ChatMessage as ChatMessageType, SearchResult } from "./types";
+import { ChatMessage as ChatMessageType } from "./types";
 import GeoNorgeIcon from "../../../components/ui/GeoNorgeIcon";
 import { TypingIndicator } from "@/components/ui/typing-indicator";
 import { TOUR_STEP_IDS } from "@/lib/tour-constants";
@@ -14,7 +14,7 @@ interface ChatWindowProps {
   onInputChange: (value: string) => void;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   isGenerating: boolean;
-  onWmsClick: (searchResult: SearchResult) => void;
+  onWmsClick: (url: string, title?: string) => void;
   onDownloadClick: (url: string) => void;
   onEnterFullScreen: () => void;
   onClose: () => void;

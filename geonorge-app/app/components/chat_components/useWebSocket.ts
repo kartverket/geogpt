@@ -166,22 +166,15 @@ export const useWebSocket = () => {
         break;
 
       case "insertImage":
-        const {
-          datasetImageUrl,
-          datasetDownloadUrl,
-          wmsUrl,
-          datasetTitle,
-          datasetUuid,
-        } = payload;
+        const { datasetImageUrl, datasetDownloadUrl, wmsUrl } = payload;
         setMessages((prev) => [
           ...prev,
           {
-            title: datasetTitle || "Bilde melding",
+            title: "Image message",
             type: "image",
             imageUrl: datasetImageUrl,
             downloadUrl: datasetDownloadUrl,
             wmsUrl: wmsUrl,
-            uuid: datasetUuid,
           },
         ]);
         break;
