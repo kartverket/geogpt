@@ -459,6 +459,15 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
               <Eye size={14} className="mr-1" /> Aktive lag (
               {activeLayerIds.length})
             </Badge>
+            <Badge
+              variant={filterType === "popular" ? "default" : "outline"}
+              className="cursor-pointer"
+              onClick={() =>
+                onFilterTypeChange(filterType === "popular" ? null : "popular")
+              }
+            >
+              <Star size={14} className="mr-1" /> Populære
+            </Badge>
           </div>
         </div>
 
