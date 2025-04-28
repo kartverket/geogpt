@@ -325,7 +325,6 @@ const DemoV3 = () => {
             changeToRasterKart,
             changeToSjoKart,
           }}
-          setSearchMarker={mapState.setSearchMarker}
           className="z-40"
         />
 

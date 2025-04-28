@@ -12,9 +12,6 @@ export default {
       fontFamily: {
         sans: ["var(--font-inter)", "sans-serif"],
       },
-      fontSize: {
-        xxs: "10px",
-      },
       colors: {
         color: {
           "gn-primary": "#fe642f",

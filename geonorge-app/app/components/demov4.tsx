@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useMemo } from "react";
-import { Send, X, Database } from "lucide-react";
+import { HelpCircle, Send, X, Database } from "lucide-react";
 import Image from "next/image";
 import "leaflet/dist/leaflet.css";
 import { LayerPanel } from "@/app/components/LayerPanel";
@@ -23,7 +23,6 @@ import { useMapState } from "@/hooks/useMapState";
 import dynamic from "next/dynamic";
 import hodetTilOmar from "@/app/components/Skjermbilde 2025-04-10 kl. 14.45.23.png";
 import FileDownloadModal from "@/app/components/FileDownloadModal/FileDownloadModal";
-import { SidebarMinimized } from "./sidebar_components/sidebar-minimized";
 
 const MapWithNoSSR = dynamic(() => import("@/components/map-wrapper"), {
   ssr: false,
@@ -288,7 +287,6 @@ const DemoV4 = () => {
               changeToRasterKart,
               changeToSjoKart,
             }}
-            setSearchMarker={mapState.setSearchMarker}
           />
         </div>
 
@@ -310,10 +308,13 @@ const DemoV4 = () => {
             setUserMarker={mapState.setUserMarker}
             setSearchMarker={mapState.setSearchMarker}
             onMapReady={mapState.handleMapReady}
+            showAddressSearch={true}
             activeMapLayers={activeMapLayers}
           />
 
-          <SidebarMinimized />
+          <button className="absolute left-4 bottom-4 bg-white p-2 rounded-full shadow-md hover:bg-gray-50 z-50">
+            <HelpCircle className="w-6 h-6 text-gray-700" />
+          </button>
 
           {/* Initial Chat Input - Repositioned */}
           {showInitialInput && !chatManagement.isFullScreen && (

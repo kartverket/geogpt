@@ -36,13 +36,7 @@ export default function RootLayout({
         <LanguageProvider>
           <TourProvider>
             {children}
-            <Toaster
-              position="top-right"
-              offset={{
-                top: 16,
-                right: 72,
-              }}
-            />
+            <Toaster position="bottom-center" />
           </TourProvider>
         </LanguageProvider>
       </body>

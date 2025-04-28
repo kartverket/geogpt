@@ -1,16 +1,15 @@
 "use client";
 
 import { SidebarProvider } from "@/components/ui/sidebar";
-import DemoV4 from "./components/demov4";
-import { VersionDisplay } from "./components/VersionDisplay";
+import DemoV3 from "./components/demo";
+import DemoV2 from "./dashboard/page";
 
 export default function Home() {
   return (
     <SidebarProvider>
       <div className="relative h-screen w-full">
-        <DemoV4 />
+        <DemoV3 />
       </div>
-      <VersionDisplay />
     </SidebarProvider>
   );
 }
