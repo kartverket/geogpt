@@ -352,21 +352,6 @@ function DynamicWMSLayers({
   );
 }
 
-// Define the default icon using L.icon
-const defaultIcon = L.icon({
-  iconRetinaUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
-  iconUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
-  shadowUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  tooltipAnchor: [16, -28],
-  shadowSize: [41, 41],
-});
-
 // Dynamic Markers component
 function DynamicMarkers({
   userMarker,
@@ -379,24 +364,15 @@ function DynamicMarkers({
 }) {
   return (
     <>
-      {userMarker && (
-        <Marker
-          position={[userMarker.lat, userMarker.lng]}
-          icon={defaultIcon}
-        />
-      )}
+      {userMarker && <Marker position={[userMarker.lat, userMarker.lng]} />}
       {searchMarker && (
-        <Marker
-          position={[searchMarker.lat, searchMarker.lng]}
-          icon={defaultIcon}
-        />
+        <Marker position={[searchMarker.lat, searchMarker.lng]} />
       )}
       {searchMarkers &&
         searchMarkers.map((marker, index) => (
           <Marker
             key={`search-marker-${index}`}
             position={[marker.lat, marker.lng]}
-            icon={defaultIcon}
           >
             {marker.label && <Popup>{marker.label}</Popup>}
           </Marker>
