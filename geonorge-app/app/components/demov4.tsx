@@ -18,7 +18,7 @@ import "leaflet/dist/leaflet.css";
 import { LayerPanel, ActiveLayerInfo } from "@/app/components/LayerPanel";
 import { AppSidebar } from "@/app/components/app-sidebar";
 import { LanguageProvider } from "@/i18n/LanguageContext";
-import { useSidebar } from "@/components/ui/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { ChatWindow } from "@/app/components/chat_components/ChatWindow";
 import { useWebSocket } from "@/app/components/chat_components/useWebSocket";
 import FullScreenChatView from "@/app/components/chat_components/FullScreenChatView";
@@ -64,7 +64,6 @@ const MapWithNoSSR = dynamic(() => import("@/components/map-wrapper"), {
 const DemoV4 = () => {
   // === MOVE HOOKS INSIDE THE COMPONENT ===
   const mapState = useMapState();
-  const { state } = useSidebar();
   const {
     currentBaseLayer,
     revertToBaseMap,
@@ -290,29 +289,25 @@ const DemoV4 = () => {
   return (
     <LanguageProvider>
       <div className="min-h-screen bg-gray-50 flex relative">
-        {/* Left Sidebar */}
-        <div
-          className={`flex-shrink-0 max-h-screen z-10 transition-[width] duration-300 ${
-            state === "collapsed" ? "w-0" : "w-[350px]"
-          }`}
-        >
-          <AppSidebar
-            availableLayers={wmsManagement.availableLayers ?? []}
-            trackedDatasets={wmsManagement.trackedDatasets}
-            onLayerChangeWithDataset={
-              wmsManagement.handleLayerChangeWithDataset
-            }
-            onRemoveDataset={wmsManagement.removeTrackedDataset}
-            onChangeBaseLayer={{
-              revertToBaseMap,
-              changeToGraattKart,
-              changeToRasterKart,
-              changeToSjoKart,
-            }}
-          />
+        <div className="absolute top-0 left-0 bottom-0 z-10">
+          <SidebarProvider>
+            <AppSidebar
+              availableLayers={wmsManagement.availableLayers ?? []}
+              trackedDatasets={wmsManagement.trackedDatasets}
+              onLayerChangeWithDataset={
+                wmsManagement.handleLayerChangeWithDataset
+              }
+              onRemoveDataset={wmsManagement.removeTrackedDataset}
+              onChangeBaseLayer={{
+                revertToBaseMap,
+                changeToGraattKart,
+                changeToRasterKart,
+                changeToSjoKart,
+              }}
+            />
+          </SidebarProvider>
         </div>
 
-        {/* Main Content Area */}
         <div
           className={`flex-1 relative bg-gray-100 transition-all duration-300 ${
             isChatOpen || isLayerPanelOpen ? "mr-96" : ""
@@ -337,35 +332,6 @@ const DemoV4 = () => {
           <button className="absolute left-4 bottom-4 bg-white p-2 rounded-full shadow-md hover:bg-gray-50 z-50">
             <HelpCircle className="w-6 h-6 text-gray-700" />
           </button>
-
-          {/* Initial Chat Input - Repositioned */}
-          {showInitialInput && !chatManagement.isFullScreen && (
-            <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 w-[600px] z-50 px-4">
-              <div className="relative bg-white/80 backdrop-blur-sm rounded-lg shadow-lg hover:bg-white transition-colors duration-200">
-                <input
-                  type="text"
-                  placeholder="Spør Kartassistent..."
-                  value={chatManagement.chatInput}
-                  onChange={(e) =>
-                    chatManagement.handleChatInputChange(e.target.value)
-                  }
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      handleChatSubmit();
-                    }
-                  }}
-                  className="w-full pl-4 pr-12 py-3 bg-transparent rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                />
-                <button
-                  onClick={() => handleChatSubmit()}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 text-orange-500 hover:text-orange-600"
-                >
-                  <Send className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-          )}
-
           {!chatManagement.isFullScreen && (
             <div className="absolute right-8 top-1/2 transform -translate-y-1/2 flex flex-col space-y-4 z-50">
               <button
@@ -408,6 +374,34 @@ const DemoV4 = () => {
             </div>
           )}
         </div>
+
+        {/* Initial Chat Input */}
+        {showInitialInput && !chatManagement.isFullScreen && (
+          <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 w-[600px] z-50">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Spør Kartassistent..."
+                value={chatManagement.chatInput} // Use value from hook
+                onChange={(e) =>
+                  chatManagement.handleChatInputChange(e.target.value)
+                } // Use handler from hook
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleChatSubmit(); // Call our custom handler
+                  }
+                }}
+                className="w-full pl-4 pr-12 py-3 bg-white border border-gray-200 rounded-lg shadow-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              />
+              <button
+                onClick={() => handleChatSubmit()} // Call our custom handler
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 text-orange-500 hover:text-orange-600"
+              >
+                <Send className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Chat Panel - Use ChatWindow */}
         <div
