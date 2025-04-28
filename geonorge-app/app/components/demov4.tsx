@@ -35,7 +35,19 @@ import dynamic from "next/dynamic";
 import hodetTilOmar from "@/app/components/Skjermbilde 2025-04-10 kl. 14.45.23.png";
 import FileDownloadModal from "@/app/components/FileDownloadModal/FileDownloadModal";
 
-// Removed problematic global icon setup code
+// Fix Leaflet default marker icon issue
+import L from "leaflet";
+import icon from "leaflet/dist/images/marker-icon.png";
+import iconShadow from "leaflet/dist/images/marker-shadow.png";
+
+let DefaultIcon = L.icon({
+  iconUrl: icon.src,
+  shadowUrl: iconShadow.src,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+});
+
+L.Marker.prototype.options.icon = DefaultIcon;
 
 interface Dataset {
   title: string;
