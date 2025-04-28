@@ -27,7 +27,7 @@ const SearchForm: React.FC<SearchFormProps> = ({
           onSearchTermChange(e.target.value)
         }
         placeholder="Søk etter datasett..."
-        className="pl-9 bg-white border border-gray-300 rounded-lg focus:ring"
+        className="pl-9 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-color-gn-primary focus:border-color-gn-primary"
         disabled={isSearching}
       />
       <button

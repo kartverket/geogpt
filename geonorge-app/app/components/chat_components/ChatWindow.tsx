@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Maximize, X } from "lucide-react";
 import { ChatMessage as ChatMessageType, SearchResult } from "./types";
 import GeoNorgeIcon from "../../../components/ui/GeoNorgeIcon";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { TypingIndicator } from "@/components/ui/typing-indicator";
 import { TOUR_STEP_IDS } from "@/lib/tour-constants";
 
@@ -36,9 +35,7 @@ export const ChatWindow = ({
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (chatEndRef.current) {
-      chatEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   return (
@@ -66,29 +63,27 @@ export const ChatWindow = ({
         </div>
       </div>
 
-      <ScrollArea className="flex-1">
-        <div id="chatMessages" className="p-4 space-y-3">
-          {messages.length === 0 && (
-            <div className="text-sm text-gray-500">
-              Hei! Jeg er GeoGPT. Spør meg om geodata!
-            </div>
-          )}
-          {messages.map((msg, idx) => (
-            <ChatMessage
-              key={idx}
-              message={msg}
-              onWmsClick={onWmsClick}
-              onDownloadClick={onDownloadClick}
-            />
-          ))}
-          {isGenerating && (
-            <div className="flex justify-start">
-              <TypingIndicator />
-            </div>
-          )}
-          <div ref={chatEndRef} />
-        </div>
-      </ScrollArea>
+      <div id="chatMessages" className="flex-1 p-4 overflow-y-auto space-y-2">
+        {messages.length === 0 && (
+          <div className="text-sm text-gray-500">
+            Hei! Jeg er GeoGPT. Spør meg om geodata!
+          </div>
+        )}
+        {messages.map((msg, idx) => (
+          <ChatMessage
+            key={idx}
+            message={msg}
+            onWmsClick={onWmsClick}
+            onDownloadClick={onDownloadClick}
+          />
+        ))}
+        {isGenerating && (
+          <div className="flex justify-start">
+            <TypingIndicator />
+          </div>
+        )}
+        <div ref={chatEndRef} />
+      </div>
 
       <ChatInput
         value={input}
