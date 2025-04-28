@@ -1,9 +1,21 @@
 "use client";
 import React, { useState, useEffect, useMemo } from "react";
-import { HelpCircle, Send, X, Database } from "lucide-react";
+import {
+  Map as MapIcon,
+  Search,
+  Layers,
+  Plus,
+  Minus,
+  HelpCircle,
+  ChevronLeft,
+  Send,
+  X,
+  Compass,
+  Database,
+} from "lucide-react";
 import Image from "next/image";
 import "leaflet/dist/leaflet.css";
-import { LayerPanel } from "@/app/components/LayerPanel";
+import { LayerPanel, ActiveLayerInfo } from "@/app/components/LayerPanel";
 import { AppSidebar } from "@/app/components/app-sidebar";
 import { LanguageProvider } from "@/i18n/LanguageContext";
 import { useSidebar } from "@/components/ui/sidebar";
@@ -13,7 +25,6 @@ import FullScreenChatView from "@/app/components/chat_components/FullScreenChatV
 import {
   ChatMessage as WebSocketChatMessage,
   SearchResult,
-  ActiveLayerInfo,
 } from "@/app/components/chat_components/types";
 import { useChatManagement } from "@/hooks/useChatManagement";
 import { useWmsManagement } from "@/hooks/useWmsManagement";
@@ -23,6 +34,16 @@ import { useMapState } from "@/hooks/useMapState";
 import dynamic from "next/dynamic";
 import hodetTilOmar from "@/app/components/Skjermbilde 2025-04-10 kl. 14.45.23.png";
 import FileDownloadModal from "@/app/components/FileDownloadModal/FileDownloadModal";
+
+// Removed problematic global icon setup code
+
+interface Dataset {
+  title: string;
+  description: string;
+  organization: string;
+  type: string;
+  updated: string;
+}
 
 const MapWithNoSSR = dynamic(() => import("@/components/map-wrapper"), {
   ssr: false,
