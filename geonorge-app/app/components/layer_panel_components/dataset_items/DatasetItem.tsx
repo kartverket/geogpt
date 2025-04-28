@@ -195,27 +195,27 @@ const DatasetItem: React.FC<DatasetItemProps> = (props) => {
               open={isHoverCardOpen}
               onOpenChange={handleHoverCardOpenChange}
             >
-              <span
-                className={`${
-                  hasActiveLayer
-                    ? "text-color-gn-primary"
-                    : "text-gray-800 hover:text-color-gn-lightblue"
-                } line-clamp-2 text-sm`}
-              >
-                <HoverCardTrigger asChild>
-                  <a
-                    href={`https://kartkatalog.geonorge.no/metadata/${encodeURIComponent(
-                      searchResult.title || "Dataset"
-                    )}/${resultKey}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="underline-offset-4 hover:underline"
+              <HoverCardTrigger asChild>
+                <a
+                  href={`https://kartkatalog.geonorge.no/metadata/${encodeURIComponent(
+                    searchResult.title || "Dataset"
+                  )}/${resultKey}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-sm font-medium transition-colors duration-200 underline-offset-4 hover:underline block"
+                >
+                  <span
+                    className={`${
+                      hasActiveLayer
+                        ? "text-color-gn-primary"
+                        : "text-gray-800 hover:text-color-gn-lightblue"
+                    } line-clamp-2`}
                   >
                     {searchResult.title || "Ukjent Tittel"}
-                  </a>
-                </HoverCardTrigger>
-              </span>
+                  </span>
+                </a>
+              </HoverCardTrigger>
               <HoverCardContent
                 side="left"
                 className="w-80 p-4 rounded-omar border border-gray-200 shadow-lg"
