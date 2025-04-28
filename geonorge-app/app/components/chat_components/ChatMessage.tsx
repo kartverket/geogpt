@@ -40,7 +40,6 @@ export const ChatMessage = ({
                   title: message.title || "Ukjent datasett",
                   wmsUrl: wmsInfo,
                   downloadUrl: message.downloadUrl || null,
-                  downloadFormats: message.downloadFormats || [],
                 };
                 onWmsClick(searchResult);
               } else {

@@ -54,15 +54,6 @@ export interface SearchResult {
   };
 }
 
-export interface ActiveLayerInfo {
-  id: string; // Unique ID: `${sourceUuid}-${layer.name}`
-  name: string;
-  title: string;
-  sourceUrl: string;
-  sourceTitle: string;
-  sourceUuid: string;
-}
-
 export interface MapUpdate {
   center?: [number, number];
   zoom?: number;
