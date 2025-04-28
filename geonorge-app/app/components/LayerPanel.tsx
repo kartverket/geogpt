@@ -1,5 +1,5 @@
-import React, { useMemo, useState, useEffect } from "react";
-import { Clock, Loader2, MapIcon, Search, Trash2, Layers2 } from "lucide-react";
+import React, { useMemo } from "react";
+import { Star, Clock, Loader2, Trash2, Layers2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -138,54 +138,6 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
     }
   };
 
-  // Add state to track initial loading
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
-
-  // Simulate initial loading effect
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsInitialLoading(false);
-    }, 0);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Component for initial loading state
-  const InitialState = () => (
-    <div className="flex flex-col items-center justify-center p-6 text-center h-full">
-      <div className="relative mb-6">
-        <div className="p-4 bg-gray-50 rounded-full border-2 border-gray-100">
-          <MapIcon className="h-12 w-12 text-color-gn-primary animate-typing-dot-bounce" />
-        </div>
-      </div>
-
-      <h3 className="text-lg font-medium mb-2 text-color-gn-secondarylight">
-        Velkommen til Kartkatalogen
-      </h3>
-      <div className="flex items-center gap-2 bg-gray-50 px-4 py-2 rounded-lg">
-        <Loader2 className="h-4 w-4 text-color-gn-secondarylight animate-spin" />
-        <span className="text-sm font-medium text-color-gn-secondarylight">
-          Datasett lastes inn, vennligst vent...
-        </span>
-      </div>
-    </div>
-  );
-
-  // Component for no results state
-  const NoResults = () => (
-    <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
-      <div className="rounded-full bg-gray-100 p-3 mb-4">
-        <Search className="h-6 w-6 text-gray-400" />
-      </div>
-      <h3 className="text-lg font-medium mb-2 text-gray-700">
-        Ingen resultater funnet
-      </h3>
-      <p className="text-sm text-gray-500 max-w-xs">
-        Prøv med andre søkeord eller sjekk stavemåten på søket ditt.
-      </p>
-    </div>
-  );
-
   return (
     <TooltipProvider delayDuration={100}>
       <div className="w-full flex flex-col h-full bg-white border-r border-gray-200 shrink-0 shadow-md">
@@ -225,184 +177,170 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
           </div>
         </div>
 
-        {/* Show InitialState during first load */}
-        {isInitialLoading ? (
-          <div className="flex-1 overflow-hidden flex items-center justify-center">
-            <InitialState />
-          </div>
-        ) : (
-          /* Tabs */
-          <Tabs defaultValue="all" className="flex-1 flex flex-col min-h-0">
-            <TabsList className="grid grid-cols-2 mx-4 mt-2 shrink-0 bg-gray-50">
-              <TabsTrigger
-                value="all"
-                className="data-[state=active]:text-color-gn-primary data-[state=active]:border-b-2 data-[state=active]:border-color-gn-primary"
-              >
-                Alle datasett
-              </TabsTrigger>
-              <TabsTrigger
-                value="recent"
-                className="data-[state=active]:text-color-gn-primary data-[state=active]:border-b-2 data-[state=active]:border-color-gn-primary"
-              >
-                Nylig brukt
-              </TabsTrigger>
-            </TabsList>
-
-            {/* Tab Content: All Datasets (Search Results) */}
-            <TabsContent
+        {/* Tabs */}
+        <Tabs defaultValue="all" className="flex-1 flex flex-col min-h-0">
+          <TabsList className="grid grid-cols-3 mx-4 mt-2 shrink-0 bg-gray-50 border-b border-gray-200">
+            <TabsTrigger
               value="all"
-              className="flex-1 space-y-1 overflow-y-auto relative"
+              className="data-[state=active]:text-color-gn-primary data-[state=active]:border-b-2 data-[state=active]:border-color-gn-primary"
             >
-              <h3 className="text-sm font-medium text-gray-800 mb-2 flex items-center gap-2 px-4 pt-2">
-                <Layers2
-                  size={16}
-                  className="text-color-gn-primary flex-shrink-0"
-                />
-                <span className="leading-5">Alle datasett</span>
-              </h3>
-              {/* Bulk Action Bar positioned absolutely within the TabsContent */}
-              <BulkActionBar
-                selectedCount={selectedDatasetsInfo.size}
-                onClearSelection={clearSelectedDatasets}
-                onInitiateDownload={handleBulkDownloadClick}
-              />
-
-              <div className="px-4 pb-4 space-y-4">
-                {/* Loading/Empty/No Results States */}
-                {isSearching ? (
-                  <div className="text-center py-8 text-gray-500 flex items-center justify-center gap-2">
-                    <Loader2
-                      size={16}
-                      className="animate-spin text-color-gn-primary"
-                    />
-                    <span>Søker...</span>
-                  </div>
-                ) : displayedResults.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    {filterType === "active" ? (
-                      <p>Ingen kjente datasett matcher de aktive kartlagene.</p>
-                    ) : !hasSearched ? (
-                      <InitialState />
-                    ) : (
-                      <NoResults />
-                    )}
-                    <button
-                      onClick={clearSearch}
-                      className="text-color-gn-primary hover:underline mt-2"
-                    >
-                      {filterType === "active"
-                        ? "Vis alle søkeresultater"
-                        : hasSearched
-                        ? "Tilbakestill søk"
-                        : ""}
-                    </button>
-                  </div>
-                ) : (
-                  // Render Search Results
-                  displayedResults.map((searchResult) => {
-                    // Ensure UUID exists for key and logic; skip rendering if not (shouldn't happen ideally)
-                    if (!searchResult.uuid) {
-                      console.warn(
-                        "Skipping rendering dataset without UUID:",
-                        searchResult
-                      );
-                      return null;
-                    }
-                    return (
-                      <DatasetItem
-                        key={searchResult.uuid}
-                        searchResult={searchResult}
-                        activeLayerIds={activeLayerIds}
-                        isExpanded={expandedCategories.includes(
-                          searchResult.uuid!
-                        )}
-                        isSelected={selectedDatasetsInfo.has(
-                          searchResult.uuid!
-                        )}
-                        onToggleExpand={toggleCategory}
-                        onSelectDataset={(dataset: SearchResult) =>
-                          handleSelectDataset(dataset)
-                        }
-                        onDownloadDataset={onDatasetDownload}
-                        onToggleLayerRequest={handleLayerToggleRequest}
-                      />
-                    );
-                  })
-                )}
-              </div>
-            </TabsContent>
-
-            {/* Tab Content: Recently Used */}
-            <TabsContent
+              Alle datasett
+            </TabsTrigger>
+            <TabsTrigger
               value="recent"
-              className="flex-1 space-y-1 overflow-y-auto relative"
+              className="data-[state=active]:text-color-gn-primary data-[state=active]:border-b-2 data-[state=active]:border-color-gn-primary"
             >
-              {/* Also add the BulkActionBar here if needed */}
-              <BulkActionBar
-                selectedCount={selectedDatasetsInfo.size}
-                onClearSelection={clearSelectedDatasets}
-                onInitiateDownload={handleBulkDownloadClick}
-              />
+              Nylig brukt
+            </TabsTrigger>
+            <TabsTrigger
+              value="favorites"
+              className="data-[state=active]:text-color-gn-primary data-[state=active]:border-b-2 data-[state=active]:border-color-gn-primary"
+            >
+              Favoritter
+            </TabsTrigger>
+          </TabsList>
 
-              <div className="px-4 pb-4">
-                <div className="py-2">
-                  <h3 className="text-sm font-medium text-gray-800 mb-2 flex items-center gap-2">
-                    <Clock size={16} className="text-color-gn-primary" />
-                    Nylig brukte datasett
-                  </h3>
-                  {recentDatasets.length === 0 ? (
-                    <div className="text-center py-8 flex flex-col items-center justify-center">
-                      <div className="rounded-full bg-gray-100 p-3 mb-4">
-                        <Clock className="h-6 w-6 text-gray-400" />
-                      </div>
-                      <p className="text-sm text-gray-500">
-                        Ingen nylig brukte datasett. Aktiver et kartlag for å se
-                        det her.
-                      </p>
-                    </div>
-                  ) : (
-                    // Render Recent Datasets with proper spacing
-                    <div className="space-y-4">
-                      {recentDatasets.map((searchResult) => {
-                        // Ensure UUID exists for key and logic
-                        if (!searchResult.uuid) {
-                          console.warn(
-                            "Skipping rendering recent dataset without UUID:",
-                            searchResult
-                          );
-                          return null;
-                        }
-                        return (
-                          <DatasetItem
-                            key={`recent-${searchResult.uuid}`}
-                            searchResult={searchResult}
-                            activeLayerIds={activeLayerIds}
-                            isExpanded={expandedCategories.includes(
-                              searchResult.uuid!
-                            )}
-                            isSelected={selectedDatasetsInfo.has(
-                              searchResult.uuid!
-                            )}
-                            onToggleExpand={toggleCategory}
-                            onSelectDataset={(dataset: SearchResult) =>
-                              handleSelectDataset(dataset)
-                            }
-                            onDownloadDataset={onDatasetDownload}
-                            onToggleLayerRequest={handleLayerToggleRequest}
-                          />
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
+          {/* Tab Content: All Datasets (Search Results) */}
+          <TabsContent
+            value="all"
+            className="flex-1 overflow-y-auto px-4 pb-4 space-y-1 relative"
+          >
+            <h3 className="text-sm font-medium text-gray-800 mb-2 flex items-center gap-2 py-2">
+              <Layers2 size={16} className="text-color-gn-primary" />
+              Alle datasett
+            </h3>
+            {/* Bulk Action Bar, basically multi download button */}
+            <BulkActionBar
+              selectedCount={selectedDatasetsInfo.size}
+              onClearSelection={clearSelectedDatasets}
+              onInitiateDownload={handleBulkDownloadClick}
+            />
+
+            {/* Loading/Empty States */}
+            {isSearching ? (
+              <div className="text-center py-8 text-gray-500 flex items-center justify-center gap-2">
+                <Loader2
+                  size={16}
+                  className="animate-spin text-color-gn-primary"
+                />
+                <span>Søker...</span>
               </div>
-            </TabsContent>
-          </Tabs>
-        )}
+            ) : displayedResults.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                {filterType === "active" ? (
+                  <p>Ingen kjente datasett matcher de aktive kartlagene.</p>
+                ) : !hasSearched ? (
+                  <p>Start søk for å finne datasett.</p>
+                ) : (
+                  <p>Ingen resultater funnet for "{searchTerm}"</p>
+                )}
+                <button
+                  onClick={clearSearch}
+                  className="text-color-gn-primary hover:underline mt-2"
+                >
+                  {filterType === "active"
+                    ? "Vis alle søkeresultater"
+                    : hasSearched
+                    ? "Tilbakestill søk"
+                    : ""}
+                </button>
+              </div>
+            ) : (
+              // Render Search Results using DatasetItem
+              displayedResults.map((searchResult) => {
+                // Ensure UUID exists for key and logic; skip rendering if not (shouldn't happen ideally)
+                if (!searchResult.uuid) {
+                  console.warn(
+                    "Skipping rendering dataset without UUID:",
+                    searchResult
+                  );
+                  return null;
+                }
+                return (
+                  <DatasetItem
+                    key={searchResult.uuid}
+                    searchResult={searchResult}
+                    activeLayerIds={activeLayerIds}
+                    isExpanded={expandedCategories.includes(searchResult.uuid!)}
+                    isSelected={selectedDatasetsInfo.has(searchResult.uuid!)}
+                    onToggleExpand={toggleCategory}
+                    onSelectDataset={(dataset: SearchResult) =>
+                      handleSelectDataset(dataset)
+                    }
+                    onDownloadDataset={onDatasetDownload}
+                    onToggleLayerRequest={handleLayerToggleRequest}
+                  />
+                );
+              })
+            )}
+          </TabsContent>
+
+          {/* Tab Content: Recently Used */}
+          <TabsContent
+            value="recent"
+            className="flex-1 overflow-y-auto px-4 pb-4 space-y-1"
+          >
+            <div className="py-2">
+              <h3 className="text-sm font-medium text-gray-800 mb-2 flex items-center gap-2">
+                <Clock size={16} className="text-color-gn-primary" />
+                Nylig brukte datasett
+              </h3>
+              {recentDatasets.length === 0 ? (
+                <div className="text-center py-4 text-gray-500">
+                  Ingen nylig brukte datasett. Aktiver et kartlag for å se det
+                  her.
+                </div>
+              ) : (
+                // Render Recent Datasets using DatasetItem
+                recentDatasets.map((searchResult) => {
+                  // Ensure UUID exists for key and logic
+                  if (!searchResult.uuid) {
+                    console.warn(
+                      "Skipping rendering recent dataset without UUID:",
+                      searchResult
+                    );
+                    return null;
+                  }
+                  return (
+                    <DatasetItem
+                      key={`recent-${searchResult.uuid}`}
+                      searchResult={searchResult}
+                      activeLayerIds={activeLayerIds}
+                      isExpanded={expandedCategories.includes(
+                        searchResult.uuid!
+                      )}
+                      isSelected={selectedDatasetsInfo.has(searchResult.uuid!)}
+                      onToggleExpand={toggleCategory}
+                      onSelectDataset={(dataset: SearchResult) =>
+                        handleSelectDataset(dataset)
+                      }
+                      onDownloadDataset={onDatasetDownload}
+                      onToggleLayerRequest={handleLayerToggleRequest}
+                    />
+                  );
+                })
+              )}
+            </div>
+          </TabsContent>
+
+          {/* Tab Content: Favorites */}
+          <TabsContent
+            value="favorites"
+            className="flex-1 overflow-y-auto px-4 pb-4"
+          >
+            <div className="py-2">
+              <h3 className="text-sm font-medium text-gray-800 mb-2 flex items-center gap-2">
+                <Star size={16} className="text-amber-400" />
+                Favorittdatasett
+              </h3>
+              <div className="space-y-1">TEST favorites cappas</div>
+            </div>
+          </TabsContent>
+        </Tabs>
 
         {/* Footer Section */}
         {activeLayerIds.length > 0 && (
-          <div className="p-3 pt-4 border-t border-gray-200 mt-auto shrink-0 bg-gray-50">
+          <div className="p-3 border-t border-gray-200 mt-auto shrink-0 bg-gray-50">
             <Button
               variant="outline"
               size="sm"
@@ -415,27 +353,20 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
           </div>
         )}
 
-        {/* Dialogs */}
-        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
-          <div className="pointer-events-auto">
-            <BulkDownloadDialog
-              open={showDownloadDialog}
-              selectedCount={selectedDatasetsInfo.size}
-              onOpenChange={setShowDownloadDialog}
-              onConfirmDownload={initiateDownloads}
-            />
-          </div>
-        </div>
+        {/* Bulk Download Dialog */}
+        <BulkDownloadDialog
+          open={showDownloadDialog}
+          selectedCount={selectedDatasetsInfo.size}
+          onOpenChange={setShowDownloadDialog}
+          onConfirmDownload={initiateDownloads}
+        />
 
-        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
-          <div className="pointer-events-auto">
-            <DuplicateLayerAlertDialog
-              open={showDuplicateLayerAlert}
-              message={duplicateLayerAlertMessage}
-              onOpenChange={setShowDuplicateLayerAlert}
-            />
-          </div>
-        </div>
+        {/* Duplicate Layer Alert Dialog */}
+        <DuplicateLayerAlertDialog
+          open={showDuplicateLayerAlert}
+          message={duplicateLayerAlertMessage}
+          onOpenChange={setShowDuplicateLayerAlert}
+        />
       </div>
     </TooltipProvider>
   );

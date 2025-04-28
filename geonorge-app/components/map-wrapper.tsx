@@ -190,20 +190,19 @@ function DynamicWMSLayers({
 }) {
   return (
     <>
-      {activeMapLayers &&
-        activeMapLayers.map((layer) => {
-          return (
-            <WMSTileLayer
-              key={layer.id}
-              url={layer.sourceUrl.split("?")[0]}
-              layers={layer.name}
-              format="image/png"
-              transparent={true}
-              zIndex={10}
-              version="1.3.0"
-            />
-          );
-        })}
+      {activeMapLayers.map((layer) => {
+        return (
+          <WMSTileLayer
+            key={layer.id}
+            url={layer.sourceUrl.split("?")[0]}
+            layers={layer.name}
+            format="image/png"
+            transparent={true}
+            zIndex={10}
+            version="1.3.0"
+          />
+        );
+      })}
     </>
   );
 }

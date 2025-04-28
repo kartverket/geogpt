@@ -27,7 +27,7 @@ const DuplicateLayerAlertDialog: React.FC<DuplicateLayerAlertDialogProps> = ({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="bg-white rounded-lg border border-gray-200 shadow-xl max-w-md">
         <AlertDialogHeader>
-          <AlertDialogTitle className="text-xl flex items-center">
+          <AlertDialogTitle className="text-xl flex items-center text-yellow-700">
             {/* <AlertTriangle className="h-5 w-5 mr-2" /> Optional Icon */}
             Duplisert Kartlag Funnet
           </AlertDialogTitle>
