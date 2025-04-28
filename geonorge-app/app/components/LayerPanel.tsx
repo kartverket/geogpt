@@ -287,13 +287,7 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
                       <NoResults />
                     )}
                     <button
-                      onClick={() => {
-                        if (filterType === "active") {
-                          onFilterTypeChange(null);
-                        } else {
-                          clearSearch();
-                        }
-                      }}
+                      onClick={clearSearch}
                       className="text-color-gn-primary hover:underline mt-2"
                     >
                       {filterType === "active"
