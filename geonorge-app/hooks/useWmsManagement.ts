@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState } from 'react';
 import { WMSLayer } from "@/app/components/chat_components/types";
 
 export interface TrackedDataset {
@@ -17,7 +17,10 @@ export const useWmsManagement = () => {
   const [isDuplicateAlertOpen, setIsDuplicateAlertOpen] = useState(false);
   const [duplicateDatasetTitle, setDuplicateDatasetTitle] = useState("");
 
-  const fetchWMSInfo = async (urlToFetch?: string, datasetId?: string) => {
+  const fetchWMSInfo = async (
+    urlToFetch?: string,
+    datasetId?: string,
+  ) => {
     if (!urlToFetch && !wmsUrl) {
       return { available_layers: [] };
     }
