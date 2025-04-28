@@ -4,7 +4,7 @@ export interface ChatMessage {
   content?: string;
   imageUrl?: string;
   downloadUrl?: string;
-  wmsUrl?: SearchResult["wmsUrl"] | "None";
+  wmsUrl?: string;
   downloadFormats?: Array<any>;
   uuid?: string;
 }
