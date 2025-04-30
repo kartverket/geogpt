@@ -195,6 +195,7 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
             searchTerm={searchTerm}
             isSearching={isSearching}
             filterActive={filterType === "active"}
+            searchMethod={searchMethod}
             onSearchTermChange={setSearchTerm}
             onSubmitSearch={handleSearchSubmit}
             onClearSearch={clearSearch}
@@ -211,7 +212,9 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
                 htmlFor="search-method-toggle"
                 className="text-xs text-gray-600"
               >
-                Geonorge Standard Søk
+                {searchMethod === "websocket"
+                  ? "GeoGPT AI Søk"
+                  : "Geonorge Standard Søk"}
               </Label>
               <Switch
                 id="search-method-toggle"

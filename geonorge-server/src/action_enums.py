@@ -21,3 +21,4 @@ class Action(Enum):
     SHOW_DATASET = "showDataset"
     DOWNLOAD_DATASET = "downloadDataset"
     DOWNLOAD_DATASET_ORDER = "downloadDatasetOrder"
+    UPDATE_DATASET_WMS = "updateDatasetWms"

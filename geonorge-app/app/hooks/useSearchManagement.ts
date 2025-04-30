@@ -1,5 +1,8 @@
-import { useState, useEffect, useCallback, FormEvent } from "react";
-import { SearchResult, WMSLayer } from "../components/chat_components/types";
+import { useState, useEffect, useCallback, FormEvent, useRef } from "react";
+import {
+  SearchResult,
+  WebSocketMessage,
+} from "../components/chat_components/types";
 
 interface DownloadFormatSelection {
   areaCode?: string;
@@ -42,6 +45,10 @@ interface UseSearchManagementProps {
 }
 
 export type SearchMethod = "websocket" | "http";
+interface WmsUpdatePayload {
+  uuid: string;
+  wmsInfo: SearchResult["wmsUrl"];
+}
 
 export const useSearchManagement = ({
   ws,
@@ -53,29 +60,15 @@ export const useSearchManagement = ({
   const [hasSearched, setHasSearched] = useState(false);
   const [currentSearchResults, setCurrentSearchResults] = useState<
     SearchResult[]
-  >([]); // Store results locally for display
-  const [searchMethod, setSearchMethod] = useState<SearchMethod>("websocket"); // Default to websocket
+  >([]);
+  const currentSearchResultsRef = useRef(currentSearchResults); // Ref to access current state in listener
+  const [searchMethod, setSearchMethod] = useState<SearchMethod>("websocket");
+
+  useEffect(() => {
+    currentSearchResultsRef.current = currentSearchResults;
+  }, [currentSearchResults]);
 
   // --- Start: HTTP Search Logic ---
-
-  // Updated helper to find WMS info using ServiceDistributionUrlForDataset
-  const findWmsInfo = (
-    apiResult: GeonorgeApiResult
-  ): SearchResult["wmsUrl"] => {
-    const wmsUrl = apiResult.ServiceDistributionUrlForDataset;
-
-    if (wmsUrl) {
-      // NOTE: The API doesn't directly provide available_layers list per dataset here.
-      // We return the base URL. A full implementation might require fetching GetCapabilities later.
-      // Also using the dataset title as a placeholder for WMS title.
-      return {
-        wms_url: wmsUrl,
-        available_layers: [], // Placeholder - requires GetCapabilities fetch
-        title: apiResult.Title || "", // Use dataset title as placeholder
-      };
-    }
-    return undefined; // Changed from null to undefined to match type
-  };
 
   const fetchHttpSearchResults = useCallback(
     async (term: string) => {
@@ -94,7 +87,7 @@ export const useSearchManagement = ({
       setCurrentSearchResults([]); // Clear previous results
 
       // --- Call Combined Backend Endpoint ---
-      const backendBaseUrl = "http://localhost:5000"; // Add to env ...
+      const backendBaseUrl = "http://127.0.0.1:5000"; // Add to env ...
       const backendSearchUrl = `${backendBaseUrl}/search-http?term=${encodeURIComponent(
         term
       )}`;
@@ -137,51 +130,121 @@ export const useSearchManagement = ({
 
   // WebSocket listener for search results (remains largely the same)
   useEffect(() => {
-    if (ws && searchMethod === "websocket") {
-      // Only listen if WS is active method
-      const handleMessage = (event: MessageEvent) => {
+    if (!ws) {
+      console.log(
+        "[useSearchManagement] No WebSocket connection, skipping message listener setup."
+      );
+      return;
+    }
+
+    console.log(
+      "[useSearchManagement] Setting up WebSocket message listener..."
+    );
+
+    const handleMessage = (event: MessageEvent) => {
+      try {
+        let data: WebSocketMessage;
         try {
-          const data = JSON.parse(event.data);
-          if (
-            data.action === "searchVdbResults" ||
-            data.action === "searchResults"
-          ) {
-            const newResults: SearchResult[] = data.payload || [];
-            console.log(
-              "[useSearchManagement] Received WebSocket search results:",
-              newResults.length
-            );
-            setIsSearching(false);
-            setCurrentSearchResults(newResults); // Update local results for display
-            updateWmsResultsMap(newResults); // Update the master WMS map
-          }
-        } catch (error) {
+          data = JSON.parse(event.data);
+        } catch (parseError) {
           console.error(
-            "[useSearchManagement] Failed to parse WebSocket message:",
-            error
+            "[useSearchManagement] Failed to parse incoming WebSocket message:",
+            event.data,
+            parseError
           );
-          setIsSearching(false); // Ensure loading state is reset on error
+          return;
         }
-      };
 
-      ws.addEventListener("message", handleMessage);
-      console.log("[useSearchManagement] Added WS message listener.");
+        // --- Handle Initial Search Results (if using WS search method) ---
+        if (
+          searchMethod === "websocket" &&
+          (data.action === "searchVdbResults" ||
+            data.action === "searchResults")
+        ) {
+          const newResults: SearchResult[] = data.payload || [];
+          console.log(
+            "[useSearchManagement] Received WebSocket search results:",
+            newResults.length
+          );
+          setIsSearching(false);
+          setCurrentSearchResults(newResults); // Update local results for display
+          updateWmsResultsMap(newResults); // Update the master WMS map
+          return;
+        }
+        // Handle WMS Update Message (kartkatalog elements loading)
+        if (data.action === "updateDatasetWms") {
+          console.log(
+            "[useSearchManagement] Received WMS update:",
+            data.payload
+          );
+          const updatePayload = data.payload as WmsUpdatePayload;
+          // Check for payload, uuid, and the *presence* of the wmsInfo key.
+          if (
+            !updatePayload ||
+            !updatePayload.uuid ||
+            !("wmsInfo" in updatePayload)
+          ) {
+            console.warn(
+              "[useSearchManagement] Received invalid WMS update payload (missing uuid or wmsInfo key):",
+              updatePayload
+            );
+            return;
+          }
 
-      return () => {
+          // Update the specific dataset in the results immutably
+          // Use the ref here to get the *latest* state within the closure
+          const updatedResults = currentSearchResultsRef.current.map(
+            (result) => {
+              if (result.uuid === updatePayload.uuid) {
+                console.log(
+                  `[useSearchManagement] Updating WMS info for UUID: ${updatePayload.uuid}`
+                );
+                // Return a *new* object with the wmsUrl updated
+                return {
+                  ...result,
+                  wmsUrl: updatePayload.wmsInfo,
+                };
+              }
+              return result;
+            }
+          );
+
+          // Check if any update actually happened (importante!"#!"#!"#!!)
+          if (
+            JSON.stringify(updatedResults) !==
+            JSON.stringify(currentSearchResultsRef.current)
+          ) {
+            setCurrentSearchResults(updatedResults);
+            updateWmsResultsMap(updatedResults);
+          } else {
+            console.log(
+              `[useSearchManagement] WMS update received for ${updatePayload.uuid}, but no matching dataset found in current results.`
+            );
+          }
+          return;
+        }
+
+        // Add handling for other message types ONE DAY
+      } catch (error) {
+        console.error(
+          "[useSearchManagement] Error processing WebSocket message:",
+          error
+        );
+        // Consider resetting isSearching state on generic errors too perhaps
+        // setIsSearching(false);
+      }
+    };
+
+    ws.addEventListener("message", handleMessage);
+    console.log("[useSearchManagement] Added WS message listener.");
+    // Cleanup function
+    return () => {
+      if (ws) {
         ws.removeEventListener("message", handleMessage);
         console.log("[useSearchManagement] Removed WS message listener.");
-      };
-    } else {
-      if (isSearching && searchMethod === "websocket") {
-        // If WS disconnects during a WS search, reset searching state.
-        console.log(
-          "[useSearchManagement] WS is null or method is HTTP, resetting WS searching state."
-        );
-        setIsSearching(false);
       }
-    }
-    // Include searchMethod in dependencies to re-evaluate listener attachment
-  }, [ws, updateWmsResultsMap, isSearching, searchMethod]);
+    };
+  }, [ws, searchMethod, updateWmsResultsMap]);
 
   // Modified search submit handler
   const handleSearchSubmit = useCallback(
@@ -243,7 +306,7 @@ export const useSearchManagement = ({
       metadataUuid: string,
       downloadFormats: DownloadFormatSelection
     ): Promise<string | null> => {
-      const backendBaseUrl = "http://localhost:5000"; // Add to env ...
+      const backendBaseUrl = "http://127.0.0.1:5000"; // Add to env ...
 
       const downloadApiUrl = `${backendBaseUrl}/download-dataset`;
 

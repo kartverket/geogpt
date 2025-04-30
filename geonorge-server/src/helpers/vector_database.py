@@ -19,7 +19,11 @@ def _vector_search(vector_array):
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT uuid, title, combined_text_vector <-> %s::vector AS distance 
+                SELECT 
+                    uuid, 
+                    title, 
+                    getcapabilitiesurl, 
+                    combined_text_vector <-> %s::vector AS distance 
                 FROM text_embedding_3_large 
                 ORDER BY combined_text_vector <-> %s::vector LIMIT 20
                 """,
