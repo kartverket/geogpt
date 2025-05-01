@@ -1,8 +1,9 @@
 import { useState } from "react";
+import { Map, TileLayer } from "leaflet";
 
 export const useMapState = () => {
-  const [map, setMap] = useState<any>(null);
-  const [wmsLayer, setWmsLayer] = useState<Record<string, any>>({});
+  const [map, setMap] = useState<Map | null>(null);
+  const [wmsLayer, setWmsLayer] = useState<Record<string, TileLayer>>({});
   const [userMarker, setUserMarker] = useState<{
     lat: number;
     lng: number;
@@ -19,7 +20,7 @@ export const useMapState = () => {
     }>
   >([]);
 
-  const handleMapReady = (mapInstance: any) => {
+  const handleMapReady = (mapInstance: Map) => {
     setMap(mapInstance);
   };
 

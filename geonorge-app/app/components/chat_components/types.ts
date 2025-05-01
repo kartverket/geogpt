@@ -5,7 +5,13 @@ export interface ChatMessage {
   imageUrl?: string;
   downloadUrl?: string;
   wmsUrl?: SearchResult["wmsUrl"] | "None";
-  downloadFormats?: Array<any>;
+  downloadFormats?: Array<{
+    type: string;
+    name: string;
+    code: string;
+    projections?: Array<{ name: string; code: string }>;
+    formats?: Array<{ name: string }>;
+  }>;
   uuid?: string;
 }
 
@@ -45,7 +51,7 @@ export type WebSocketPayload =
   | UpdateWmsPayload
   | DownloadDatasetPayload
   | ChatStreamPayload
-  | {}; // For actions like 'streamComplete' with empty payload
+  | object;
 
 export interface WebSocketMessage {
   action: string;
@@ -56,12 +62,6 @@ export interface WMSLayer {
   name: string;
   title: string;
 }
-
-export type MessageType = {
-  action: string;
-  payload?: any;
-  isNewMessage?: boolean;
-};
 
 export interface Address {
   adressetekst: string;

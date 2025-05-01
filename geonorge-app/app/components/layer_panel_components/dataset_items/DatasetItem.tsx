@@ -22,11 +22,7 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
-import {
-  SearchResult,
-  WMSLayer,
-  ActiveLayerInfo,
-} from "../../chat_components/types";
+import { SearchResult, ActiveLayerInfo } from "../../chat_components/types";
 import LayerListItem from "./LayerListItem";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -398,7 +394,7 @@ const DatasetItem: React.FC<DatasetItemProps> = (props) => {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-7 px-2 text-xs text-color-kv-primary hover:text-color-gn-primary border-gray-200 transition-colors duration-200 whitespace-nowrap"
+                    className="h-7 px-2 text-xs text-color-kv-primary hover:text-green-700 border-gray-200 transition-colors duration-200 whitespace-nowrap"
                     onClick={handleShowOnMap}
                     title="Vis første kartlag på kartet"
                   >

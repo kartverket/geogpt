@@ -61,7 +61,7 @@ export const useWmsManagement = () => {
     }
   };
 
-  const replaceIframe = async (wmsUrl: any, datasetTitle?: string) => {
+  const replaceIframe = async (wmsUrl: string | { wms_url: string; available_layers?: WMSLayer[]; title?: string }, datasetTitle?: string) => {
     if (
       !wmsUrl ||
       wmsUrl === "NONE" ||
@@ -91,10 +91,11 @@ export const useWmsManagement = () => {
           extractedLayers = wmsData.available_layers || [];
           extractedTitle = wmsData.title || datasetTitle;
         } else {
-          processedWmsUrl = wmsUrl;
+          processedWmsUrl = typeof wmsUrl === 'string' ? wmsUrl : wmsUrl.wms_url;
         }
       } catch (error) {
-        processedWmsUrl = wmsUrl;
+        console.error("Error when parsing WMS URL:", error);
+        processedWmsUrl = typeof wmsUrl === 'string' ? wmsUrl : wmsUrl.wms_url;
       }
     }
 
@@ -165,6 +166,8 @@ export const useWmsManagement = () => {
     console.log(searchResult, "searchResult");
     if (
       !searchResult.wmsUrl ||
+      'loading' in searchResult.wmsUrl ||
+      'error' in searchResult.wmsUrl ||
       !searchResult.wmsUrl.wms_url ||
       !searchResult.wmsUrl.available_layers ||
       searchResult.wmsUrl.available_layers.length === 0
