@@ -2,16 +2,8 @@ import { useState, useEffect } from "react";
 import { SearchResult } from "@/app/components/chat_components/types";
 import { usePopoverBlocker } from "./usePopoverBlocker";
 
-// Define or import DownloadInfo
-interface DownloadInfo {
-  uuid: string;
-  title: string;
-  downloadUrl: string;
-  downloadFormats: any[];
-}
-
 interface ChatManagementProps {
-  messages: any[];
+  messages: any[]; // Need to create a proper type for messages
   isStreaming: boolean;
   sendMessage: (message: string) => void;
   executeDatasetDownload: (dataset: SearchResult) => void;
@@ -57,8 +49,7 @@ export const useChatManagement = ({
   };
 
   const fullScreenHandleSubmit = (
-    e?: { preventDefault?: () => void },
-    options?: { experimental_attachments?: FileList }
+    e?: { preventDefault?: () => void }
   ) => {
     if (e && e.preventDefault) {
       e.preventDefault();
@@ -87,7 +78,7 @@ export const useChatManagement = ({
   };
 
   const transformMessagesForChatKit = () => {
-    return messages.map((msg, idx) => {
+    return messages.map((msg) => {
       if (msg.type === "image" && msg.imageUrl) {
         return {
           id: msg.uuid,

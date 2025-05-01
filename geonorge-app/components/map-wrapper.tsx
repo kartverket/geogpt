@@ -21,10 +21,8 @@ import {
 
 // Icons
 import { Compass, Loader2, Plus, Minus } from "lucide-react";
-
 import { TrackedDataset } from "@/hooks/useWmsManagement";
-import { ActiveLayerInfo } from "@/app/components/LayerPanel";
-
+import { ActiveLayerInfo } from "@/app/components/chat_components/types";
 
 // Enhanced hook to handle all Leaflet event propagation
 function useLeafletEventPropagation<T extends HTMLElement>() {
@@ -229,8 +227,8 @@ function DynamicMarkers({
   searchMarker,
   searchMarkers = [],
 }: {
-  userMarker: any;
-  searchMarker: any;
+  userMarker: { lat: number; lng: number } | null;
+  searchMarker: { lat: number; lng: number } | null;
   searchMarkers?: Array<{ lat: number; lng: number; label?: string }>;
 }) {
   return (
@@ -267,9 +265,9 @@ interface MapWrapperProps {
   currentBaseLayer: string;
   trackedDatasets: TrackedDataset[];
   activeMapLayers: ActiveLayerInfo[];
-  wmsLayer: Record<string, any>;
-  userMarker: any;
-  searchMarker: any;
+  wmsLayer: string;
+  userMarker: { lat: number; lng: number } | null;
+  searchMarker: { lat: number; lng: number } | null;
   searchMarkers?: Array<{ lat: number; lng: number; label?: string }>;
   setUserMarker: (marker: { lat: number; lng: number } | null) => void;
   setSearchMarker: (marker: { lat: number; lng: number } | null) => void;
@@ -280,20 +278,20 @@ const MapWrapper: React.FC<MapWrapperProps> = ({
   center,
   zoom,
   currentBaseLayer,
-  trackedDatasets,
   activeMapLayers,
-  wmsLayer,
   userMarker,
   searchMarker,
   searchMarkers = [],
   setUserMarker,
-  setSearchMarker,
   onMapReady,
 }) => {
   // Move the Leaflet icon setup inside the component
   useEffect(() => {
     // Fix Leaflet's default icon path issues
-    delete (L.Icon.Default.prototype as any)._getIconUrl;
+    interface IconDefaultExtended extends L.Icon.Default {
+      _getIconUrl?: string;
+    }
+    delete (L.Icon.Default.prototype as IconDefaultExtended)._getIconUrl;
     L.Icon.Default.mergeOptions({
       iconRetinaUrl:
         "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",

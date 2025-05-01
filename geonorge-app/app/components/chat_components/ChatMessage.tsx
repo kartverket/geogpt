@@ -147,7 +147,7 @@ export const ChatMessage = ({
   // Wrap lists in ul tags with better styling for nested content
   if (content.includes("<li>")) {
     content = content.replace(
-      /(<li>.*?<\/li>)+/gs,
+      /(<li>.*?<\/li>)+/g,
       '<ul class="list-disc pl-5 my-2 space-y-1">$&</ul>'
     );
   }

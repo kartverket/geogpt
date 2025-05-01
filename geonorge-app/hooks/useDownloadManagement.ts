@@ -50,7 +50,7 @@ export const useDownloadManagement = () => {
     if (downloadFormats.length > 0) {
       // Extract and dedupe geographical areas
       const rawGeoAreas = downloadFormats.map(
-        (fmt: { type: any; name: any; code: any }) => ({
+        (fmt: { type: string; name: string; code: string }) => ({
           type: fmt.type,
           name: fmt.name,
           code: fmt.code,
@@ -64,7 +64,7 @@ export const useDownloadManagement = () => {
           (fmt: { projections?: { name: string; code: string }[] }) =>
             fmt.projections || []
         )
-        .map((proj: { name: any; code: any }) => ({
+        .map((proj: { name: string; code: string }) => ({
           name: proj.name,
           code: proj.code,
         }));
@@ -72,7 +72,7 @@ export const useDownloadManagement = () => {
 
       const rawFormats = downloadFormats
         .flatMap((fmt: { formats?: { name: string }[] }) => fmt.formats || [])
-        .map((format: { name: any }) => format.name);
+        .map((format: { name: string }) => format.name);
       setFormats(dedupeFormats(rawFormats));
 
       setDatasetName(dataset.title || "");

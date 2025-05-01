@@ -17,27 +17,6 @@ interface DownloadFormatSelection {
   usagePurpose?: string;
 }
 
-interface GeonorgeApiResult {
-  Uuid: string;
-  Title: string;
-  Abstract: string;
-  Organization: string;
-  ThumbnailUrl: string;
-  Type: string;
-  DistributionUrl: string;
-  DistributionProtocol: string;
-  DatasetServices?: Array<{
-    Protocol: string;
-    GetCapabilitiesUrl: string;
-    Name?: string;
-  }>;
-  ServiceDistributionUrlForDataset?: string;
-  AccessIsRestricted?: boolean;
-  AccessIsOpendata?: boolean;
-  AccessIsProtected?: boolean;
-  // Add other fields if needed
-}
-
 interface UseSearchManagementProps {
   ws: WebSocket | null;
   updateWmsResultsMap: (results: SearchResult[]) => void; // From useWmsLayerManagement
@@ -155,13 +134,12 @@ export const useSearchManagement = ({
           return;
         }
 
-        // --- Handle Initial Search Results (if using WS search method) ---
         if (
           searchMethod === "websocket" &&
           (data.action === "searchVdbResults" ||
             data.action === "searchResults")
         ) {
-          const newResults: SearchResult[] = data.payload || [];
+          const newResults: SearchResult[] = Array.isArray(data.payload) ? data.payload : [];
           console.log(
             "[useSearchManagement] Received WebSocket search results:",
             newResults.length
