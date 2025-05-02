@@ -19,6 +19,7 @@ import { useRecentDatasets } from "../hooks/useRecentDatasets";
 import { useDuplicateLayerCheck } from "../hooks/useDuplicateLayerCheck";
 import { useWmsLayerManagement } from "../hooks/useWmsLayerManagement";
 import { useSearchManagement } from "../hooks/useSearchManagement";
+export type { ActiveLayerInfo } from "./chat_components/types";
 
 // Define props for LayerPanel
 interface LayerPanelProps {
@@ -43,7 +44,7 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
   newlyAddedDatasetInfo,
   onRemoveAllLayers,
 }) => {
-  const { searchResults, ws } = useWebSocket();
+  const { ws } = useWebSocket();
   const { selectedDatasetsInfo, handleSelectDataset, clearSelectedDatasets } =
     useDatasetSelection();
   const {
@@ -95,7 +96,13 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
       const allKnownWmsResults = Array.from(allWmsResultsMap.values());
       return allKnownWmsResults.filter((result) => {
         const wmsInfo = result.wmsUrl;
-        if (!result.uuid || !wmsInfo || !wmsInfo.available_layers) {
+        if (
+          !result.uuid ||
+          !wmsInfo ||
+          "loading" in wmsInfo ||
+          "error" in wmsInfo ||
+          !wmsInfo.available_layers
+        ) {
           return false;
         }
         return activeLayerIds.some((activeId) =>
@@ -195,6 +202,7 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
             searchTerm={searchTerm}
             isSearching={isSearching}
             filterActive={filterType === "active"}
+            searchMethod={searchMethod}
             onSearchTermChange={setSearchTerm}
             onSubmitSearch={handleSearchSubmit}
             onClearSearch={clearSearch}
@@ -211,7 +219,9 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
                 htmlFor="search-method-toggle"
                 className="text-xs text-gray-600"
               >
-                Geonorge Standard Søk
+                {searchMethod === "websocket"
+                  ? "GeoGPT AI Søk"
+                  : "Geonorge Standard Søk"}
               </Label>
               <Switch
                 id="search-method-toggle"

@@ -30,10 +30,14 @@ from helpers.download import (
     get_dataset_download_and_wms_status,
     get_download_url,
     get_standard_or_first_format,
-    fetch_area_data
+    fetch_area_data,
+    _fetch_wms_capabilities_async
 )
 from helpers.vector_database import get_vdb_response, get_vdb_search_response
 from helpers.websocket import send_websocket_message, send_websocket_action
+
+# Constants
+WMS_RETRY_TIMEOUT = 30 
 
 # Initialize Flask app 
 app = Flask(__name__)
@@ -117,33 +121,71 @@ class ChatServer:
             logger.error("Stack trace: %s", traceback.format_exc())
             await send_websocket_action(Action.STREAM_COMPLETE.value, websocket)
 
+    async def _retry_and_send_wms_update(self, websocket: Any, uuid: str, wms_capabilities_url: str, title: str) -> None:
+        """ Background task to retry fetching WMS capabilities with a longer timeout and send an update. """
+        try:
+            logger.info(f"Retrying WMS fetch for {uuid} ({title}) with {WMS_RETRY_TIMEOUT}s timeout...")
+            wms_capabilities = await _fetch_wms_capabilities_async(wms_capabilities_url, timeout_seconds=WMS_RETRY_TIMEOUT)
+            
+            if wms_capabilities:
+                # Construct the wms_info object structure expected by the frontend
+                wms_info = {
+                    "wms_url": wms_capabilities_url,
+                    "available_layers": wms_capabilities.get("available_layers", []),
+                    "available_formats": wms_capabilities.get("available_formats", []),
+                    "title": title 
+                }
+                update_payload = {"uuid": uuid, "wmsInfo": wms_info}
+                logger.info(f"Successfully fetched WMS for {uuid} on retry. Sending update.")
+                await send_websocket_message(Action.UPDATE_DATASET_WMS.value, update_payload, websocket)
+            else:
+                logger.warning(f"WMS fetch for {uuid} still failed on retry with {WMS_RETRY_TIMEOUT}s timeout.")
+                # Send update with wmsInfo: None to signal loading finished unsuccessfully
+                update_payload = {"uuid": uuid, "wmsInfo": None}
+                await send_websocket_message(Action.UPDATE_DATASET_WMS.value, update_payload, websocket)
+
+        except Exception as e:
+            logger.error(f"Error during WMS retry task for {uuid}: {e}")
+            # Avoid crashing the server, just log the error
+
     async def handle_search_form_submit(self, websocket: Any, query: str) -> None:
         """
-        Handle search form submission by processing the query and sending search results.
+        Handle search form submission by processing the query, sending initial results,
+        and launching background tasks to retry slow WMS fetches.
 
         Args:
             websocket: The client websocket connection.
             query: The search query submitted by the user.
         """
         try:
+            # 1. Initial Fetch (using short WMS timeout internally)
             vdb_search_response = await get_vdb_search_response(query)
             datasets_with_status = await get_dataset_download_and_wms_status(vdb_search_response)
+            
+            # 2. Send Initial Results Immediately
+            logger.info(f"Sending initial {len(datasets_with_status)} search results for query: '{query}'")
             await send_websocket_message(Action.SEARCH_VDB_RESULTS.value, datasets_with_status, websocket)
+
+            # 3. Launch Background Retries for Timed-out WMS
+            for dataset in datasets_with_status:
+                # Check if WMS fetch likely timed out initially and needs retry
+                # Condition: wmsUrl is the loading object and getcapabilitiesurl exists
+                if isinstance(dataset.get('wmsUrl'), dict) and dataset.get('wmsUrl').get('loading') and dataset.get('getcapabilitiesurl'):
+                    uuid = dataset.get('uuid')
+                    url = dataset.get('getcapabilitiesurl')
+                    title = dataset.get('title')
+                    if uuid and url and title:
+                        logger.info(f"Scheduling background WMS retry for {uuid} ({title})")
+                        # Launch the retry task without awaiting it
+                        asyncio.create_task(self._retry_and_send_wms_update(websocket, uuid, url, title))
+                    else:
+                        logger.warning(f"Skipping WMS retry for dataset due to missing info: {dataset}")
 
         except Exception as error:
             logger.error("Search failed: %s", str(error))
             logger.error("Stack trace: %s", traceback.format_exc())
+            # await send_websocket_message("searchError", {"message": str(error)}, websocket)
 
-    # Uncomment and update if needed for dataset download functionality.
-    # async def handle_download_dataset(self, websocket: Any, dataset_uuid: str, chosen_formats: List[str]) -> None:
-    #     try:
-    #         is_downloadable = await dataset_has_download(dataset_uuid)
-    #         if is_downloadable:
-    #             dataset_download_url = await get_download_url(dataset_uuid, chosen_formats)
-    #             await send_websocket_message("downloadDatasetOrder", dataset_download_url, websocket)
-    #     except Exception as error:
-    #         logger.error("Download failed: %s", str(error))
-    #         logger.error("Stack trace: %s", traceback.format_exc())
 
     async def handle_message(self, websocket: Any, message: str) -> None:
         """
@@ -674,6 +716,7 @@ async def main() -> None:
     allowed_origins = [
         "http://localhost:3000", 
         "http://127.0.0.1:3000",
+        "http://geogpt.geokrs.no"
     ]
     logger.info(f"Allowed WebSocket origins: {allowed_origins}")
 

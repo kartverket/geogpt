@@ -9,7 +9,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button"; // Although not used directly, good practice if extending
 import { Download } from "lucide-react";
 
 interface BulkDownloadDialogProps {

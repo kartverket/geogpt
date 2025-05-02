@@ -1,5 +1,18 @@
 import React, { useEffect, useState, useRef } from "react";
 
+// Type definitions
+interface FileDownloadModalProps {
+  isOpen: boolean;
+  handleClose: () => void;
+  handleStandardDownload: () => void;
+  geographicalAreas: { name: string; code: string; type: string }[];
+  projections: { name: string; code: string; codespace: string }[];
+  formats: string[];
+  datasetName: string;
+  onAreaChange: (areaCode: string) => void;
+  metadataUuid: string;
+}
+
 // Utils
 import { fixNorwegianEncoding } from "./utils/fixNbEncoding";
 import { groupedGoals, userGroups } from "./utils/selectionData";
@@ -602,22 +615,6 @@ const FileDownloadModal: React.FC<FileDownloadModalProps> = ({
 
   const handleConfirmSelectionWithLoading = async () => {
     await handleDownload();
-  };
-
-  // Calculate progress based on step - keeping this for future reference
-  const calculateProgress = () => {
-    if (!isEditing) {
-      return 100; // Initial overview
-    }
-
-    switch (step) {
-      case STEPS.AREA:
-        return 50; // First of two steps
-      case STEPS.USER_GROUP:
-        return 100; // Second of two steps
-      default:
-        return 0;
-    }
   };
 
   if (!isOpen) return null;

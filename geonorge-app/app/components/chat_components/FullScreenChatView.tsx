@@ -1,25 +1,23 @@
 import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Chat as FullScreenChat } from "@/components/ui/chat";
+import { Chat as FullScreenChat, DownloadInfo } from "@/components/ui/chat";
 import GeoNorgeIcon from "@/components/ui/GeoNorgeIcon";
 
-// Define or import DownloadInfo
-interface DownloadInfo {
-  uuid: string;
-  title: string;
-  downloadUrl: string;
-  downloadFormats: any[];
+interface ChatMessage {
+  id: string;
+  role: "user" | "assistant" | "system";
+  content: string;
 }
 
 interface FullScreenChatViewProps {
-  messages: any[];
+  messages: ChatMessage[];
   chatInput: string;
   isStreaming: boolean;
   suggestions: string[];
   handleInputChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
   handleSubmit: (e?: { preventDefault?: () => void }) => void;
   handleAppend: (message: { role: "user"; content: string }) => void;
-  onWmsClick: (wmsUrl: any, datasetTitle?: string) => void;
+  onWmsClick: (wmsUrl: string, datasetTitle?: string) => void;
   onDownloadClick: (info: DownloadInfo) => void;
   exitFullScreen: () => void;
 }
