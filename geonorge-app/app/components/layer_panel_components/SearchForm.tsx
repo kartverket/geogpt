@@ -148,8 +148,8 @@ const SearchForm: React.FC<SearchFormProps> = ({
           <div className="h-6 w-6 flex items-center justify-center">
             <button
               type="button"
-              onClick={onClearSearch}
-              aria-label="Clear search and filters"
+              onClick={() => onSearchTermChange("")}
+              aria-label="Clear search term"
               className={`p-0 h-full w-full items-center justify-center text-gray-500 hover:text-color-gn-primary m-0 ${
                 !isSearching && (searchTerm || filterActive) ? "flex" : "hidden"
               }`}
