@@ -3,7 +3,7 @@ from config import CONFIG
 import logging
 from langsmith import Client
 import os
-from langchain_google_genai import ChatGoogleGenerativeAI
+
 # Configure logging
 logger = logging.getLogger(__name__)
 
@@ -41,24 +41,25 @@ class LLMManager:
         Returns the main LLM instance with streaming enabled
         """
         if self._llm is None:
-            self._llm = ChatGoogleGenerativeAI(
-                model=self.MODEL_NAME,
-                google_api_key=CONFIG["api"]["gemini_api_key"],
+            self._llm = ChatOpenAI(
+                model_name=self.MODEL_NAME,
+                openai_api_key=CONFIG["api"]["gemini_api_key"],
+                openai_api_base=CONFIG["api"]["gemini_base_endpoint"],
                 streaming=True,
                 temperature=0.3,
                 tags=["main_llm", "streaming"],
             )
         return self._llm
 
-
     def get_rewrite_llm(self) -> ChatOpenAI:
         """
         Returns the rewrite LLM instance with streaming disabled and zero temperature
         """
         if self._rewrite_llm is None:
-            self._rewrite_llm = ChatGoogleGenerativeAI(
-                model=self.MODEL_NAME,
-                google_api_key=CONFIG["api"]["gemini_api_key"],
+            self._rewrite_llm = ChatOpenAI(
+                model_name=self.MODEL_NAME,
+                openai_api_key=CONFIG["api"]["gemini_api_key"],
+                openai_api_base=CONFIG["api"]["gemini_base_endpoint"],
                 streaming=False,
                 temperature=0,
                 tags=["rewrite_llm", "non_streaming"],
