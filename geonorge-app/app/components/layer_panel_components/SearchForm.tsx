@@ -1,4 +1,4 @@
-import React, { ChangeEvent, FormEvent, useState } from "react";
+import React, { ChangeEvent, FormEvent, useState, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, X, Loader2, Sparkles, Lightbulb } from "lucide-react";
 import {
@@ -53,10 +53,12 @@ const SearchForm: React.FC<SearchFormProps> = ({
 }) => {
   const isWebsocketSearch = searchMethod === "websocket";
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const handleSampleClick = (prompt: string) => {
     onSearchTermChange(prompt);
     setPopoverOpen(false);
+    inputRef.current?.focus();
   };
 
   // Determine if the X/Loader container area should be active
@@ -70,6 +72,7 @@ const SearchForm: React.FC<SearchFormProps> = ({
 
   const inputElement = (
     <Input
+      ref={inputRef}
       value={searchTerm}
       onChange={(e: ChangeEvent<HTMLInputElement>) =>
         onSearchTermChange(e.target.value)
