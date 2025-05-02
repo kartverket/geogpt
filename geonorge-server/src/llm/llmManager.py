@@ -1,11 +1,7 @@
-from langchain_openai import ChatOpenAI, AzureChatOpenAI
+from langchain_openai import ChatOpenAI
 from config import CONFIG
-
-from typing import Any, Dict, Optional
-from langchain.callbacks.base import BaseCallbackHandler
 import logging
 from langsmith import Client
-from langsmith.wrappers import wrap_openai
 import os
 from langchain_google_genai import ChatGoogleGenerativeAI
 # Configure logging
@@ -55,7 +51,7 @@ class LLMManager:
         return self._llm
 
 
-    def get_rewrite_llm(self) -> ChatGoogleGenerativeAI:
+    def get_rewrite_llm(self) -> ChatOpenAI:
         """
         Returns the rewrite LLM instance with streaming disabled and zero temperature
         """
@@ -63,6 +59,7 @@ class LLMManager:
             self._rewrite_llm = ChatGoogleGenerativeAI(
                 model=self.MODEL_NAME,
                 google_api_key=CONFIG["api"]["gemini_api_key"],
+                streaming=False,
                 temperature=0,
                 tags=["rewrite_llm", "non_streaming"],
             )
