@@ -10,7 +10,6 @@ import { ChatWindow } from "@/app/components/chat_components/ChatWindow";
 import { useWebSocket } from "@/app/components/chat_components/useWebSocket";
 import FullScreenChatView from "@/app/components/chat_components/FullScreenChatView";
 import {
-  ChatMessage as WebSocketChatMessage,
   SearchResult,
   ActiveLayerInfo,
 } from "@/app/components/chat_components/types";
@@ -59,9 +58,7 @@ const DemoV4 = () => {
     messages: wsMessages,
     isStreaming,
     sendMessage,
-    ws,
     mapUpdates,
-    searchResults,
     clearMapUpdates,
   } = useWebSocket();
 
@@ -92,11 +89,11 @@ const DemoV4 = () => {
 
       // Handle center coordinates update
       if (mapUpdates.center) {
-        mapState.setMap?.((prevMap: any) => {
+        mapState.setMap?.((prevMap: L.Map | null) => {
           if (prevMap) {
             prevMap.setView(
               mapUpdates.center as [number, number],
-              mapUpdates.zoom || prevMap.getZoom()
+              (mapUpdates.zoom as number) || prevMap.getZoom()
             );
           }
           return prevMap;
@@ -105,7 +102,7 @@ const DemoV4 = () => {
 
       // Handle zoom level update (if no center was provided)
       if (mapUpdates.zoom && !mapUpdates.center) {
-        mapState.setMap?.((prevMap: any) => {
+        mapState.setMap?.((prevMap: L.Map | null) => {
           if (prevMap) {
             prevMap.setZoom(mapUpdates.zoom as number);
           }
@@ -142,7 +139,7 @@ const DemoV4 = () => {
           (position) => {
             const { latitude, longitude } = position.coords;
             mapState.setUserMarker({ lat: latitude, lng: longitude });
-            mapState.setMap?.((prevMap: any) => {
+            mapState.setMap?.((prevMap: L.Map | null) => {
               if (prevMap) {
                 prevMap.setView([latitude, longitude], mapUpdates.zoom || 14);
               }
@@ -168,6 +165,7 @@ const DemoV4 = () => {
     // Ensure all dependencies from mapState are included if necessary
   }, [
     mapUpdates,
+    mapState,
     mapState.setMap,
     mapState.clearSearchMarkers,
     mapState.addSearchMarker,
@@ -190,7 +188,11 @@ const DemoV4 = () => {
       return () => clearTimeout(timer);
     }
     // Ensure chatManagement.setBlockPopoverClose is stable or add it
-  }, [isFileDownloadModalOpen, chatManagement.setBlockPopoverClose]);
+  }, [
+    isFileDownloadModalOpen,
+    chatManagement,
+    chatManagement.setBlockPopoverClose,
+  ]);
 
   const handleChatSubmit = (e?: React.FormEvent<HTMLFormElement>) => {
     if (e) e.preventDefault();
@@ -304,7 +306,9 @@ const DemoV4 = () => {
             zoom={5}
             currentBaseLayer={currentBaseLayer}
             trackedDatasets={wmsManagement.trackedDatasets}
-            wmsLayer={mapState.wmsLayer}
+            wmsLayer={
+              typeof mapState.wmsLayer === "string" ? mapState.wmsLayer : ""
+            }
             userMarker={mapState.userMarker}
             searchMarker={mapState.searchMarker}
             searchMarkers={mapState.searchMarkers}

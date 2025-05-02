@@ -11,14 +11,17 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { MessageInput } from "@/components/ui/message-input";
 import { MessageList } from "@/components/ui/message-list";
 import { PromptSuggestions } from "@/components/ui/prompt-suggestions";
-
-// Import or define DownloadInfo type (assuming it's defined in message-list or a shared types file)
-// If not defined elsewhere, define it here:
-interface DownloadInfo {
-  uuid: string;
+export interface DownloadInfo {
   title: string;
   downloadUrl: string;
-  downloadFormats: any[];
+  downloadFormats?: Array<{
+    type: string;
+    name: string;
+    code: string;
+    projections?: Array<{ name: string; code: string }>;
+    formats?: Array<{ name: string }>;
+  }>;
+  uuid?: string;
 }
 
 interface ChatPropsBase {
@@ -232,7 +235,7 @@ interface ChatFormProps {
 }
 
 export const ChatForm = forwardRef<HTMLFormElement, ChatFormProps>(
-  ({ children, handleSubmit, isPending, className }, ref) => {
+  ({ children, handleSubmit, className }, ref) => {
     const [files, setFiles] = useState<File[] | null>(null);
 
     const onSubmit = (event: React.FormEvent) => {

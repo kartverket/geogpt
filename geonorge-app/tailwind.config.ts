@@ -97,9 +97,21 @@ export default {
             transform: "translateY(-0.25rem)",
           },
         },
+        "border-rotate": {
+          "0%": {
+            backgroundPosition: "0% 50%",
+          },
+          "50%": {
+            backgroundPosition: "100% 50%",
+          },
+          "100%": {
+            backgroundPosition: "0% 50%",
+          },
+        },
       },
       animation: {
         "typing-dot-bounce": "typing-dot-bounce 1.25s ease-out infinite",
+        "border-rotate": "border-rotate 3s ease infinite",
       },
     },
   },

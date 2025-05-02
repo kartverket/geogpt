@@ -1,16 +1,8 @@
 "use client";
 import "./globals.css";
-import { Inter } from "next/font/google";
 import { LanguageProvider } from "@/i18n/LanguageContext";
 import { TourProvider } from "@/components/tour";
 import { Toaster } from "@/components/ui/sonner";
-
-// Load Inter font with specific weights
-const inter = Inter({
-  subsets: ["latin"],
-  weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
-  variable: "--font-inter",
-});
 
 export default function RootLayout({
   children,
