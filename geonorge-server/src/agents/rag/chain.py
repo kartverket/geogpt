@@ -1,7 +1,7 @@
 """
 Core multi-agent implementation for GeoNorge using a supervisor pattern.
 """
-from .supervisor import GeoNorgeSupervisor
+from ..supervisor import GeoNorgeSupervisor
 
 
 class EnhancedGeoNorgeRAGChain:

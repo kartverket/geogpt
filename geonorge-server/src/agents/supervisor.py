@@ -11,13 +11,13 @@ from llm import LLMManager
 from langchain.prompts import ChatPromptTemplate
 from langchain.schema import StrOutputParser
 
-from .rag_workflow import GeoNorgeRAGWorkflow
-from .map_workflow import LeafletMapWorkflow
-from .utils.common import register_websockets_dict, format_history, active_websockets
-from .utils.image_processor import insert_image_rag_response
+from .rag.rag_workflow import GeoNorgeRAGWorkflow
+from .rag.map_workflow import LeafletMapWorkflow
+from .rag.utils.common import register_websockets_dict, format_history, active_websockets
+from .rag.utils.image_processor import insert_image_rag_response
 from helpers.websocket import send_websocket_message
 from action_enums import Action
-from .message_utils import (
+from .rag.message_utils import (
     fix_message_dict_for_conversion, 
     standardize_message, 
     standardize_state, 

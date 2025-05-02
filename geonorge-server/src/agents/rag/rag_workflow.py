@@ -12,11 +12,9 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
 from helpers.websocket import send_websocket_action
-from .models.state import ConversationState
 from retrieval import GeoNorgeVectorRetriever
 
 from .utils.common import register_websockets_dict
-from .models import ConversationState
 from .utils.image_processor import insert_image_rag_response
 from .message_utils import standardize_message, standardize_state, get_last_message_by_role
 
