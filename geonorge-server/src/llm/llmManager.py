@@ -63,7 +63,6 @@ class LLMManager:
             self._rewrite_llm = ChatGoogleGenerativeAI(
                 model=self.MODEL_NAME,
                 google_api_key=CONFIG["api"]["gemini_api_key"],
-                streaming=False,
                 temperature=0,
                 tags=["rewrite_llm", "non_streaming"],
             )
