@@ -1,23 +1,23 @@
 """
 Leaflet map interaction workflow for GeoNorge.
 """
-from typing import Dict, List, Optional, Tuple, Annotated, Literal, TypedDict, Any, Sequence
-from dataclasses import dataclass, field
+from typing import Dict, List, Optional, Tuple, TypedDict, Sequence
 from langgraph.checkpoint.memory import MemorySaver
-from langgraph.graph import START, END, StateGraph
-from langgraph.types import Command
-
+from langgraph.graph import END, StateGraph
 from llm import LLMManager
 from langchain.prompts import ChatPromptTemplate
 from langchain.schema import StrOutputParser
 from pydantic import BaseModel, Field
 from langchain.tools import StructuredTool
-from langchain.schema.messages import ToolMessage
 from helpers.websocket import send_websocket_message
 from langchain_core.messages import BaseMessage
-from .utils.common import register_websockets_dict, format_history, get_websocket, active_websockets
-from .utils.tool_utils import ToolExecutor, ToolInvocation 
+from .utils.common import register_websockets_dict, format_history, active_websockets
+from .utils.tool_utils import ToolExecutor, ToolInvocation
+from .message_utils import standardize_state, get_last_message_by_role
 import json
+import re
+import requests
+import urllib.parse
 
 # Initialize LLM
 llm_manager = LLMManager()
@@ -32,109 +32,68 @@ class MapState(TypedDict, total=False):
     chat_history: str
     map_center: Tuple[float, float]  
     zoom_level: int
-    visible_layers: List[str]
     markers: List[Dict]
     websocket_id: Optional[str]
     action_taken: Optional[List[str]]
     add_marker_at_location: bool
+    add_marker_at_address: Optional[bool]
     in_merged_workflow: bool
+    found_address_text: Optional[str]
 
-# Added global persistent state storage
-persistent_map_states = {}
-
-# Create wrapper function that handles state conversion, merging with persistent state.
+# Create wrapper function that handles state standardization and defaults.
 def with_map_state_handling(node_func):
-    """Wrap a map node function with state handling logic."""
+    """Wrap a map node function with state standardization and default value logic."""
     async def wrapped(state):
         print(f"DEBUG Map {node_func.__name__}: state type = {type(state)}")
-        
-        # Check if in_merged_workflow flag is set in the incoming state
-        if isinstance(state, dict) and "in_merged_workflow" in state:
-            print(f"DEBUG Map {node_func.__name__}: in_merged_workflow flag found in input state = {state['in_merged_workflow']}")
-        elif hasattr(state, "in_merged_workflow"):
-            print(f"DEBUG Map {node_func.__name__}: in_merged_workflow flag found in input object = {state.in_merged_workflow}")
+
+        # Standardize incoming state to a dictionary (if not already)
+        current_state = {}
+        if not isinstance(state, dict):
+            # Convert based on expected attributes or raise error
+            for k in MapState.__annotations__.keys():
+                 if hasattr(state, k):
+                     current_state[k] = getattr(state, k)
+            # Handle potential special keys like NEXT if necessary
+            if hasattr(state, "NEXT"): current_state["NEXT"] = state.NEXT
         else:
-            print(f"DEBUG Map {node_func.__name__}: in_merged_workflow flag NOT found in input state")
-        
-        # Determine websocket id if available
-        ws_id = None
-        if isinstance(state, dict):
-            ws_id = state.get("websocket_id")
-        elif hasattr(state, "websocket_id"):
-            ws_id = state.websocket_id
-            
-        # Special handling for router-returned states
-        if isinstance(state, dict) and "NEXT" in state:
-            # Preserve the NEXT key but continue with state handling
-            has_next = True
-            next_value = state["NEXT"]
-            # Remove temporarily to avoid interference with state merging
-            state_without_next = {k: v for k, v in state.items() if k != "NEXT"}
-        else:
-            has_next = False
-            state_without_next = state
-        
-        # Merge incoming state with persistent state if available
-        if ws_id and ws_id in persistent_map_states:
-            prev_state = persistent_map_states[ws_id]
-            if isinstance(state_without_next, dict):
-                merged_state = {**prev_state, **state_without_next}
-            else:
-                state_dict = {}
-                for k in MapState.__annotations__.keys():
-                    if hasattr(state_without_next, k):
-                        state_dict[k] = getattr(state_without_next, k)
-                merged_state = {**prev_state, **state_dict}
-        else:
-            if isinstance(state_without_next, dict):
-                merged_state = state_without_next
-            else:
-                merged_state = {}
-                for k in MapState.__annotations__.keys():
-                    if hasattr(state_without_next, k):
-                        merged_state[k] = getattr(state_without_next, k)
-        
-        # Add back the NEXT key if it was present
-        if has_next:
-            merged_state["NEXT"] = next_value
-            
-        # Debug: Check if in_merged_workflow flag survived merging
-        print(f"DEBUG Map {node_func.__name__}: in_merged_workflow flag in merged state = {merged_state.get('in_merged_workflow', False)}")
-        
-        # Ensure state has default values
-        if "map_center" not in merged_state:
-            merged_state["map_center"] = (59.9139, 10.7522)  # Default to Oslo
-        if "zoom_level" not in merged_state:
-            merged_state["zoom_level"] = 14
-        if "visible_layers" not in merged_state:
-            merged_state["visible_layers"] = []
-        if "markers" not in merged_state:
-            merged_state["markers"] = []
-        if "action_taken" not in merged_state:
-            merged_state["action_taken"] = []
-            
-        # Explicitly check and handle in_merged_workflow flag
-        if isinstance(state_without_next, dict) and "in_merged_workflow" in state_without_next:
-            merged_state["in_merged_workflow"] = state_without_next["in_merged_workflow"]
-            print(f"DEBUG Map {node_func.__name__}: Explicitly set in_merged_workflow to {merged_state['in_merged_workflow']}")
-        elif hasattr(state_without_next, "in_merged_workflow"):
-            merged_state["in_merged_workflow"] = state_without_next.in_merged_workflow
-            print(f"DEBUG Map {node_func.__name__}: Explicitly set in_merged_workflow from object to {merged_state['in_merged_workflow']}")
-        
+            current_state = state.copy() # Work with a copy
+
+        ws_id = current_state.get("websocket_id")
+        in_merged = current_state.get("in_merged_workflow", False)
+        print(f"DEBUG Map {node_func.__name__}: ws_id={ws_id}, in_merged={in_merged}")
+
+        # Ensure state has default values ONLY if they don't exist
+        if "map_center" not in current_state:
+            current_state["map_center"] = (59.9139, 10.7522)
+        if "zoom_level" not in current_state:
+            current_state["zoom_level"] = 14
+        if "markers" not in current_state:
+            current_state["markers"] = []
+        if "action_taken" not in current_state:
+            current_state["action_taken"] = []
+        # Ensure add_marker_at_location exists for tool checks
+        if "add_marker_at_location" not in current_state:
+            current_state["add_marker_at_location"] = False # Default to False
+        # Ensure add_marker_at_address exists for tool checks
+        if "add_marker_at_address" not in current_state:
+             current_state["add_marker_at_address"] = None # Default to None
+        # Ensure found_address_text exists
+        if "found_address_text" not in current_state:
+             current_state["found_address_text"] = None # Default to None
+
+        # Set/Ensure in_merged_workflow flag is present if needed downstream
+        # Overwrite if present in input, otherwise default to False
+        current_state["in_merged_workflow"] = current_state.get("in_merged_workflow", False)
+
         # Process the state with the node function
-        result_state = await node_func(merged_state)
-        
-        # Update persistent state with the new state for future requests
-        if ws_id:
-            # Don't store the NEXT key in persistent state
-            if isinstance(result_state, dict) and "NEXT" in result_state:
-                persistent_state = {k: v for k, v in result_state.items() if k != "NEXT"}
-                persistent_map_states[ws_id] = persistent_state
-            else:
-                persistent_map_states[ws_id] = result_state
-        
-        return result_state
-    
+        # The state passed here is managed by LangGraph's checkpointer between steps
+        result_state = await node_func(current_state)
+
+        # No need to update any persistent store here.
+        # LangGraph handles passing state to the next node via the checkpointer.
+
+        return result_state # Return the result for LangGraph
+
     # Preserve original function name and docstring
     wrapped.__name__ = node_func.__name__
     wrapped.__doc__ = node_func.__doc__
@@ -149,11 +108,6 @@ class ZoomInput(BaseModel):
     """Input schema for zoomMap tool"""
     level: int = Field(description="The zoom level to set (1-18)")
     
-class LayersInput(BaseModel):
-    """Input schema for toggleLayers tool"""
-    layers: List[str] = Field(description="List of layer names to show")
-    action: str = Field(description="Action to take: 'show', 'hide', or 'clear'")
-    
 class MarkersInput(BaseModel):
     """Input schema for addMarkers tool"""
     locations: List[str] = Field(description="List of locations to mark")
@@ -163,6 +117,11 @@ class MyLocationInput(BaseModel):
     """Input schema for findMyLocation tool"""
     zoom_level: int = Field(description="The zoom level to set when finding location", default=14)
     add_marker: bool = Field(description="Whether to add a marker at the user's location", default=False)
+
+class AddressSearchInput(BaseModel):
+    """Input schema for SearchAddress tool"""
+    address: str = Field(description="The address string to search for")
+    add_marker: bool = Field(description="Whether to add a marker at the found address", default=False)
 
 # Define tool implementations
 async def pan_to_location(location: str) -> Tuple[float, float]:
@@ -283,30 +242,6 @@ async def set_zoom_level(level: int) -> int:
         print(f"Error setting zoom level: {e}")
         return 14  # Default zoom level
 
-async def toggle_layers(layers: List[str], action: str) -> List[str]:
-    """Show or hide map layers."""
-    # Define available layers
-    available_layers = [
-        "topographic", 
-        "satellite", 
-        "terrain", 
-        "administrative", 
-        "roads", 
-        "buildings", 
-        "water",
-        "forests"
-    ]
-    
-    # Filter to only include valid layers
-    valid_layers = [layer for layer in layers if layer.lower() in available_layers]
-    
-    if action.lower() == "clear":
-        print("Clearing all layers")
-        return []
-    else:
-        print(f"Updated layers: {valid_layers}")
-        return valid_layers
-
 async def add_markers(locations: List[str], clear: bool = False) -> List[Dict]:
     """Add markers to the map."""
     if not locations and clear:
@@ -341,6 +276,53 @@ async def find_my_location(zoom_level: int = 14, add_marker: bool = False):
         "addMarker": add_marker
     }
 
+# New Tool Implementation for Address Search
+async def search_address(address: str, add_marker: bool = False) -> Dict:
+    """Search for a specific address using GeoNorge API and return its details."""
+    print(f"Searching for address: {address}, Add marker: {add_marker}")
+    encoded_address = urllib.parse.quote(address)
+    # Use treffPerSide=1 to get the most relevant result
+    api_url = f"https://ws.geonorge.no/adresser/v1/sok?sok={encoded_address}*&treffPerSide=1"
+    
+    headers = {'Accept': 'application/json'}
+    
+    try:
+        # Using requests synchronously for simplicity, consider aiohttp for async
+        response = requests.get(api_url, headers=headers, timeout=10)
+        response.raise_for_status() # Raise an exception for bad status codes (4xx or 5xx)
+        data = response.json()
+        
+        if data and data.get("adresser"):
+            first_address = data["adresser"][0]
+            coords = first_address.get("representasjonspunkt")
+            full_address_text = first_address.get("adressetekst")
+            
+            if coords and "lat" in coords and "lon" in coords:
+                lat = coords["lat"]
+                lon = coords["lon"]
+                print(f"Found address: {full_address_text} at ({lat}, {lon})")
+                return {
+                    "coordinates": (lat, lon),
+                    "full_address": full_address_text,
+                    "add_marker_preference": add_marker
+                }
+            else:
+                print("Address found, but coordinates are missing.")
+                return {"error": "Coordinates not found for the address.", "add_marker_preference": add_marker}
+        else:
+            print(f"No address found for: {address}")
+            return {"error": "Address not found.", "add_marker_preference": add_marker}
+            
+    except requests.exceptions.RequestException as e:
+        print(f"API request failed: {e}")
+        return {"error": f"API request failed: {e}", "add_marker_preference": add_marker}
+    except json.JSONDecodeError:
+        print("Failed to decode JSON response from API.")
+        return {"error": "Invalid response from address API.", "add_marker_preference": add_marker}
+    except Exception as e:
+        print(f"An unexpected error occurred during address search: {e}")
+        return {"error": f"An unexpected error occurred: {e}", "add_marker_preference": add_marker}
+
 # Create structured tools
 pan_map_tool = StructuredTool.from_function(
     func=pan_to_location,
@@ -355,14 +337,6 @@ zoom_map_tool = StructuredTool.from_function(
     name="ZoomMap",
     description="Set zoom level of the map with a number between 1 and 18",
     args_schema=ZoomInput,
-    return_direct=False,
-)
-
-layers_tool = StructuredTool.from_function(
-    func=toggle_layers,
-    name="ToggleLayers",
-    description="Show or hide map layers",
-    args_schema=LayersInput,
     return_direct=False,
 )
 
@@ -382,30 +356,91 @@ my_location_tool = StructuredTool.from_function(
     return_direct=False,
 )
 
+# New Address Search Tool
+address_search_tool = StructuredTool.from_function(
+    func=search_address,
+    name="SearchAddress",
+    description="Search for a specific Norwegian address using GeoNorge API to get its coordinates and full name.",
+    args_schema=AddressSearchInput,
+    return_direct=False, 
+)
+
 # Create tool executor with all tools
-map_tools = [pan_map_tool, zoom_map_tool, layers_tool, markers_tool, my_location_tool]
+map_tools = [pan_map_tool, zoom_map_tool, markers_tool, my_location_tool, address_search_tool]
 tool_executor = ToolExecutor(map_tools)
 
 # Define the function to determine whether to continue the agent-action cycle
 def get_next_node(state: Dict) -> str:
     """Determine the next node in the workflow based on the message history."""
+    print("--- DEBUG: get_next_node ---")
     messages = state.get("messages", [])
-    
     if not messages:
-        return "end"
-    
-    last_message = messages[-1]
-    
-    if last_message.get("role") == "human":
+        print("  No messages found, ending.")
+        return END # Changed from "end" to END constant
+
+    last_message_obj = messages[-1]
+    print(f"  Last message object type: {type(last_message_obj)}")
+    print(f"  Last message object: {last_message_obj}")
+
+    role = None
+    has_tool_calls = False
+
+    # Handle dictionary format (common in LangGraph)
+    if isinstance(last_message_obj, dict):
+        role = last_message_obj.get("role")
+        # Check for tool calls in additional_kwargs
+        additional_kwargs = last_message_obj.get("additional_kwargs", {})
+        has_tool_calls = bool(additional_kwargs.get("tool_calls")) if additional_kwargs else False
+        # Also check if the role is directly 'tool'
+        if role == 'tool':
+             print("  Last message is a tool result (dict format).")
+             return "response" # Tool results always go to generate response
+
+    # Handle LangChain BaseMessage format (less common here but possible)
+    elif hasattr(last_message_obj, "type"): # Check for 'type' attribute
+        # Mapping from LangChain 'type' to simpler roles
+        lc_type = getattr(last_message_obj, "type")
+        if lc_type == "human": role = "human"
+        elif lc_type == "ai": role = "assistant"
+        elif lc_type == "tool": role = "tool"
+        # Add other mappings if needed (system, function, etc.)
+
+        # Check for tool calls attribute
+        if hasattr(last_message_obj, "tool_calls"):
+            has_tool_calls = bool(getattr(last_message_obj, "tool_calls"))
+        elif hasattr(last_message_obj, "additional_kwargs") and isinstance(last_message_obj.additional_kwargs, dict):
+             # Sometimes tool calls might still be nested in additional_kwargs for BaseMessages
+             has_tool_calls = bool(last_message_obj.additional_kwargs.get("tool_calls"))
+
+        if role == 'tool':
+             print("  Last message is a tool result (BaseMessage format).")
+             return "response" # Tool results always go to generate response
+
+    else:
+        print("  Last message is of unknown format.")
+        return END # End if format is unrecognized
+
+    print(f"  Determined Role: {role}, Has Tool Calls: {has_tool_calls}")
+
+    # Routing logic based on determined role and tool calls
+    if role == "human":
+        print("  Routing to 'agent' (Human message).")
         return "agent"
-    if last_message.get("role") == "assistant" and last_message.get("additional_kwargs", {}).get("tool_calls"):
-        return "tools" 
-    if last_message.get("role") == "tool":
-        return "response"
-    if last_message.get("role") == "assistant":
-        return "response"
-    
-    return "end"  # Default to end
+    elif role == "assistant" and has_tool_calls:
+        print("  Routing to 'tools' (Assistant message with tool calls).")
+        return "tools"
+    elif role == "assistant" and not has_tool_calls:
+         # This is assumed to be the final response generated by the 'response' node.
+         # Route directly to update to send the response and end the flow.
+         print("  Routing to 'update' (Assistant message WITHOUT tool calls - assuming final response).")
+         return "update" # Route directly to update, bypassing response node again.
+    # Tool role handled above
+    #elif role == "tool":
+    #    print("  Routing to 'response' (Tool message).")
+    #    return "response"
+
+    print("  No matching condition found, ending.")
+    return END # Default to end if no condition matches
 
 async def router(state: Dict) -> Dict:
     """Simple pass-through router that preserves state."""
@@ -442,33 +477,38 @@ async def call_model(state: Dict) -> Dict:
     
     Tilgjengelige verktøy:
     1. "PanMap" - Flytter kartet til en spesifisert lokasjon
-       Format: {{"tool": "PanMap", "params": {{"location": "stedsnavnet"}}}}
+       Format: {{"tool": "PanMap", "params": {{"location": "stedsnavnet"}}}} // Kan også ta koordinater hentet fra SearchAddress
        
     2. "ZoomMap" - Setter zoom-nivået på kartet (1-18)
        Format: {{"tool": "ZoomMap", "params": {{"level": zoom_level}}}}
        VIKTIG: "level" må være et heltall mellom 1 og 18, IKKE en streng som "increase" eller "decrease".
        
-    3. "ToggleLayers" - Viser eller skjuler kartlag
-       Format: {{"tool": "ToggleLayers", "params": {{"layers": ["lag1", "lag2"], "action": "show/hide/clear"}}}}
-       
-    4. "AddMarkers" - Legger til markører på kartet
+    3. "AddMarkers" - Legger til markører på kartet
        Format: {{"tool": "AddMarkers", "params": {{"locations": ["sted1", "sted2"], "clear": true/false}}}}
        
-    5. "FindMyLocation" - Finner brukerens nåværende posisjon og sentrerer kartet på den
+    4. "FindMyLocation" - Finner brukerens nåværende posisjon og sentrerer kartet på den
        Format: {{"tool": "FindMyLocation", "params": {{"zoom_level": 14, "add_marker": true/false}}}}
        Du kan også bruke add_marker parameteren for å legge til en markør på brukerens posisjon.
+       
+    5. "SearchAddress" - Søker etter en spesifikk norsk gateadresse for å finne koordinater og fullt navn.
+      Format: {{"tool": "SearchAddress", "params": {{"address": "gatenavn nummer...", "add_marker": true/false}}}}
+      VIKTIG:
+        - Dette verktøyet finner koordinatene og sentrerer kartet der automatisk.
+        - Kartet vil automatisk zoome til nivå 14 med mindre du også kaller "ZoomMap".
+        - Bruk "add_marker": true for å legge til en markør på adressen.
+        - Du trenger ikke å inkludere postnummer/poststed, men det kan hjelpe for å finne riktig adresse.
     
     Analyser brukerens forespørsel og returner en JSON-array med verktøykall som skal utføres.
-    Eksempel: [{{"tool": "PanMap", "params": {{"location": "Oslo"}}}}, {{"tool": "ZoomMap", "params": {{"level": 14}}}}]
+    Eksempel (søk adresse): [{{"tool": "SearchAddress", "params": {{"address": "Eidsdalen 7B"}}}}] // Senterer kartet + zoomer til 14 automatisk
+    Eksempel (søk adresse + marker): [{{"tool": "SearchAddress", "params": {{"address": "Storgata 1, Oslo", "add_marker": true}}}}] // Senterer kartet, zoomer til 14 auto + marker
+    Eksempel (søk adresse + zoom): [{{"tool": "SearchAddress", "params": {{"address": "Nygårdsgaten 5, Bergen"}}}}, {{"tool": "ZoomMap", "params": {{"level": 16}}}}] // Senterer kartet + zoomer til 16
+    Eksempel (panorering og zoom): [{{"tool": "PanMap", "params": {{"location": "Oslo"}}}}, {{"tool": "ZoomMap", "params": {{"level": 14}}}}] // Eksempel for panorering og zoom
     
     Du kan kjenne igjen disse handlingene:
     - Panorering: Når brukeren vil se et spesifikt sted (f.eks. "vis meg Oslo", "ta meg til Bergen")
     - Zooming: Når brukeren vil zoome inn eller ut (f.eks. "zoom til nivå 16", "zoom inn")
-    - Kartlag: Når brukeren vil endre kartlag (f.eks. "vis satelittbilde", "skjul administrative grenser")
     - Markører: Når brukeren vil markere steder (f.eks. "marker Oslo og Bergen", "fjern alle markører")
-    - Min posisjon: 
-      * Når brukeren vil finne sin egen posisjon (f.eks. "finn min posisjon", "vis hvor jeg er")
-      * Når brukeren vil legge til en markør på sin posisjon (f.eks. "sett markør på min lokasjon", "marker hvor jeg er")
+    - Min posisjon: Finne eller markere brukerens posisjon (f.eks. "vis hvor jeg er", "marker min posisjon")
     """
     
     # Create tool calling prompt
@@ -588,9 +628,10 @@ async def call_tools(state: Dict) -> Dict:
     # Track map state for applying changes
     map_center = state.get("map_center", (59.9139, 10.7522))
     zoom_level = state.get("zoom_level", 14)
-    visible_layers = state.get("visible_layers", [])[:]
     markers = state.get("markers", [])[:]
-    action_taken = []
+    action_taken = state.get("action_taken", [])[:]
+    # Reset action-specific flags
+    state["add_marker_at_address"] = None
     
     # Execute each tool call
     for tool_call in last_message["additional_kwargs"]["tool_calls"]:
@@ -606,36 +647,105 @@ async def call_tools(state: Dict) -> Dict:
             action_taken.append(action.tool)
             print(f"Executing tool: {action.tool} with arguments: {action.tool_input}")
             
+            # Store tool result directly for potential use by response generation or subsequent tools
+            tool_result = None
+            
             # Call the appropriate tool function
             tool_name = action.tool
             if tool_name == "PanMap":
-                result = await pan_to_location(**action.tool_input)
-                map_center = result
-            elif tool_name == "ZoomMap":
-                result = await set_zoom_level(**action.tool_input)
-                zoom_level = result
-            elif tool_name == "ToggleLayers":
-                result = await toggle_layers(**action.tool_input)
-                visible_layers = result
-            elif tool_name == "AddMarkers":
-                result = await add_markers(**action.tool_input)
-                if action.tool_input.get("clear", False):
-                    markers = result
+                # Check if SearchAddress ran successfully earlier in *this* tool call sequence
+                search_address_succeeded = bool(state.get("found_address_text")) 
+                
+                tool_result = await pan_to_location(**action.tool_input)
+                
+                # Only update map_center from PanMap if SearchAddress hasn't already set it successfully
+                if not search_address_succeeded:
+                    # Check if the result is valid coordinates before updating map_center
+                    if isinstance(tool_result, tuple) and len(tool_result) == 2:
+                        map_center = tool_result
+                        print(f"PanMap updating map_center (SearchAddress did not precede or failed): {map_center}")
+                    else:
+                         print(f"PanMap returned non-coordinate result, not updating map_center: {tool_result}")
                 else:
-                    markers.extend(result)
+                    print(f"PanMap skipping map_center update because SearchAddress succeeded earlier.")
+                # Ensure PanMap action is recorded if coordinates were valid or if SearchAddress already added it.
+                # We add PanMap when SearchAddress succeeds, so we don't need to add it again here if search_address_succeeded.
+                if not search_address_succeeded and isinstance(tool_result, tuple) and len(tool_result) == 2:
+                    if "PanMap" not in action_taken:
+                         action_taken.append("PanMap")
+            elif tool_name == "ZoomMap":
+                tool_result = await set_zoom_level(**action.tool_input)
+                zoom_level = tool_result
+            elif tool_name == "AddMarkers":
+                tool_result = await add_markers(**action.tool_input)
+                if action.tool_input.get("clear", False):
+                    markers = tool_result
+                else:
+                    markers.extend(tool_result)
             elif tool_name == "FindMyLocation":
                 # Call the find my location function with the zoom level
                 zoom_level = action.tool_input.get("zoom_level", 14)
                 add_marker = action.tool_input.get("add_marker", False)
-                result = await find_my_location(zoom_level, add_marker)
+                tool_result = await find_my_location(zoom_level, add_marker)
                 
                 # Note: The actual update to map_center will happen when the client responds
                 print(f"Find my location tool called with zoom level {zoom_level} and add_marker: {add_marker}")
-                
                 # Add the FindMyLocation action to the list of actions taken
                 action_taken.append("FindMyLocation")
                 # Store the add_marker parameter in the state
                 state["add_marker_at_location"] = add_marker
+            elif tool_name == "SearchAddress":
+                tool_result = await search_address(**action.tool_input)
+                # Initialize coords and label to None in this scope
+                coords = None
+                label = None
+                # Store the full address text if found, regardless of whether PanMap is called next
+                if isinstance(tool_result, dict) and "full_address" in tool_result:
+                    state["found_address_text"] = tool_result["full_address"]
+                    # If address found, also store marker preference and handle marker addition
+                    add_marker_pref = tool_result.get("add_marker_preference", False)
+                    state["add_marker_at_address"] = add_marker_pref
+
+                    # Get coords and label from the successful result
+                    coords = tool_result.get("coordinates")
+                    label = tool_result.get("full_address")
+                    
+                    if add_marker_pref:
+                        # Only add marker if coords and label were found
+                        if coords and label:
+                            new_marker = {"lat": coords[0], "lng": coords[1], "label": label}
+                            # Avoid adding duplicate markers if the tool is called multiple times
+                            if new_marker not in markers:
+                                markers.append(new_marker)
+                                print(f"Adding marker for searched address: {label}")
+                                if "AddMarkers" not in action_taken:
+                                     action_taken.append("AddMarkers") # Ensure marker update is sent
+                            else:
+                                print(f"Marker for {label} already exists.")
+                                
+                    # Directly update map center if coordinates were found in the result
+                    # This check now uses the 'coords' variable assigned above
+                    if coords:
+                        map_center = coords
+                        print(f"Setting map center to found address: {coords}")
+                        if "PanMap" not in action_taken: # Add PanMap action if not already present
+                            action_taken.append("PanMap")
+                    # Set default zoom if SearchAddress succeeded and ZoomMap is not called
+                    zoom_map_called = any(tc["function"]["name"] == "ZoomMap" for tc in last_message["additional_kwargs"]["tool_calls"])
+                    if not zoom_map_called and coords: # Also ensure coords were found before setting zoom
+                        zoom_level = 14
+                        print(f"Setting default zoom to 14 after successful address search.")
+                else:
+                     # Handle case where tool failed or didn't return expected structure
+                     state["found_address_text"] = None # Clear if not found or error
+                     state["add_marker_at_address"] = None
+                     # Log the actual result for debugging
+                     print(f"SearchAddress tool did not return expected dict. Result: {tool_result}")
+                
+                # IMPORTANT: SearchAddress itself does NOT update map_center.
+                # The LLM must issue a subsequent PanMap call with the coordinates.
+                # We store the result in tool_message content for the LLM to potentially use.
+                print(f"SearchAddress result: {tool_result}")
             else:
                 raise ValueError(f"Unknown tool: {tool_name}")
             
@@ -644,7 +754,7 @@ async def call_tools(state: Dict) -> Dict:
                 "role": "tool",
                 "tool_call_id": tool_call["id"],
                 "name": action.tool,
-                "content": str(result)
+                "content": json.dumps(tool_result) if isinstance(tool_result, dict) else str(tool_result) # Store full result as JSON string
             }
             
             # Add the tool message to the state
@@ -659,7 +769,6 @@ async def call_tools(state: Dict) -> Dict:
     state["messages"] = messages
     state["map_center"] = map_center
     state["zoom_level"] = zoom_level
-    state["visible_layers"] = visible_layers
     state["markers"] = markers
     state["action_taken"] = action_taken
     
@@ -684,43 +793,93 @@ async def generate_response(state: Dict) -> Dict:
     if not latest_query:
         latest_query = "Vis meg kartet"
     
-    # Find the location name from PanMap tool calls
+    # Find the location name from PanMap tool calls (if not from SearchAddress)
     location_name = None
-    actions = state.get("action_taken", [])
+    # Find specific result from SearchAddress if it was called
+    search_address_error = None
+    search_address_called = False
+    original_search_query = None
     
-    if "PanMap" in actions:
+    actions = state.get("action_taken", [])
+
+    # Check tool results for SearchAddress outcome
+    for msg in reversed(messages):
+        if msg.get("role") == "tool" and msg.get("name") == "SearchAddress":
+            search_address_called = True
+            try:
+                tool_content = json.loads(msg.get("content", "{}"))
+                if "error" in tool_content:
+                    search_address_error = tool_content["error"]
+                    print(f"SearchAddress resulted in error: {search_address_error}")
+                # Find the original address query from the corresponding assistant tool call
+                for prev_msg in reversed(messages):
+                     if prev_msg.get("role") == "assistant" and "tool_calls" in prev_msg.get("additional_kwargs", {}):
+                         for tool_call in prev_msg["additional_kwargs"]["tool_calls"]:
+                             if tool_call["id"] == msg.get("tool_call_id") and tool_call["function"]["name"] == "SearchAddress":
+                                 try:
+                                     call_args = json.loads(tool_call["function"]["arguments"])
+                                     original_search_query = call_args.get("address")
+                                     print(f"Original SearchAddress query: {original_search_query}")
+                                     break
+                                 except Exception as e:
+                                     print(f"Error extracting original search query args: {e}")
+                         if original_search_query:
+                             break
+            except json.JSONDecodeError:
+                search_address_error = "Could not parse tool result."
+            except Exception as e:
+                search_address_error = f"Error processing tool result: {e}"
+            break # Found the SearchAddress result
+
+    # Determine location name for response (prefer found address, fallback to PanMap arg)
+    if state.get("found_address_text"):
+        location_name = state.get("found_address_text")
+    elif "PanMap" in actions and not search_address_called: # Only use PanMap arg if not an address search
         for msg in reversed(messages):
             if msg.get("role") == "tool" and msg.get("name") == "PanMap":
                 # Find the corresponding tool call to get the original location name
                 for prev_msg in reversed(messages):
                     if prev_msg.get("role") == "assistant" and "tool_calls" in prev_msg.get("additional_kwargs", {}):
                         for tool_call in prev_msg["additional_kwargs"]["tool_calls"]:
-                            if tool_call["function"]["name"] == "PanMap":
+                            if tool_call["function"]["name"] == "PanMap" and tool_call["id"] == msg.get("tool_call_id"):
                                 try:
                                     location_args = json.loads(tool_call["function"]["arguments"])
-                                    location_name = location_args.get("location")
-                                    print(f"Found location in tool call: {location_name}")
+                                    # Avoid using raw coordinate strings as location names
+                                    loc_arg = location_args.get("location")
+                                    if not (loc_arg.startswith('[') and loc_arg.endswith(']')):
+                                        location_name = loc_arg
+                                        print(f"Found location in PanMap tool call: {location_name}")
                                     break
                                 except Exception as e:
-                                    print(f"Error extracting location: {e}")
+                                    print(f"Error extracting PanMap location: {e}")
                         if location_name:
                             break
                 break
     
     # Create a response prompt template
+    prompt_template = """Du er en kartassistent. Generer et svar basert på handlingene som ble utført og resultatet av verktøykall.
+        
+Handlinger utført: {actions}
+Kartsentrum: {map_center}
+Zoom-nivå: {zoom_level}
+Markører: {markers}
+        
+VIKTIG:
+- Hvis SearchAddress ble kalt ({search_address_called}) og mislyktes med en feilmelding ('{search_address_error}'), informer brukeren klart om at adressen '{original_search_query}' ikke ble funnet.
+- Hvis SearchAddress var vellykket og kartet ble flyttet (PanMap i handlinger), bekreft ved å nevne den funnede adressen '{found_address}'.
+- Hvis PanMap ble brukt for et generelt stedsnavn '{location}', bekreft at kartet er sentrert der.
+- Hvis ingen spesifikk adresse eller sted ble panorert til, si bare at kartet er oppdatert basert på de andre handlingene (zoom, lag, markører osv.).
+- Nevn andre utførte handlinger kort (f.eks. "zoomet inn", "la til markør", "viste terrenglag").
+        
+Eksempel (adresse ikke funnet): "Beklager, jeg fant ingen adresse som heter 'Helvetesgata 12'."
+Eksempel (adresse funnet): "Ok, jeg har sentrert kartet på Eidsdalen 7B og la til en markør."
+Eksempel (sted funnet): "Greit, kartet viser nå Oslo."
+Eksempel (kun zoom): "Jeg har zoomet inn på kartet."
+        
+Hold svaret kort og konsist, men naturlig og hjelpsomt."""
+
     prompt = ChatPromptTemplate.from_messages([
-        ("system", """Du er en kartassistent. Generer et svar som forklarer hvilke endringer som ble gjort med kartet.
-        
-        Handlinger utført: {actions}
-        Kartsentrum: {map_center}
-        Lokasjon: {location}
-        Zoom-nivå: {zoom_level}
-        Synlige lag: {visible_layers}
-        Markører: {markers}
-        
-        Hold svaret kort og konsist, men naturlig og hjelpsomt. Unngå tekniske detaljer med mindre brukeren spør spesifikt om det.
-        Det er VELDIG viktig at du nevner den korrekte lokasjonen som kartet nå er sentrert på.
-        """),
+        ("system", prompt_template),
         ("human", "{query}")
     ])
     
@@ -730,10 +889,13 @@ async def generate_response(state: Dict) -> Dict:
         "query": latest_query,
         "actions": ", ".join(actions) if actions else "info",
         "map_center": state.get("map_center", (59.9139, 10.7522)),
-        "location": location_name or "kartet",
+        "location": location_name or "kartet", # Use found location name or fallback
         "zoom_level": state.get("zoom_level", 14),
-        "visible_layers": state.get("visible_layers", []) or "ingen",
-        "markers": state.get("markers", []) or "ingen"
+        "markers": state.get("markers", []) or "ingen",
+        "found_address": state.get("found_address_text", ""), # Pass found address to prompt
+        "search_address_called": search_address_called,
+        "search_address_error": search_address_error or "", # Pass error message or empty string
+        "original_search_query": original_search_query or ""
     })
     
     # Add the response to the messages
@@ -743,10 +905,13 @@ async def generate_response(state: Dict) -> Dict:
     
     return state
 
-# Function to send map updates to the client
+# Update the send_map_update function to use standardization
 async def send_map_update(state: Dict) -> Dict:
     """Send the map update to the frontend via websocket."""
     print(f"Sending map update with state: {state.keys()}")
+    
+    # Standardize the state
+    state = standardize_state(state)
     
     is_mixed_workflow = state.get("in_merged_workflow", False)
     print(f"DEBUG send_map_update: in_merged_workflow flag = {is_mixed_workflow}")
@@ -762,15 +927,12 @@ async def send_map_update(state: Dict) -> Dict:
         action_taken = state.get("action_taken", [])
         map_data = {}
         
-        # Check if PanMap was used
-        if "PanMap" in action_taken:
+        # If an address was searched, we assume the intent is to pan there, even if PanMap wasn't explicitly the *last* action,
+        # but resulted from SearchAddress. The actual panning happens if PanMap is called *after* SearchAddress by the LLM.
+        # So, we primarily rely on PanMap action to trigger sending center coordinates.
+        if "PanMap" in action_taken: # Keep relying on PanMap to send center updates
             map_data["center"] = state.get("map_center", None)
         
-        # Check if ToggleLayers was used
-        if "ToggleLayers" in action_taken:
-            map_data["layers"] = state.get("visible_layers", None)
-            map_data["layerAction"] = state.get("layer_action", None)
-            
         # Check if AddMarkers was used
         if "AddMarkers" in action_taken:
             map_data["markers"] = state.get("markers", None)
@@ -791,6 +953,9 @@ async def send_map_update(state: Dict) -> Dict:
         
         if should_send_zoom:
              current_zoom = state.get("zoom_level", 12) # Get the current zoom from state
+             # If SearchAddress set a default zoom, use it
+             if "SearchAddress" in action_taken and not zoom_explicitly_set:
+                 current_zoom = state.get("zoom_level", 14) # Should be 14 if set in call_tools
              map_data["zoom"] = current_zoom
              print(f"DEBUG send_map_update: Including zoom level {current_zoom} in update. Reason: explicit_zoom={zoom_explicitly_set}, panned_default_zoom={panned_without_zoom}")
         else:
@@ -818,29 +983,9 @@ async def send_map_update(state: Dict) -> Dict:
             print(f"DEBUG send_map_update: Not in mixed workflow, sending chat message if available.")
             messages = state.get("messages", [])
             if messages:
-                # Find the latest assistant message that is not a tool call
-                assistant_response_content = None
-                for m in reversed(messages):
-                    is_assistant = False
-                    is_tool_call = False
-                    content = None
-                    
-                    if isinstance(m, dict):
-                        is_assistant = m.get("role") == "assistant"
-                        is_tool_call = "tool_calls" in m.get("additional_kwargs", {})
-                        content = m.get("content")
-                    else: # Assuming BaseMessage object
-                        try:
-                             is_assistant = hasattr(m, "type") and m.type == "ai"
-                             is_tool_call = hasattr(m, "tool_calls") and m.tool_calls
-                             content = m.content if hasattr(m, "content") else None
-                        except Exception:
-                            pass # Ignore objects we can't inspect easily
-                            
-                    if is_assistant and not is_tool_call and content:
-                        assistant_response_content = content
-                        break # Found the latest relevant response
-
+                # Get the latest assistant message using our utility function
+                assistant_response_content = get_last_message_by_role(messages, "assistant")
+                
                 if assistant_response_content:
                     print(f"DEBUG: Streaming assistant response: {assistant_response_content}")
                     # Stream the message
@@ -853,9 +998,6 @@ async def send_map_update(state: Dict) -> Dict:
                 print("DEBUG: No messages found to stream")
         else:
             print(f"DEBUG: Suppressing map chat response in mixed workflow mode")
-            # Optional: Log the message that would have been sent
-            # ... (similar logic as above to find the assistant message)
-
     else:
         print(f"ERROR: No websocket found for ID: {websocket_id}")
         print(f"DEBUG: Available websocket IDs: {list(active_websockets.keys())}")
