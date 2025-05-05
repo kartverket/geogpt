@@ -40,7 +40,6 @@ class MapState(TypedDict, total=False):
     in_merged_workflow: bool
     found_address_text: Optional[str]
 
-# Create wrapper function that handles state standardization and defaults.
 def with_map_state_handling(node_func):
     """Wrap a map node function with state standardization and default value logic."""
     async def wrapped(state):
@@ -87,12 +86,24 @@ def with_map_state_handling(node_func):
 
         # Process the state with the node function
         # The state passed here is managed by LangGraph's checkpointer between steps
-        result_state = await node_func(current_state)
+        result_state = current_state # Default to current state if node func fails
+        try:
+            result_state = await node_func(current_state)
+        except Exception as e:
+             print(f"ERROR: Exception caught within wrapped node '{node_func.__name__}': {e}")
+             import traceback
+             traceback.print_exc()
+             # Keep the current state as the result to allow the graph to continue if possible
+             # Ensure result_state is a dictionary
+             result_state = standardize_state(current_state) 
+             # Optionally add an error marker to the state
+             result_state['node_execution_error'] = f"Error in {node_func.__name__}: {e}"
 
         # No need to update any persistent store here.
         # LangGraph handles passing state to the next node via the checkpointer.
 
-        return result_state # Return the result for LangGraph
+        # Ensure the return value is always a dictionary
+        return standardize_state(result_state)
 
     # Preserve original function name and docstring
     wrapped.__name__ = node_func.__name__
@@ -176,6 +187,7 @@ async def pan_to_location(location: str) -> Tuple[float, float]:
         coords_str = location_result.strip()
         # Extract numbers from the string
         import re
+
         coords = re.findall(r'[-+]?\d*\.\d+|\d+', coords_str)
         if len(coords) >= 2:
             # Convert to float
@@ -540,6 +552,7 @@ async def call_model(state: Dict) -> Dict:
                 tool_calls_json = [parsed_json]
             print(f"Successfully parsed full response as JSON: {tool_calls_json}")
         except json.JSONDecodeError:
+            import re
             # Second attempt: Look for JSON array in the response
             array_match = re.search(r'\[(.*?)\]', cleaned_response.replace('\n', ' '), re.DOTALL)
             if array_match:
@@ -924,84 +937,94 @@ async def send_map_update(state: Dict) -> Dict:
     websocket = active_websockets.get(websocket_id)
     
     if websocket:
-        action_taken = state.get("action_taken", [])
-        map_data = {}
-        
-        # If an address was searched, we assume the intent is to pan there, even if PanMap wasn't explicitly the *last* action,
-        # but resulted from SearchAddress. The actual panning happens if PanMap is called *after* SearchAddress by the LLM.
-        # So, we primarily rely on PanMap action to trigger sending center coordinates.
-        if "PanMap" in action_taken: # Keep relying on PanMap to send center updates
-            map_data["center"] = state.get("map_center", None)
-        
-        # Check if AddMarkers was used
-        if "AddMarkers" in action_taken:
-            map_data["markers"] = state.get("markers", None)
-            map_data["clearMarkers"] = state.get("clear_markers", False)
-        
-        # Check if FindMyLocation was used
-        if "FindMyLocation" in action_taken:
-            map_data["findMyLocation"] = True
-            if "add_marker_at_location" in state:
-                map_data["addMarker"] = state.get("add_marker_at_location", False)
-                
-        # --- REVISED LOGIC FOR ZOOM ---
-        # Determine if the zoom level should be sent
-        zoom_explicitly_set = "ZoomMap" in action_taken
-        panned_without_zoom = "PanMap" in action_taken and not zoom_explicitly_set
-        
-        should_send_zoom = zoom_explicitly_set or panned_without_zoom
-        
-        if should_send_zoom:
-             current_zoom = state.get("zoom_level", 12) # Get the current zoom from state
-             # If SearchAddress set a default zoom, use it
-             if "SearchAddress" in action_taken and not zoom_explicitly_set:
-                 current_zoom = state.get("zoom_level", 14) # Should be 14 if set in call_tools
-             map_data["zoom"] = current_zoom
-             print(f"DEBUG send_map_update: Including zoom level {current_zoom} in update. Reason: explicit_zoom={zoom_explicitly_set}, panned_default_zoom={panned_without_zoom}")
-        else:
-             print(f"DEBUG send_map_update: Not including zoom level in update. Actions taken: {action_taken}")
-        # --- END REVISED LOGIC ---
-
-        print(f"Sending map update: {map_data}")
-        
-        # Only send if there's actual map data to send
-        if map_data:
-            try:
-                print(f"DEBUG: Sending map update with data: {map_data}")
-                await send_websocket_message("mapUpdate", map_data, websocket)
-                print(f"DEBUG: Successfully sent map update to websocket {websocket_id}")
-            except Exception as e:
-                print(f"ERROR: Failed to send map update: {e}")
-                import traceback
-                traceback.print_exc()
-        else:
-             print("DEBUG send_map_update: No map data changes detected, skipping mapUpdate message.")
-
-        # --- REST OF THE FUNCTION (chat message handling) ---
-        # Only send chat response if not in mixed workflow
-        if not is_mixed_workflow:
-            print(f"DEBUG send_map_update: Not in mixed workflow, sending chat message if available.")
-            messages = state.get("messages", [])
-            if messages:
-                # Get the latest assistant message using our utility function
-                assistant_response_content = get_last_message_by_role(messages, "assistant")
-                
-                if assistant_response_content:
-                    print(f"DEBUG: Streaming assistant response: {assistant_response_content}")
-                    # Stream the message
-                    await send_websocket_message("chatStream", {"payload": assistant_response_content, "isNewMessage": True}, websocket)
-                    # Signal completion
-                    await send_websocket_message("streamComplete", {}, websocket)
-                else:
-                    print("DEBUG: No assistant message found to stream")
+        try:
+            action_taken = state.get("action_taken", [])
+            map_data = {}
+            
+            # If an address was searched, we assume the intent is to pan there, even if PanMap wasn't explicitly the *last* action,
+            # but resulted from SearchAddress. The actual panning happens if PanMap is called *after* SearchAddress by the LLM.
+            # So, we primarily rely on PanMap action to trigger sending center coordinates.
+            if "PanMap" in action_taken: # Keep relying on PanMap to send center updates
+                map_data["center"] = state.get("map_center", None)
+            
+            # Check if AddMarkers was used
+            if "AddMarkers" in action_taken:
+                map_data["markers"] = state.get("markers", None)
+                map_data["clearMarkers"] = state.get("clear_markers", False)
+            
+            # Check if FindMyLocation was used
+            if "FindMyLocation" in action_taken:
+                map_data["findMyLocation"] = True
+                if "add_marker_at_location" in state:
+                    map_data["addMarker"] = state.get("add_marker_at_location", False)
+                    
+            # --- REVISED LOGIC FOR ZOOM ---
+            # Determine if the zoom level should be sent
+            zoom_explicitly_set = "ZoomMap" in action_taken
+            panned_without_zoom = "PanMap" in action_taken and not zoom_explicitly_set
+            
+            should_send_zoom = zoom_explicitly_set or panned_without_zoom
+            
+            if should_send_zoom:
+                 current_zoom = state.get("zoom_level", 12) # Get the current zoom from state
+                 # If SearchAddress set a default zoom, use it
+                 if "SearchAddress" in action_taken and not zoom_explicitly_set:
+                     current_zoom = state.get("zoom_level", 14) # Should be 14 if set in call_tools
+                 map_data["zoom"] = current_zoom
+                 print(f"DEBUG send_map_update: Including zoom level {current_zoom} in update. Reason: explicit_zoom={zoom_explicitly_set}, panned_default_zoom={panned_without_zoom}")
             else:
-                print("DEBUG: No messages found to stream")
-        else:
-            print(f"DEBUG: Suppressing map chat response in mixed workflow mode")
+                 print(f"DEBUG send_map_update: Not including zoom level in update. Actions taken: {action_taken}")
+            # --- END REVISED LOGIC ---
+
+            print(f"Sending map update: {map_data}")
+            
+            # Only send if there's actual map data to send
+            if map_data:
+                try:
+                    print(f"DEBUG: Sending map update with data: {map_data}")
+                    await send_websocket_message("mapUpdate", map_data, websocket)
+                    print(f"DEBUG: Successfully sent map update to websocket {websocket_id}")
+                except Exception as e:
+                    print(f"ERROR: Failed to send map update: {e}")
+                    # Don't re-raise here, just log
+                    # import traceback
+                    # traceback.print_exc()
+            else:
+                 print("DEBUG send_map_update: No map data changes detected, skipping mapUpdate message.")
+
+            # --- REST OF THE FUNCTION (chat message handling) ---
+            # Only send chat response if not in mixed workflow
+            if not is_mixed_workflow:
+                print(f"DEBUG send_map_update: Not in mixed workflow, attempting to send chat message.")
+                messages = state.get("messages", [])
+                if messages:
+                    # Get the latest assistant message using our utility function
+                    assistant_response_content = get_last_message_by_role(messages, "assistant")
+                    
+                    if assistant_response_content:
+                        print(f"DEBUG: Streaming assistant response: {assistant_response_content[:100]}...") # Log snippet
+                        # Stream the message
+                        await send_websocket_message("chatStream", {"payload": assistant_response_content, "isNewMessage": True}, websocket)
+                        # Signal completion
+                        await send_websocket_message("streamComplete", {}, websocket)
+                        print("DEBUG: Chat stream sent successfully.")
+                    else:
+                        print("DEBUG: No assistant message content found to stream.")
+                else:
+                    print("DEBUG: No messages found in state to extract assistant response.")
+            else:
+                print(f"DEBUG: Suppressing map chat response in mixed workflow mode.")
+                
+        except Exception as e_inner:
+             print(f"ERROR: Exception caught within send_map_update logic: {e_inner}")
+             import traceback
+             traceback.print_exc()
+             # Return the current state to prevent the graph from crashing completely
     else:
         print(f"ERROR: No websocket found for ID: {websocket_id}")
         print(f"DEBUG: Available websocket IDs: {list(active_websockets.keys())}")
     
+    # Ensure the function always returns the state dictionary
     return state
 
 class LeafletMapWorkflow:
@@ -1052,6 +1075,7 @@ class LeafletMapWorkflow:
                 "agent": "agent",
                 "tools": "tools",
                 "response": "response",
+                "update": "update",
                 "end": END
             }
         )

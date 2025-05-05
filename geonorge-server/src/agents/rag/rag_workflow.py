@@ -892,9 +892,9 @@ class GeoNorgeRAGWorkflow:
                 Hold svaret konsist og fokusert på norske geografiske data.
                 Du MÅ legge til formatering med bold (**) for titler.
 
-                IKKE legg til kartoperasjoner i svaret.
+                IKKE legg til kartoperasjoner i svaret. Eksempel på ting som ikke skal være i svaret: "Jeg kan ikke utføre kartoperasjoner.". Fortell brukeren de kan legge til kartlag fra datasettet ved å trykke på "VIS" knappen på bildet. 
                 
-                Spørsmål: {question} 
+                Bruk informasjonen fra søkeresultatene til å svare på spørsmålet og foreslå datasett til brukeren: {question}
                 
                 Kontekst:
                 {context}

@@ -217,11 +217,30 @@ class GeoNorgeSupervisor:
             
             try:
                 result = await instance.workflow.ainvoke(workflow_input_state)
-                # Store result directly for process_result
-                state_dict["results"] = {workflow_name: standardize_state(result)}
-                # Update main state with potential changes from the workflow
-                # Especially map state if the map workflow ran
-                updated_state = self._update_state_from_result(state_dict, result)
+                # Store result for potential debugging/info
+                result_state = standardize_state(result) # Ensure it's a dict
+                state_dict["results"] = {workflow_name: result_state}
+
+                # *** FIX: Update the main message list with the result's messages ***
+                if "messages" in result_state and result_state["messages"]:
+                    # Standardize the messages coming from the sub-workflow result
+                    # We need to get the messages from the result_state dict, standardize them, and assign back to state_dict
+                    standardized_result_messages = [standardize_message(msg) for msg in result_state.get("messages", [])]
+                    state_dict["messages"] = standardized_result_messages
+                    state_dict["chat_history"] = format_history(state_dict["messages"]) # Update history too
+                    print(f"DEBUG execute_single_workflow: Updated messages from '{workflow_name}' result.")
+                else:
+                     print(f"WARN execute_single_workflow: Workflow '{workflow_name}' result missing 'messages'.")
+                     # Keep the original messages for now if result is bad
+                     pass 
+
+                # Update other state fields (map, metadata) using the standardized result state
+                updated_state = self._update_state_from_result(state_dict, result_state) 
+                
+                # Mark response as not streamed (sub-workflow might handle streaming, supervisor didn't)
+                # Add 'response_streamed' key safely
+                updated_state["response_streamed"] = result_state.get("response_streamed", False) 
+                
                 return updated_state # Pass the updated state to process_result
             except Exception as e:
                  print(f"ERROR in single workflow '{workflow_name}': {e}")
@@ -348,10 +367,29 @@ class GeoNorgeSupervisor:
             
             # --- Construct Final Merged State ---
             # Use the original user query message + the new concatenated assistant response
-            user_query_message = get_last_message_by_role(state_dict.get("messages", []), "human")
+            # --- FIX: Find the actual last human message dictionary ---
+            last_human_message_dict = None
+            original_messages = state_dict.get("messages", [])
+            for msg in reversed(original_messages):
+                # Standardize msg to check its role reliably
+                std_msg_check = standardize_message(msg)
+                if std_msg_check.get("role") in ["human", "user"]:
+                    # Ensure we append the original message (or a standardized dict version)
+                    # Let's use the standardized version for consistency
+                    last_human_message_dict = std_msg_check 
+                    break # Found the latest one
+            # --- End FIX ---
+
+            # user_query_message = get_last_message_by_role(state_dict.get("messages", []), "human") # Old way, likely returned string
             final_messages = []
-            if user_query_message:
-                final_messages.append(user_query_message)
+            # if user_query_message: # Old way
+            #     final_messages.append(user_query_message) # Old way
+            if last_human_message_dict:
+                 final_messages.append(last_human_message_dict) # Append the found dictionary
+            else:
+                 print("WARN merge_results: Could not find last human message in state.")
+                 # Optionally, add a placeholder or skip? For now, just log.
+            
             final_messages.append({"role": "assistant", "content": final_response_content})
 
             merged_state["messages"] = final_messages
@@ -663,15 +701,4 @@ class GeoNorgeSupervisor:
         
         print(f"DEBUG: chat method returning final message content.")
         
-        # Add a small delay ONLY IF streaming didn't happen, to allow websocket buffer to clear?
-        # This seems unreliable. Let's rely on the streaming logic completing.
-        # if not final_state.get("response_streamed", False):
-        #      await asyncio.sleep(0.1) 
-
-        # print(f"DEBUG: Final check - supervisor has {len(self.active_websockets)} websockets")
-        # print(f"DEBUG: Final check - common module has {len(active_websockets)} websockets")
-
-        # DO NOT clean up websocket here; needed for potential future interactions/streaming.
-        # print(f"DEBUG: Keeping websocket {websocket_id} active.")
-
         return last_message_content 
