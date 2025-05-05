@@ -14,9 +14,9 @@ from langchain_core.output_parsers import StrOutputParser
 from helpers.websocket import send_websocket_action
 from retrieval import GeoNorgeVectorRetriever
 
-from .utils.common import register_websockets_dict
-from .utils.image_processor import insert_image_rag_response
-from .message_utils import standardize_message, standardize_state, get_last_message_by_role
+from ..utils.common import register_websockets_dict
+from ..utils.image_processor import insert_image_rag_response
+from ..utils.message_utils import standardize_message, standardize_state, get_last_message_by_role
 
 def tools_condition(state: Dict) -> Literal["tools", END]:
     """
@@ -274,7 +274,7 @@ class GeoNorgeRAGWorkflow:
         from llm import LLMManager
         from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
         from helpers.websocket import send_websocket_message
-        from .utils.common import active_websockets
+        from ..utils.common import active_websockets
         import json
         
         print("DEBUG agent_node: Starting agent processing")
@@ -730,7 +730,7 @@ class GeoNorgeRAGWorkflow:
         from langchain_core.prompts import PromptTemplate
         from llm import LLMManager
         from helpers.websocket import send_websocket_message, send_websocket_action
-        from .utils.common import active_websockets # Keep get_websocket if needed elsewhere
+        from ..utils.common import active_websockets # Keep get_websocket if needed elsewhere
         from helpers.vector_database import get_vdb_response # Need this here now
         import json
         import asyncio
