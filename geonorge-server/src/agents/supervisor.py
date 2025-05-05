@@ -2,7 +2,6 @@
 Supervisor module for GeoNorge multi-agent system, managing multiple workflows.
 """
 from typing import Dict, List, Optional, Any, Literal, TypedDict, Union, Tuple
-from dataclasses import dataclass, field
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import START, END, StateGraph
 from langgraph.types import Command
@@ -12,12 +11,11 @@ from langchain.prompts import ChatPromptTemplate
 from langchain.schema import StrOutputParser
 
 from .rag.rag_workflow import GeoNorgeRAGWorkflow
-from .rag.map_workflow import LeafletMapWorkflow
-from .rag.utils.common import register_websockets_dict, format_history, active_websockets
-from .rag.utils.image_processor import insert_image_rag_response
-from helpers.websocket import send_websocket_message
+from .map_agent.map_workflow import LeafletMapWorkflow
+from .utils.common import register_websockets_dict, format_history, active_websockets
+from .utils.image_processor import insert_image_rag_response
 from action_enums import Action
-from .rag.message_utils import (
+from .utils.message_utils import (
     fix_message_dict_for_conversion, 
     standardize_message, 
     standardize_state, 
