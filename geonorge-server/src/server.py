@@ -717,15 +717,45 @@ async def main() -> None:
         "http://127.0.0.1:3000", 
         "http://geogpt.geokrs.no",
         "https://smith.langchain.com" 
-        
     ]
     logger.info(f"Allowed WebSocket origins: {allowed_origins}")
+
+    # --- Add CORS Preflight Handler ---
+    async def process_http_request(path, request_obj):
+        # Access the headers attribute of the Request object
+        try:
+            actual_headers = request_obj.headers
+        except AttributeError:
+             logger.warning(f"process_http_request did not receive an object with a .headers attribute (type: {type(request_obj)}). Skipping preflight check.")
+             return None 
+
+        origin = actual_headers.get("Origin")
+        acrm = actual_headers.get("Access-Control-Request-Method")
+        swk = actual_headers.get("Sec-WebSocket-Key")
+
+        # Check if it's a CORS preflight request AND origin is allowed
+        if acrm and origin and origin in allowed_origins and swk is None:
+            print(f"Handling CORS preflight request for path: {path} from origin: {origin}")
+            response_headers = [
+                ('Access-Control-Allow-Origin', origin),
+                ('Access-Control-Allow-Methods', 'GET, OPTIONS'),
+                ('Access-Control-Allow-Headers', '*'), # Adjust in production
+                ('Access-Control-Allow-Credentials', 'true'),
+                ('Access-Control-Max-Age', '86400')
+            ]
+            # Return 204 No Content for OPTIONS
+            return (204, response_headers, b'')
+
+        # If it's not an allowed preflight request, let websockets handle it
+        return None # Returning None tells websockets to proceed with normal handshake
+    # --- End CORS Preflight Handler ---
 
     async with websockets.serve(
         chat_server.ws_handler, 
         host, 
         ws_port,
-        origins=allowed_origins # Pass the allowed origins list
+        # origins=allowed_origins # origins checks WebSocket handshake, not preflight
+        process_request=process_http_request # Add our preflight handler
     ):
         logger.info("WebSocket server running on ws://%s:%s", host, ws_port)
         await asyncio.Future()  # Run forever

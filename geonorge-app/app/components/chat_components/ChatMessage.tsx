@@ -2,6 +2,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { ChatMessage as ChatMessageType, SearchResult } from "./types";
 import { Download, Eye } from "lucide-react";
+import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
 import {
   Tooltip,
   TooltipContent,
@@ -127,37 +128,6 @@ export const ChatMessage = ({
     content = content.slice("System: ".length);
   }
 
-  // Format bold text
-  content = content.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
-
-  content = content.replace(
-    /(https?:\/\/[^\s]+)/g,
-    '<a href="$1" target="_blank" rel="noopener noreferrer" class="underline break-all">$1</a>'
-  );
-
-  // Format URLs with better styling
-  content = content.replace(
-    /\[([^\]]+)\]\(([^)]+)\)/g,
-    '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-black hover:underline break-words">$1</a>'
-  );
-
-  // Format bullet points (asterisks)
-  content = content.replace(/^\s*\*\s+(.+)$/gm, "<li>$1</li>");
-
-  // Wrap lists in ul tags with better styling for nested content
-  if (content.includes("<li>")) {
-    content = content.replace(
-      /(<li>.*?<\/li>)+/g,
-      '<ul class="list-disc pl-5 my-2 space-y-1">$&</ul>'
-    );
-  }
-
-  // Add paragraph breaks for better readability
-  content = content.replace(/\n\n+/g, '</p><p class="my-2">');
-  if (!content.startsWith("<ul") && !content.startsWith("<p")) {
-    content = "<p>" + content + "</p>";
-  }
-
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-3`}>
       <div
@@ -165,10 +135,9 @@ export const ChatMessage = ({
           isUser ? "bg-orange-50" : "bg-gray-100"
         }`}
       >
-        <div
-          className="chat-content"
-          dangerouslySetInnerHTML={{ __html: content }}
-        />
+        <div className="chat-content">
+          <MarkdownRenderer>{content}</MarkdownRenderer>
+        </div>
       </div>
     </div>
   );
