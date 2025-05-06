@@ -25,6 +25,19 @@ from .utils.message_utils import (
 import re
 import asyncio
 import uuid
+import logging
+
+# --- Specific File Logging Configuration ---
+log_file = 'geonorge_chat.log'
+file_handler = logging.FileHandler(log_file, mode='a')
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+file_handler.setFormatter(formatter)
+
+logger = logging.getLogger(__name__) 
+logger.setLevel(logging.INFO) # Ensure INFO messages are processed by this logger
+logger.addHandler(file_handler)
+logger.propagate = False # Prevent logs from going to the console handler
+# --- End Logging Configuration ---
 
 # Define workflow configuration
 WORKFLOW_CONFIG = {
@@ -53,6 +66,8 @@ class SupervisorStateSchema(TypedDict, total=False):
     visible_layers: Optional[List[str]]
     markers: Optional[List[Any]]
     action_taken: Optional[List[str]]
+
+logger = logging.getLogger(__name__)
 
 class GeoNorgeSupervisor:
     """
@@ -676,7 +691,14 @@ class GeoNorgeSupervisor:
         
         # Extract the final assistant message content
         last_message_content = "Ingen respons generert."
+        last_user_message = "Ingen brukerinput funnet."
         if final_state and 'messages' in final_state and final_state['messages']:
+            # Find last user message
+            user_msg_obj = get_last_message_by_role(final_state['messages'], "human")
+            if user_msg_obj:
+                 std_user_msg = standardize_message(user_msg_obj)
+                 last_user_message = std_user_msg.get('content', 'Brukerinput mangler innhold.')
+
             # Get the last message (should be assistant's response)
             last_message_obj = final_state['messages'][-1]
             std_msg = standardize_message(last_message_obj) # Handle dict/BaseMessage
@@ -689,6 +711,16 @@ class GeoNorgeSupervisor:
                      last_message_content = last_assistant_msg.get('content', 'Ingen respons generert.')
                 else:
                      print("WARNING: Final state has messages, but the last one isn't from the assistant.")
+                     logger.warning(f"Session {session_id}: Final state messages don't end with assistant.")
+
+        # Log the interaction
+
+        log_message = ( # New multi-line log message
+            f"Session: {session_id}\n"
+            f"  User: {last_user_message}\n"
+            f"  Assistant: {last_message_content}"
+        )
+        logger.info(log_message)
 
         # Image insertion is now handled within process_result before END
         
@@ -698,5 +730,14 @@ class GeoNorgeSupervisor:
         # Let's return the final content anyway for consistency / non-websocket use cases.
         
         print(f"DEBUG: chat method returning final message content.")
-        
+        # Remove websocket from active list when chat interaction is done for this query
+        if websocket_id in self.active_websockets:
+            # print(f"DEBUG: Deregistering websocket {websocket_id} from supervisor.")
+            del self.active_websockets[websocket_id]
+            if websocket_id in active_websockets: # Clean up common dict too
+                # print(f"DEBUG: Removing websocket {websocket_id} from common active_websockets.")
+                del active_websockets[websocket_id]
+        # print(f"DEBUG: Remaining active websockets in supervisor: {len(self.active_websockets)}")
+        # print(f"DEBUG: Remaining active websockets in common dict: {len(active_websockets)}")
+
         return last_message_content 
