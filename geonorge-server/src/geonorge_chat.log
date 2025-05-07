@@ -132,3 +132,101 @@ Du kan legge til kartlag fra datasettet ved å trykke på "VIS" knappen på bild
 
 Du kan legge til kartlag fra datasettet ved å trykke på "VIS" knappen på bildet.
 
+2025-05-07 12:15:55,043 - agents.supervisor - INFO - Session: 4404113296
+  User: hva er fkb
+  Assistant: **Hva er FKB?**
+
+FKB står for Felles KartdataBase. Det er en samling av datasett som utgjør en sentral del av grunnkartet i Norge. FKB-dataene er ikke-sensitive og åpne data, finansiert gjennom Geovekst-samarbeidet eller av kommunene selv.
+
+**Innhold i FKB:**
+FKB inneholder en rekke datasett, inkludert:
+*   Høyde
+*   Vann
+*   Markslag (AR5)
+*   Arealbruk
+*   Bygninger
+*   Bygningsmessige anlegg
+*   Ledninger
+*   Veg
+*   Jernbane
+*   Flyplass
+
+**Tilgang til FKB-data:**
+FKB-data er fritt tilgjengelige for Norge digitalt parter og kan lastes ned gjennom nedlastingsløsningen på Geonorge. Private aktører må kjøpe tilgang til dataene gjennom en forhandler.
+
+Du kan utforske følgende FKB-datasett for mer detaljert informasjon:
+
+*   FKB-Bygning
+*   FKB-Vann
+*   FKB-BygnAnlegg
+*   FKB-Arealbruk
+*   FKB-Veg
+*   FKB-TraktorvegSti
+*   FKB-Naturinfo
+*   FKB-Lufthavn
+*   FKB-Tiltak
+
+2025-05-07 12:28:00,246 - agents.supervisor - INFO - Session: 4690659664
+  User: hva er fkb
+  Assistant: **Hva er FKB?**
+
+FKB står for Felles KartdataBase. Det er en samling datasett som utgjør en sentral del av grunnkartet i Norge. FKB-dataene er ikke-sensitive og åpne data, finansiert gjennom Geovekst-samarbeidet eller av kommunene selv.
+
+**Innhold i FKB:**
+FKB inneholder en rekke datasett, inkludert:
+*   Høyde
+*   Vann
+*   Markslag (AR5)
+*   Arealbruk
+*   Bygninger
+*   Bygningsmessige anlegg
+*   Ledninger
+*   Veg
+*   Jernbane
+*   Flyplass
+
+**Tilgang til FKB-data:**
+FKB-data er fritt tilgjengelige for Norge digitalt parter og kan lastes ned gjennom nedlastingsløsningen på Geonorge. Private aktører må kjøpe tilgang til dataene gjennom en forhandler.
+
+Du kan finne mer informasjon om de ulike FKB-datasettene her:
+*   [Felles KartdataBase (FKB)](https://kartkatalog.geonorge.no/metadata/Felles-KartdataBase-(FKB)/0e90ca71-6a02-4036-bd94-f219fe64645f)
+*   [FKB-Bygning](https://kartkatalog.geonorge.no/metadata/FKB-Bygning/8b4304ea-4fb0-479c-a24d-fa225e2c6e97)
+*   [FKB-Vann](https://kartkatalog.geonorge.no/metadata/FKB-Vann/595e47d9-d201-479c-a77d-cbc1f573a76b)
+*   [FKB-BygnAnlegg](https://kartkatalog.geonorge.no/metadata/FKB-BygnAnlegg/ede5ffb2-ee2a-44a3-852d-369a14d97f2e)
+*   [FKB-Arealbruk](https://kartkatalog.geonorge.no/metadata/FKB-Arealbruk/87b31015-a3de-4540-9b8b-cb1bf4e1cb3a)
+*   [FKB-Veg](https://kartkatalog.geonorge.no/metadata/FKB-Veg/4920b452-75cc-45f2-964c-3378204c3517)
+*   [FKB-TraktorvegSti](https://kartkatalog.geonorge.no/metadata/FKB-TraktorvegSti/cc3a2d98-52ac-4699-9947-ed0625903de4)
+*   [FKB-Naturinfo](https://kartkatalog.geonorge.no/metadata/FKB-Naturinfo/aa3c01f3-0678-470d-b03b-33085a7bae28)
+*   [FKB-Lufthavn](https://kartkatalog.geonorge.no/metadata/FKB-Lufthavn/23dfcc33-fb04-4898-aa88-68b49c4bfea7)
+*   [FKB-Tiltak](https://kartkatalog.geonorge.no/metadata/FKB-Tiltak/8944603c-9414-43a7-9421-9a1de9850a96)
+
+2025-05-07 12:39:03,095 - agents.supervisor - INFO - Session: 4713844176
+  User: hva er fkb
+  Assistant: Beklager, det oppstod en feil under kjøring av rag: 'str' object has no attribute 'content'
+2025-05-07 12:43:42,435 - agents.supervisor - INFO - Session: 4804435856
+  User: What does the acronym FKB stand for?
+
+  Assistant: Beklager, jeg kunne ikke prosessere spørsmålet ditt. Kan du prøve på nytt?
+2025-05-07 12:47:05,428 - agents.supervisor - INFO - Session: 4408090960
+  User: fkb
+  Assistant: Beklager, det oppstod en feil under kjøring av rag: No module named 'utils'
+2025-05-07 12:48:45,684 - agents.supervisor - INFO - Session: 4575408080
+  User: hva er kvikkleire
+  Assistant: Jeg har funnet følgende datasett relatert til **kvikkleire**:
+
+*   **Kvikkleire**: Oversikt over soner med potensiell fare for større kvikkleireskred, klassifisert etter faregrad og konsekvensklasse.
+*   **Aktsomhetskart for kvikkleireskred**: Kart utviklet av NVE som tar hensyn til både løsmasser og terreng for å identifisere mulige løsneområder.
+*   **Mulighet for marin leire**: Viser hvor det potensielt kan finnes marin leire basert på løsmassekart og data for marin grense.
+2025-05-07 12:52:31,097 - agents.supervisor - INFO - Session: 4832224144
+  User: jeg vil se om det er kvikkleire rundt min posisjon
+  Assistant: Beklager, jeg kan ikke hjelpe deg med å finne kvikkleire. Jeg kan bare vise deg kart og markere steder.
+
+Jeg har ikke nok informasjon til å svare på spørsmålet ditt om kvikkleire rundt din posisjon. Jeg trenger din spesifikke posisjon for å kunne gi deg relevant informasjon.
+
+Du kan for eksempel spørre:
+*   "Finnes det kvikkleire i [sted/kommune/fylke]?"
+*   "Hvilke datasett kan hjelpe meg å finne kvikkleire nær [sted/kommune/fylke]?"
+2025-05-07 12:52:50,710 - agents.supervisor - INFO - Session: 4832224144
+  User: er det kvikkleire rundt håkonsens vei 1
+  Assistant: Jeg har ikke nok informasjon til å svare på om det er kvikkleire nær Håkonsens vei 1. Jeg kan foreslå at du bruker et kartverktøy for å se etter kvikkleireforekomster i det spesifikke området. Du kan også se på datasettene "Kvikkleire" og "Aktsomhetskart for kvikkleireskred" for å finne mer informasjon.
+
