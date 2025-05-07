@@ -24,7 +24,7 @@ sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 # Import config directly from project root
 from config import CONFIG
 
-from rag import get_rag_response
+from agents.rag import get_rag_response
 from helpers.download import (
     get_dataset_download_formats, 
     get_dataset_download_and_wms_status,
@@ -67,7 +67,7 @@ class ChatServer:
         messages = self.client_messages.get(websocket, [])
         try:
             # Register the websocket directly with common.active_websockets
-            from rag.utils.common import active_websockets
+            from agents.utils.common import active_websockets
             websocket_id = str(id(websocket))
             active_websockets[websocket_id] = websocket
             print(f"DEBUG server: Directly registered websocket with ID {websocket_id} in common.active_websockets")

@@ -2,7 +2,7 @@
 Main entry points for the RAG workflow.
 """
 from typing import List, Dict, Any, Optional
-from .chain import GeoNorgeSupervisor
+from .supervisor import GeoNorgeSupervisor
 from .utils.common import active_websockets
 
 # Initialize the enhanced RAG chain - use a single global instance

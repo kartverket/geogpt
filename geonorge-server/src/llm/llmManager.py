@@ -1,12 +1,7 @@
-from langchain_openai import ChatOpenAI, AzureChatOpenAI
+from langchain_openai import ChatOpenAI
 from config import CONFIG
-
-from typing import Any, Dict, Optional
-from langchain.callbacks.base import BaseCallbackHandler
-import tiktoken
 import logging
 from langsmith import Client
-from langsmith.wrappers import wrap_openai
 import os
 
 # Configure logging

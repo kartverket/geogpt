@@ -12,12 +12,10 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
 from helpers.websocket import send_websocket_action
-from .models.state import ConversationState
 from retrieval import GeoNorgeVectorRetriever
 
-from .utils.common import register_websockets_dict
-from .models import ConversationState
-from .utils.image_processor import insert_image_rag_response
+from ..utils.common import register_websockets_dict
+from ..utils.image_processor import insert_image_rag_response
 
 def tools_condition(state: Dict) -> str:
     """
@@ -295,12 +293,12 @@ class GeoNorgeRAGWorkflow:
         """
         Custom agent implementation that decides what action to take based on the query.
         
-        This replaces the traditional ReAct agent with a custom implementation.
+        This replaces the traditional React agent with a custom implementation.
         """
         from llm import LLMManager
         from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
         from helpers.websocket import send_websocket_message
-        from .utils.common import active_websockets
+        from ..utils.common import active_websockets
         import json
         
         print("DEBUG agent_node: Starting agent processing")
@@ -947,7 +945,7 @@ class GeoNorgeRAGWorkflow:
         from langchain_core.prompts import PromptTemplate
         from llm import LLMManager
         from helpers.websocket import send_websocket_message, send_websocket_action
-        from .utils.common import active_websockets, get_websocket
+        from ..utils.common import active_websockets, get_websocket
         import json
         
         messages = state["messages"]
@@ -1065,8 +1063,10 @@ class GeoNorgeRAGWorkflow:
                 Hvis du ikke finner svaret i konteksten, si at du ikke har nok informasjon og foreslå alternative måter brukeren kan spørre.
                 Hold svaret konsist og fokusert på norske geografiske data.
                 Du MÅ legge til formatering med bold (**) for titler.
+
+                IKKE legg til kartoperasjoner i svaret. Eksempel på ting som ikke skal være i svaret: "Jeg kan ikke utføre kartoperasjoner.". Fortell brukeren de kan legge til kartlag fra datasettet ved å trykke på "VIS" knappen på bildet. 
                 
-                Spørsmål: {question} 
+                Bruk informasjonen fra søkeresultatene til å svare på spørsmålet og foreslå datasett til brukeren: {question}
                 
                 Kontekst:
                 {context}
