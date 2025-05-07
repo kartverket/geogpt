@@ -85,3 +85,50 @@ FKB står for Felles Kartdatabase. Det er en samling datasett som utgjør en sen
 
 Du kan finne mer informasjon om FKB og de ulike datasettene på Geonorge.
 
+2025-05-07 09:45:31,416 - agents.supervisor - INFO - Session: 4478178064
+  User: hva er kvikkleire
+  Assistant: **Hva er kvikkleire?**
+
+Kvikkleire er et jordskredmateriale som kartlegges i forskjellige datasett. Kvikkleire kan identifiseres gjennom kvartærgeologisk kartlegging og geotekniske undersøkelser.
+
+Jeg vil anbefale å se på følgende datasett for mer informasjon:
+
+*   **Kvikkleire:** Gir en oversikt over soner med potensiell fare for større kvikkleireskred, klassifisert etter faregrad, konsekvensklasse og risikoklasse.
+*   **Aktsomhetskart for kvikkleireskred:** Tar hensyn til både løsmassene og terrenget for å identifisere mulige løsneområder for kvikkleireskred.
+*   **Mulighet for marin leire:** Viser hvor det potensielt kan finnes marin leire, som er en forutsetning for kvikkleire, basert på løsmassekart og data for marin grense.
+
+2025-05-07 09:45:55,812 - agents.supervisor - INFO - Session: 4478178064
+  User: Jeg ønsker å se om det er kvikkleire rundt håkonsens vei 1
+  Assistant: Beklager, jeg fant ingen adresse som heter 'Håkonsens vei 1'.
+
+
+Jeg har ikke informasjon om kvikkleire spesifikt rundt Håkonsens vei 1, men jeg kan gi deg informasjon om relevante datasett som kan hjelpe deg med å vurdere dette:
+
+**Relevante datasett:**
+
+*   **Kvikkleire:** Dette datasettet gir en oversikt over soner med potensiell fare for større kvikkleireskred, klassifisert etter faregrad og konsekvensklasse. ([Mer informasjon](https://kartkatalog.geonorge.no/metadata/Kvikkleire/a29b905c-6aaa-4283-ae2c-d167624c08a8))
+*   **Aktsomhetskart for kvikkleireskred:** Dette kartet tar hensyn til både løsmasser og terreng, og identifiserer mulige løsneområder for kvikkleireskred. ([Mer informasjon](https://kartkatalog.geonorge.no/metadata/Aktsomhetskart-for-kvikkleireskred/dabd2a2c-36d5-4ed7-a4c9-d49808a2b848))
+*   **Mulighet for marin leire:** Viser hvor det potensielt kan finnes marin leire, som er en forutsetning for kvikkleire. ([Mer informasjon](https://kartkatalog.geonorge.no/metadata/Mulighet-for-marin-leire/641a81c2-9354-473b-b8f0-2b1e2ab3930a))
+2025-05-07 12:08:01,499 - agents.supervisor - INFO - Session: 4468640080
+  User: Hvilke datasett er nyttige for byggesaksbehandlere?
+  Assistant: Her er noen datasett som kan være nyttige for byggesaksbehandlere:
+
+*   **Matrikkelen - Bygningspunkt:** Inneholder informasjon om bygninger registrert i Matrikkelen, inkludert bygningstype, bygningsnummer og status.
+*   **Matrikkelen - Bygningspunkt Utvidet:** Et mer omfattende utdrag av bygningsinformasjon fra Matrikkelen, inkludert bruksenheter og bygningsarealer. Tilgang krever søknad.
+*   **FKB-Bygning:** Detaljert bygningsinformasjon som er en del av Felles Kartdatabase (FKB), med en 1:1 kobling til Matrikkelen.
+*   **FKB-BygnAnlegg:** Beskriver bygningsmessige anlegg som murer, gjerder og kaier, som også er en del av FKB.
+*   **SEFRAK-bygninger Kongsberg kommune:** Register over eldre bygninger og kulturminner i Kongsberg kommune. Vær oppmerksom på at dataene kan inneholde feil.
+*   **Eksplosivanlegg:** Viser anlegg hvor eksplosive varer tilvirkes eller oppbevares. Datasettet gis bare ut til bruk i kommunal og regional beredskap, arealplanlegging og byggesaksbehandling og bare ved direkte henvendelse til DSB v/ kart@dsb.no eller lars.kjaerstad@dsb.no
+
+Du kan legge til kartlag fra datasettet ved å trykke på "VIS" knappen på bildet.
+
+2025-05-07 12:10:43,862 - agents.supervisor - INFO - Session: 5744508688
+  User: kvikkleire
+  Assistant: Jeg har funnet informasjon om følgende datasett relatert til kvikkleire:
+
+*   **Kvikkleire:** Viser soner med potensiell fare for større kvikkleireskred, klassifisert etter faregrad, konsekvensklasse og risikoklasse. ([Mer informasjon](https://kartkatalog.geonorge.no/metadata/Kvikkleire/a29b905c-6aaa-4283-ae2c-d167624c08a8))
+*   **Aktsomhetskart for kvikkleireskred:** Tar hensyn til både løsmasser og terreng for å identifisere mulige løsneområder for kvikkleireskred. ([Mer informasjon](https://kartkatalog.geonorge.no/metadata/Aktsomhetskart-for-kvikkleireskred/dabd2a2c-36d5-4ed7-a4c9-d49808a2b848))
+*   **Mulighet for marin leire:** Viser områder hvor det potensielt kan finnes marin leire, basert på løsmassekart og data for marin grense. ([Mer informasjon](https://kartkatalog.geonorge.no/metadata/Mulighet-for-marin-leire/641a81c2-9354-473b-b8f0-2b1e2ab3930a))
+
+Du kan legge til kartlag fra datasettet ved å trykke på "VIS" knappen på bildet.
+
