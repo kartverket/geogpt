@@ -65,7 +65,7 @@ class ChatServer:
 
     async def handle_chat_form_submit(self, websocket: Any, user_question: str) -> None:
         messages = self.client_messages.get(websocket, [])
-        try:    
+        try:
             # Register the websocket directly with common.active_websockets
             from agents.utils.common import active_websockets
             websocket_id = str(id(websocket))
@@ -707,62 +707,72 @@ async def main() -> None:
     """
     Initialize and run both the WebSocket server and Flask app
     """
-    chat_server = ChatServer()
+    server = ChatServer()
     host = CONFIG.get("server", {}).get("host", "0.0.0.0") # Bind to all interfaces
     ws_port = CONFIG.get("server", {}).get("port", 8080)
 
-    # Define allowed WebSocket origins
+    # --- CORS Handling for websockets --- 
+    # ALLOWED ORIGINS, TODO: Make this dynamic for production/docker
     allowed_origins = [
         "http://localhost:3000", 
-        "http://127.0.0.1:3000", 
-        "http://geogpt.geokrs.no",
-        "https://smith.langchain.com" 
+        "http://127.0.0.1:3000",
+        "http://geogpt.geokrs.no"
     ]
     logger.info(f"Allowed WebSocket origins: {allowed_origins}")
 
-    # --- Add CORS Preflight Handler ---
-    async def process_http_request(path, request_obj):
-        # Access the headers attribute of the Request object
-        try:
-            actual_headers = request_obj.headers
-        except AttributeError:
-             logger.warning(f"process_http_request did not receive an object with a .headers attribute (type: {type(request_obj)}). Skipping preflight check.")
-             return None 
+    async def process_request(path: str, request_headers: websockets.Headers) -> Optional[Tuple[int, websockets.Headers, bytes]]:
+        """Handles CORS preflight requests and checks origin for WebSocket connections."""
+        
+        actual_headers = None
+        if hasattr(request_headers, 'get'): # Check if it behaves like a dict/Headers object
+            actual_headers = request_headers
+        elif hasattr(request_headers, 'headers') and hasattr(request_headers.headers, 'get'): # Check if it has a .headers attribute which behaves like a dict
+            actual_headers = request_headers.headers
+        else:
+            logger.error(f"Could not extract headers from request_headers object of type: {type(request_headers)}")
+            return (500, {}, b"Internal Server Error\n") # Cannot process headers
 
         origin = actual_headers.get("Origin")
-        acrm = actual_headers.get("Access-Control-Request-Method")
-        swk = actual_headers.get("Sec-WebSocket-Key")
+        if origin not in allowed_origins:
+            logger.warning(f"Rejected WebSocket connection from invalid origin: {origin}")
+            return (403, {}, b"Forbidden\n") 
 
-        # Check if it's a CORS preflight request AND origin is allowed
-        if acrm and origin and origin in allowed_origins and swk is None:
-            print(f"Handling CORS preflight request for path: {path} from origin: {origin}")
+        # Handle CORS preflight (OPTIONS) request
+        # Check based on the extracted headers
+        if actual_headers.get("Access-Control-Request-Method"):
+            # This is likely an OPTIONS request
             response_headers = [
-                ('Access-Control-Allow-Origin', origin),
-                ('Access-Control-Allow-Methods', 'GET, OPTIONS'),
-                ('Access-Control-Allow-Headers', '*'), # Adjust in production
-                ('Access-Control-Allow-Credentials', 'true'),
-                ('Access-Control-Max-Age', '86400')
+                ("Access-Control-Allow-Origin", origin),
+                ("Access-Control-Allow-Methods", "GET, OPTIONS"),
+                ("Access-Control-Allow-Headers", "content-type"), 
+                ("Access-Control-Max-Age", "86400"), # Cache preflight response for 1 day
+                ("Access-Control-Allow-Credentials", "true"),
             ]
-            # Return 204 No Content for OPTIONS
-            return (204, response_headers, b'')
+            logger.debug(f"Responding to OPTIONS request from {origin}")
+            # Ensure response headers are in the correct format for the tuple
+            response_headers_dict = websockets.datastructures.Headers(response_headers)
+            return (200, response_headers_dict, b"OK\n") # Return HTTP 200 OK
 
-        # If it's not an allowed preflight request, let websockets handle it
-        return None # Returning None tells websockets to proceed with normal handshake
-    # --- End CORS Preflight Handler ---
+        # If it's not an OPTIONS request and origin is allowed, let the handshake proceed
+        logger.debug(f"Allowing GET request from allowed origin: {origin}")
+        return None # Let websockets library handle the handshake
 
-    async with websockets.serve(
-        chat_server.ws_handler, 
-        host, 
+    # Start WebSocket server with CORS handling
+    ws_server = await websockets.serve(
+        server.ws_handler,
+        host,
         ws_port,
-        # origins=allowed_origins # origins checks WebSocket handshake, not preflight
-        process_request=process_http_request # Add our preflight handler
-    ):
-        logger.info("WebSocket server running on ws://%s:%s", host, ws_port)
-        await asyncio.Future()  # Run forever
+        compression=None,
+        process_request=process_request
+    )
+    logger.info("WebSocket server running on ws://%s:%s", host, ws_port)
 
     # Start Flask server in a separate thread
     loop = asyncio.get_event_loop()
     await loop.run_in_executor(None, run_flask)
+
+    # Keep the WebSocket server running
+    await ws_server.wait_closed()
 
 if __name__ == "__main__":
     asyncio.run(main())
