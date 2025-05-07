@@ -131,12 +131,25 @@ export const ChatMessage = ({
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-3`}>
       <div
-        className={`max-w-[80%] p-3 rounded-md text-sm break-words ${
+        className={`max-w-[75%] p-3 rounded-md text-sm ${
           isUser ? "bg-orange-50" : "bg-gray-100"
-        }`}
+        } overflow-hidden`}
+        style={{ width: "auto", maxWidth: "clamp(300px, 65%, 600px)" }}
       >
-        <div className="chat-content">
-          <MarkdownRenderer>{content}</MarkdownRenderer>
+        <div className="chat-content w-full overflow-hidden">
+          <div className="prose prose-sm max-w-none overflow-hidden">
+            <style jsx global>{`
+              .prose a {
+                word-break: break-word;
+                overflow-wrap: anywhere;
+                word-wrap: break-word;
+                hyphens: auto;
+                max-width: 100%;
+                display: inline-block;
+              }
+            `}</style>
+            <MarkdownRenderer>{content}</MarkdownRenderer>
+          </div>
         </div>
       </div>
     </div>
