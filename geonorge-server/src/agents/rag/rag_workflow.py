@@ -334,6 +334,12 @@ class GeoNorgeRAGWorkflow:
             else:
                 print(f"DEBUG agent_node: No websocket found for ID {websocket_id}")
         
+        # Suppress streaming in merged workflows
+        in_merged_workflow = state.get("in_merged_workflow", False)
+        if in_merged_workflow:
+            print("DEBUG agent_node: In merged workflow, disabling websocket streaming")
+            websocket = None
+        
         if not messages:
             print("DEBUG agent_node: No messages in state")
             return state
@@ -477,7 +483,7 @@ class GeoNorgeRAGWorkflow:
             print(f"DEBUG agent_node: Invoking LLM with {len(filtered_messages)} messages")
             
             # Check if we have a websocket to stream the response
-            if websocket:
+            if websocket and not in_merged_workflow:
                 print(f"DEBUG agent_node: Checking LLM response for tool calls before streaming")
                 
                 # Stream response token by token to get the final chunk
@@ -974,6 +980,10 @@ class GeoNorgeRAGWorkflow:
         print(f"DEBUG generate_final_response: Starting with websocket_id: {websocket_id}")
         print(f"DEBUG generate_final_response: Original query: {original_query}")
         
+        # Determine if this is part of a merged workflow to suppress direct streaming
+        in_merged_workflow = state.get("in_merged_workflow", False)
+        print(f"DEBUG generate_final_response: in_merged_workflow={in_merged_workflow}")
+        
         websocket = None
         
         # Get the websocket - first try directly from the active_websockets dictionary
@@ -1100,83 +1110,73 @@ class GeoNorgeRAGWorkflow:
         chain = prompt | llm | StrOutputParser()
 
         # Send the response through websocket
-        if websocket:
-            # Check if we're in a mixed query workflow or standalone RAG workflow
-            is_mixed_workflow = state.get("in_merged_workflow", False)
+        if websocket and not in_merged_workflow:
+            print(f"DEBUG generate_final_response: Starting token-by-token streaming for standalone RAG.")
+            # Send initial empty message to start streaming
+            print(f"DEBUG: Sending initial chatStream message")
+            await send_websocket_message("chatStream", {"payload": "", "isNewMessage": True}, websocket)
             
-            # Only send the chat response if this is not part of a mixed workflow
-            # For mixed workflows, the supervisor will handle sending the combined message
-            if not is_mixed_workflow:
-                print(f"DEBUG generate_final_response: Starting token-by-token streaming for standalone RAG.")
-                # Send initial empty message to start streaming
-                print(f"DEBUG: Sending initial chatStream message")
-                await send_websocket_message("chatStream", {"payload": "", "isNewMessage": True}, websocket)
+            # Stream response token by token
+            response_chunks = []
+            print(f"DEBUG: Starting to stream tokens")
+            try:
+                async for chunk in (prompt | llm).astream({"question": query_for_response, "context": retrieved_info}):
+                    if hasattr(chunk, 'content'):
+                        response_chunks.append(chunk.content)
+                        print(f"DEBUG: Streaming chunk: {chunk.content[:20]}...")
+                        await send_websocket_message("chatStream", {"payload": chunk.content}, websocket)
                 
-                # Stream response token by token
-                response_chunks = []
-                print(f"DEBUG: Starting to stream tokens")
-                try:
-                    async for chunk in (prompt | llm).astream({"question": query_for_response, "context": retrieved_info}):
-                        if hasattr(chunk, 'content'):
-                            response_chunks.append(chunk.content)
-                            print(f"DEBUG: Streaming chunk: {chunk.content[:20]}...")
-                            await send_websocket_message("chatStream", {"payload": chunk.content}, websocket)
-                    
-                    # Get full response from chunks
-                    response = "".join(response_chunks)
-                    print(f"DEBUG generate_final_response: Completed streaming for question: {query_for_response[:50]}...")
-                    
-                    # Send stream complete action
-                    print(f"DEBUG: Sending streamComplete action directly")
-                    await send_websocket_action("streamComplete", websocket)
-                    print(f"DEBUG: Sending formatMarkdown action directly")
-                    await send_websocket_action("formatMarkdown", websocket)
-                    
-                    # Now that the response is complete, try to insert image if we have metadata context
-                    metadata_context = state.get("metadata_context", [])
-                    print(f"DEBUG: Metadata context: {metadata_context}")
-                    if metadata_context:
-                        print(f"DEBUG: Found metadata context with {len(metadata_context)} items")
-                        try:
-                            await insert_image_rag_response(response, metadata_context, websocket)
-                            print("DEBUG: Successfully inserted image after response")
-                        except Exception as e:
-                            print(f"ERROR: Failed to insert image: {e}")
-                            import traceback
-                            traceback.print_exc()
-                    else:
-                        print("DEBUG: No metadata context found for image insertion")
-                        # Try to get fresh metadata for this query as fallback
-                        try:
-                            import asyncio
-                            from helpers.vector_database import get_vdb_response
+                # Get full response from chunks
+                response = "".join(response_chunks)
+                print(f"DEBUG generate_final_response: Completed streaming for question: {query_for_response[:50]}...")
+                
+                # Send stream complete action
+                print(f"DEBUG: Sending streamComplete action directly")
+                await send_websocket_action("streamComplete", websocket)
+                print(f"DEBUG: Sending formatMarkdown action directly")
+                await send_websocket_action("formatMarkdown", websocket)
+                
+                # Now that the response is complete, try to insert image if we have metadata context
+                metadata_context = state.get("metadata_context", [])
+                print(f"DEBUG: Metadata context: {metadata_context}")
+                if metadata_context:
+                    print(f"DEBUG: Found metadata context with {len(metadata_context)} items")
+                    try:
+                        await insert_image_rag_response(response, metadata_context, websocket)
+                        print("DEBUG: Successfully inserted image after response")
+                    except Exception as e:
+                        print(f"ERROR: Failed to insert image: {e}")
+                        import traceback
+                        traceback.print_exc()
+                else:
+                    print("DEBUG: No metadata context found for image insertion")
+                    # Try to get fresh metadata for this query as fallback
+                    try:
+                        import asyncio
+                        from helpers.vector_database import get_vdb_response
+                        
+                        # Use original query for metadata if we're responding to a search suggestion
+                        query_for_metadata = metadata_query if metadata_query else query_for_response
+                        
+                        async def _get_metadata():
+                            return await get_vdb_response(query_for_metadata)
                             
-                            # Use original query for metadata if we're responding to a search suggestion
-                            query_for_metadata = metadata_query if metadata_query else query_for_response
-                            
-                            async def _get_metadata():
-                                return await get_vdb_response(query_for_metadata)
-                                
-                            loop = asyncio.get_event_loop()
-                            fallback_metadata = loop.run_until_complete(_get_metadata())
-                            
-                            if fallback_metadata:
-                                print(f"DEBUG: Found fallback metadata with {(fallback_metadata)} items")
-                                await insert_image_rag_response(response, fallback_metadata, websocket)
-                                print("DEBUG: Successfully inserted image using fallback metadata")
-                        except Exception as e:
-                            print(f"ERROR: Failed to get or use fallback metadata: {e}")
-                    
-                    # state["response_streamed"] = True # RAG doesn't set this in its own state directly for supervisor
-                    print(f"DEBUG: RAG standalone response streamed and image handled (if any).")
-                    
-                except Exception as e:
-                    print(f"ERROR in generate_final_response (streaming part): {e}")
-                    # Default to non-streamed generation on error during streaming
-                    response = await chain.ainvoke({"question": query_for_response, "context": retrieved_info})
-            else:
-                print(f"DEBUG generate_final_response: In merged workflow. Generating RAG content but NOT streaming or inserting image directly.")
-                # Still generate the response for the supervisor to use, but no websocket actions here.
+                        loop = asyncio.get_event_loop()
+                        fallback_metadata = loop.run_until_complete(_get_metadata())
+                        
+                        if fallback_metadata:
+                            print(f"DEBUG: Found fallback metadata with {(fallback_metadata)} items")
+                            await insert_image_rag_response(response, fallback_metadata, websocket)
+                            print("DEBUG: Successfully inserted image using fallback metadata")
+                    except Exception as e:
+                        print(f"ERROR: Failed to get or use fallback metadata: {e}")
+                
+                # state["response_streamed"] = True # RAG doesn't set this in its own state directly for supervisor
+                print(f"DEBUG: RAG standalone response streamed and image handled (if any).")
+                
+            except Exception as e:
+                print(f"ERROR in generate_final_response (streaming part): {e}")
+                # Default to non-streamed generation on error during streaming
                 response = await chain.ainvoke({"question": query_for_response, "context": retrieved_info})
         else:
             print(f"DEBUG generate_final_response: No websocket available to send response. Generating content.")
