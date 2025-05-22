@@ -67,7 +67,7 @@ export const useSearchManagement = ({
 
       // --- Call Combined Backend Endpoint ---
       const backendBaseUrl = "http://127.0.0.1:5000"; // Add to env ...
-      const backendSearchUrl = `${backendBaseUrl}/search-http?term=${encodeURIComponent(
+      const backendSearchUrl = `${backendBaseUrl}/api/search-http?term=${encodeURIComponent(
         term
       )}`;
       console.log(
@@ -106,6 +106,22 @@ export const useSearchManagement = ({
   );
 
   // --- End: HTTP Search Logic ---
+  // Debounce HTTP search on searchTerm change (not used for now)
+  // // --- Start: useEffect for HTTP search on searchTerm change ---
+  // useEffect(() => {
+  //   if (searchMethod === "http") {
+  //     const handler = setTimeout(() => {
+  //       // We can call fetchHttpSearchResults directly.
+  //       // It already handles empty/trimmed terms to clear results.
+  //       fetchHttpSearchResults(searchTerm);
+  //     }, 300); // 300ms debounce
+
+  //     return () => {
+  //       clearTimeout(handler);
+  //     };
+  //   }
+  // }, [searchTerm, searchMethod, fetchHttpSearchResults]);
+  // // --- End: useEffect for HTTP search on searchTerm change ---
 
   // WebSocket listener for search results (remains largely the same)
   useEffect(() => {
@@ -139,7 +155,9 @@ export const useSearchManagement = ({
           (data.action === "searchVdbResults" ||
             data.action === "searchResults")
         ) {
-          const newResults: SearchResult[] = Array.isArray(data.payload) ? data.payload : [];
+          const newResults: SearchResult[] = Array.isArray(data.payload)
+            ? data.payload
+            : [];
           console.log(
             "[useSearchManagement] Received WebSocket search results:",
             newResults.length
@@ -240,6 +258,8 @@ export const useSearchManagement = ({
         return;
       }
 
+      onFilterTypeChange(null);
+
       if (searchMethod === "websocket") {
         if (!ws || ws.readyState !== WebSocket.OPEN) {
           console.warn(
@@ -267,7 +287,7 @@ export const useSearchManagement = ({
         fetchHttpSearchResults(term);
       }
     },
-    [ws, searchTerm, searchMethod, fetchHttpSearchResults] // Dependencies updated
+    [ws, searchTerm, searchMethod, fetchHttpSearchResults, onFilterTypeChange]
   );
 
   const clearSearch = useCallback(() => {
@@ -286,7 +306,7 @@ export const useSearchManagement = ({
     ): Promise<string | null> => {
       const backendBaseUrl = "http://127.0.0.1:5000"; // Add to env ...
 
-      const downloadApiUrl = `${backendBaseUrl}/download-dataset`;
+      const downloadApiUrl = `${backendBaseUrl}/api/download-dataset`;
 
       console.log(
         `[useSearchManagement] Requesting download for ${metadataUuid} with formats:`,

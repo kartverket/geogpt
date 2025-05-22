@@ -28,7 +28,7 @@ def tools_condition(state: Dict) -> str:
         String indicating if the agent wants to use a tool ("tools") or is finished (END)
     """
     from langchain_core.messages import AIMessage
-    import json
+    # import json # Removed redundant import
     
     # Debug current state
     print(f"DEBUG tools_condition: Checking for tool calls in state")
@@ -77,14 +77,24 @@ def tools_condition(state: Dict) -> str:
     print("DEBUG tools_condition: No tool calls found, returning END")
     return END
 
-class AgentState(TypedDict):
+class AgentState(TypedDict, total=False):
     """State for the agent-based RAG workflow."""
+    # Core fields
     messages: Annotated[Sequence[BaseMessage], add_messages]
-    websocket_id: str
-    intent: str
-    retrieval_results: List[Dict]
-    documents_relevant: bool
-    dataset_info: Dict
+    websocket_id: str # Will be optional due to total=False if not provided
+
+    # Context fields passed from supervisor or other nodes
+    chat_history: str
+    original_query: str
+    metadata_context: List[Any]
+    in_merged_workflow: bool # Key fix
+    rewrite_attempts: int # Counter for rewrite attempts
+
+    # Older/potentially unused fields (kept for now, optional due to total=False)
+    # intent: str # Removed unused state
+    # retrieval_results: List[Dict] # Removed unused state
+    # documents_relevant: bool # Removed unused state
+    # dataset_info: Dict # Removed unused state
 
 # Create wrapper function that handles state conversion
 def with_state_handling(node_func: Callable) -> Callable:
@@ -93,16 +103,19 @@ def with_state_handling(node_func: Callable) -> Callable:
         print(f"DEBUG RAG {node_func.__name__}: state type = {type(state)}")
         
         # Handle different state input types
-        if isinstance(state, ConversationState):
-            return await node_func(state.to_dict())
-        elif isinstance(state, dict):
+        if isinstance(state, dict): # Simplified: directly check for dict
             return await node_func(state)
         else:
             try:
                 if hasattr(state, "to_dict"):
                     state_dict = state.to_dict()
+                    return await node_func(state_dict) # Pass the converted dict
                 else:
-                    return await node_func(state_dict)
+                    # If it's not a dict and doesn't have to_dict, try to use as is if it's already a compatible state
+                    # This case might indicate an unexpected state type, but we'll let the node_func handle it
+                    # or it might be already an AgentState (though unlikely given the typical flow)
+                    print(f"DEBUG RAG {node_func.__name__}: state is not dict and has no to_dict, passing as is.")
+                    return await node_func(state) # Pass the original state
             except Exception as e:
                 print(f"DEBUG: Error converting state in {node_func.__name__}: {e}")
                 # Fallback state
@@ -299,8 +312,8 @@ class GeoNorgeRAGWorkflow:
         from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
         from helpers.websocket import send_websocket_message
         from ..utils.common import active_websockets
-        import json
-        
+        # import json # Removed - already imported globally if needed elsewhere, not directly used here beyond message parsing
+
         print("DEBUG agent_node: Starting agent processing")
         
         # Get messages and chat history from state
@@ -408,21 +421,14 @@ class GeoNorgeRAGWorkflow:
                 if history_pairs:
                     chat_history_context = "\n\nTidligere samtale:\n" + "\n\n".join(history_pairs)
         
-        system_content = f"""Du er en EKSPERT assistent for Geonorge, spesialisert på å finne geodata og datasett.
-        Ditt mål er å gi brukeren det mest nøyaktige og oppdaterte svaret ved å bruke verktøyene dine så ofte som mulig.
+        system_content = f"""Du er en EKSPERT assistent for Geonorge, kalt GeoGPT, spesialisert på å finne geodata og datasett.
 
         Du har tilgang til følgende verktøy:
 
-        1. retrieve_geo_information: Bruk dette verktøyet for å hente oppdatert geografisk informasjon. Bruk dette verktøyet for å finne spesifikke datasett.
-        2. search_dataset: Ikke bruk dette verktøyet.
-
-        Slik skal du svare:
-        - Bruk alltid et verktøy hvis det kan gi et mer presist eller oppdatert svar enn det du kan uten.
-        - Hvis det er usikkerhet, bruk et verktøy fremfor å svare basert på samtalen alene.
-        - Ikke spør brukeren om tillatelse – kall umiddelbart det mest relevante verktøyet.
+        1. retrieve_geo_information: Bruk dette verktøyet spesifikt for å søke etter datasett i GeoNorge-databasen. Søket er basert på en vektor-søk av brukerens beskrivelse av hva datasettet skal inneholde.
 
         Husk:
-        - Hvis du kan svare direkte, gjør det, men bare hvis du er helt sikker på at verktøyene ikke vil gi et bedre svar. 
+        - Hvis bruker spør om hva GeoGPT er, eller hva du tilbyr. Fortell om at du er en assistent som kan hjelpe med å finne geodata og datasett fra Geonorge. Gi eksempler på hva du kan hjelpe med, og hvordan du kan hjelpe.
         - AVSTÅ fra å svare på spørsmål som ikke er relevante for GIS, Geonorge, Geodata, datasett, eller andre GIS-relaterte emner.
         - Når brukeren ber om alternativer, relaterte emner eller bruker annen kontekstavhengig oppfølging, formuler et *nytt, spesifikt søk* for verktøyet basert på *hele samtalen*, ikke bare ved å legge til ord.
         - Hvis brukeren refererer til tidligere samtaler, bruk denne konteksten:  
@@ -534,7 +540,8 @@ class GeoNorgeRAGWorkflow:
                 "messages": messages + [response], 
                 "chat_history": state.get("chat_history", ""), 
                 "websocket_id": websocket_id,
-                "original_query": original_query
+                "original_query": original_query,
+                "rewrite_attempts": state.get("rewrite_attempts", 0)
             }
             
         except Exception as e:
@@ -548,7 +555,8 @@ class GeoNorgeRAGWorkflow:
                 "messages": messages + [AIMessage(content="Beklager, jeg kunne ikke prosessere spørsmålet ditt. Kan du prøve på nytt?")], 
                 "chat_history": state.get("chat_history", ""), 
                 "websocket_id": websocket_id,
-                "original_query": original_query
+                "original_query": original_query,
+                "rewrite_attempts": state.get("rewrite_attempts", 0)
             }
     
     async def handle_tool_calls(self, state: AgentState) -> Dict:
@@ -748,7 +756,8 @@ class GeoNorgeRAGWorkflow:
         # Return only the modified fields for LangGraph to merge
         return {
             "messages": tool_results, # Return only the ToolMessages added
-            "metadata_context": metadata_context
+            "metadata_context": metadata_context,
+            "rewrite_attempts": state.get("rewrite_attempts", 0) # Pass through rewrite_attempts
         }
     
     async def rewrite_query(self, state: AgentState) -> Dict:
@@ -803,13 +812,17 @@ class GeoNorgeRAGWorkflow:
         # Add the improved query
         new_messages.append(HumanMessage(content=response.content))
 
+        # Increment rewrite attempts
+        rewrite_attempts = state.get("rewrite_attempts", 0) + 1
+
         # Preserve other state fields when returning the update
         return {
             "messages": new_messages,
             "websocket_id": state.get("websocket_id"),
             "chat_history": state.get("chat_history"),
             "original_query": state.get("original_query"),
-            "metadata_context": state.get("metadata_context", []) # Preserve metadata
+            "metadata_context": state.get("metadata_context", []), # Preserve metadata
+            "rewrite_attempts": rewrite_attempts
         }
         
     async def assess_relevance(self, state: AgentState) -> Literal["generate", "rewrite"]:
@@ -928,10 +941,16 @@ class GeoNorgeRAGWorkflow:
             result = result.lower().strip()
             print(f"DEBUG assess_relevance: Relevance assessment result: {result}")
             
-            # Check if the result contains "yes"
+            # Check rewrite attempts
+            rewrite_attempts = state.get("rewrite_attempts", 0)
+            print(f"DEBUG assess_relevance: Rewrite attempts: {rewrite_attempts}")
+
             if "yes" in result:
                 return "generate"
             else:
+                if rewrite_attempts >= 2:
+                    print("DEBUG assess_relevance: Max rewrite attempts reached, proceeding to generate.")
+                    return "generate" # Max attempts reached, force generation
                 return "rewrite"
         except Exception as e:
             print(f"ERROR in assess_relevance: {e}")
@@ -945,7 +964,7 @@ class GeoNorgeRAGWorkflow:
         from langchain_core.prompts import PromptTemplate
         from llm import LLMManager
         from helpers.websocket import send_websocket_message, send_websocket_action
-        from ..utils.common import active_websockets, get_websocket
+        from ..utils.common import active_websockets
         import json
         
         messages = state["messages"]
@@ -1088,7 +1107,7 @@ class GeoNorgeRAGWorkflow:
             # Only send the chat response if this is not part of a mixed workflow
             # For mixed workflows, the supervisor will handle sending the combined message
             if not is_mixed_workflow:
-                print(f"DEBUG generate_final_response: Starting token-by-token streaming")
+                print(f"DEBUG generate_final_response: Starting token-by-token streaming for standalone RAG.")
                 # Send initial empty message to start streaming
                 print(f"DEBUG: Sending initial chatStream message")
                 await send_websocket_message("chatStream", {"payload": "", "isNewMessage": True}, websocket)
@@ -1148,22 +1167,26 @@ class GeoNorgeRAGWorkflow:
                         except Exception as e:
                             print(f"ERROR: Failed to get or use fallback metadata: {e}")
                     
-                    print(f"DEBUG: Marked response as streamed in state")
+                    # state["response_streamed"] = True # RAG doesn't set this in its own state directly for supervisor
+                    print(f"DEBUG: RAG standalone response streamed and image handled (if any).")
                     
                 except Exception as e:
-                    print(f"ERROR in generate_final_response: {e}")
-                    # Default to generate on error
+                    print(f"ERROR in generate_final_response (streaming part): {e}")
+                    # Default to non-streamed generation on error during streaming
                     response = await chain.ainvoke({"question": query_for_response, "context": retrieved_info})
             else:
-                print(f"DEBUG generate_final_response: Suppressing chat response in mixed workflow mode")
-                # Still generate the response for the supervisor to use
+                print(f"DEBUG generate_final_response: In merged workflow. Generating RAG content but NOT streaming or inserting image directly.")
+                # Still generate the response for the supervisor to use, but no websocket actions here.
                 response = await chain.ainvoke({"question": query_for_response, "context": retrieved_info})
         else:
-            print(f"DEBUG generate_final_response: No websocket available to send response")
+            print(f"DEBUG generate_final_response: No websocket available to send response. Generating content.")
             # Generate response without streaming
             response = await chain.ainvoke({"question": query_for_response, "context": retrieved_info})
         
-        return {"messages": [AIMessage(content=response)]}
+        return {
+            "messages": [AIMessage(content=response)],
+            "rewrite_attempts": state.get("rewrite_attempts", 0) # Pass through rewrite_attempts
+            }
 
     def _build_conversation_workflow(self):
         """Build the enhanced conversation workflow with agentic capabilities."""

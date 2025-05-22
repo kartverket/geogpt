@@ -1,0 +1,307 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "GeoGPT API",
+    "version": "1.0.0",
+    "description": "API for GeoGPT services"
+  },
+  "servers": [
+    {
+      "url": "/api"
+    }
+  ],
+  "paths": {
+    "/search-http": {
+      "get": {
+        "summary": "Performs search against Geonorge HTTP API and fetches all details.",
+        "parameters": [
+          {
+            "name": "term",
+            "in": "query",
+            "required": true,
+            "description": "Search term",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of search results with details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "uuid": {
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "restricted": {
+                        "type": "boolean"
+                      },
+                      "downloadUrl": {
+                        "type": ["string", "null"]
+                      },
+                      "downloadFormats": {
+                        "type": "array",
+                        "items": {
+                          "type": "object"
+                        }
+                      },
+                      "wmsUrl": {
+                        "type": ["object", "null"],
+                        "properties": {
+                          "wms_url": { "type": "string" },
+                          "available_layers": {
+                            "type": "array",
+                            "items": { "type": "object" }
+                          },
+                          "title": { "type": "string" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Search term is required"
+          },
+          "500": {
+            "description": "An unexpected server error occurred during search."
+          },
+          "502": {
+            "description": "Failed to contact Geonorge Search API"
+          }
+        }
+      }
+    },
+    "/download-dataset": {
+      "post": {
+        "summary": "Handle requests to order a dataset download link",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "metadataUuid": { "type": "string" },
+                  "downloadFormats": {
+                    "type": "array",
+                    "items": { "type": "object" }
+                  }
+                },
+                "required": ["metadataUuid", "downloadFormats"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully obtained download URL",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "downloadUrl": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON payload or missing parameters"
+          },
+          "403": { "description": "Dataset is restricted" },
+          "404": {
+            "description": "Order processed, but no download URL available"
+          },
+          "500": { "description": "An unexpected server error occurred" }
+        }
+      }
+    },
+    "/get-default-download-url/{metadata_uuid}": {
+      "get": {
+        "summary": "Get a download URL for a dataset using default format/area/projection settings.",
+        "parameters": [
+          {
+            "name": "metadata_uuid",
+            "in": "path",
+            "required": true,
+            "description": "Metadata UUID of the dataset",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully obtained default download URL",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "downloadUrl": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Metadata UUID is required" },
+          "403": { "description": "Dataset is restricted" },
+          "404": {
+            "description": "No default download formats found or no URL available"
+          },
+          "500": { "description": "An unexpected server error occurred" }
+        }
+      }
+    },
+    "/get-download-formats/{metadata_uuid}": {
+      "get": {
+        "summary": "Get the raw list of available download formats (areas, projections, formats) for a dataset.",
+        "parameters": [
+          {
+            "name": "metadata_uuid",
+            "in": "path",
+            "required": true,
+            "description": "Metadata UUID of the dataset",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully fetched download formats",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "type": "object" }
+                }
+              }
+            }
+          },
+          "400": { "description": "Metadata UUID is required" },
+          "404": {
+            "description": "No download formats found or dataset is restricted/inaccessible"
+          },
+          "500": {
+            "description": "An unexpected server error occurred fetching formats"
+          }
+        }
+      }
+    },
+    "/get-datasets-details": {
+      "post": {
+        "summary": "Fetch aggregated details (formats, default URL, WMS caps) for multiple datasets.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "datasets": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "uuid": { "type": "string" },
+                        "wmsServiceUrl": { "type": ["string", "null"] }
+                      },
+                      "required": ["uuid"]
+                    }
+                  }
+                },
+                "required": ["datasets"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully processed details for datasets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "downloadFormats": {
+                        "type": "array",
+                        "items": { "type": "object" }
+                      },
+                      "downloadUrl": { "type": ["string", "null"] },
+                      "wmsCapabilities": { "type": ["object", "null"] },
+                      "restricted": { "type": "boolean" },
+                      "error": { "type": ["string", "null"] }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Invalid payload" },
+          "500": { "description": "An unexpected server error occurred" }
+        }
+      }
+    },
+    "/wms-info": {
+      "get": {
+        "summary": "Handle WMS information requests",
+        "parameters": [
+          {
+            "name": "url",
+            "in": "query",
+            "required": true,
+            "description": "WMS URL",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully fetched WMS capabilities",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "title": { "type": "string" },
+                    "abstract": { "type": "string" },
+                    "available_layers": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": { "type": "string" },
+                          "title": { "type": "string" },
+                          "abstract": { "type": "string" },
+                          "srs": {
+                            "type": "array",
+                            "items": { "type": "string" }
+                          },
+                          "bbox": { "type": "object" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "WMS URL is required" },
+          "500": {
+            "description": "Failed to fetch WMS capabilities or an unexpected server error occurred"
+          }
+        }
+      }
+    }
+  }
+}
