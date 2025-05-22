@@ -126,44 +126,53 @@ async def call_model(state: Dict) -> Dict:
         return state
     
     # Create system prompt for tool calling
-    system_prompt = """Du er en kartassistent som hjelper brukere med å navigere kart.
+    system_prompt = """Du er en effektiv kartassistent. Ditt mål er å direkte utføre karthandlinger basert på brukerens forespørsel ved å returnere nødvendige verktøykall i JSON-format.
+    Fokuser KUN på karthandlinger. Andre assistenter vil håndtere spørsmål om datasett eller informasjon.
+
+    Vær proaktiv: Hvis brukeren ber om en klar karthandling (som å gå til et sted, zoome, eller legge til en markør), utfør handlingen umiddelbart ved å kalle det relevante verktøyet. Unngå å stille avklarende spørsmål hvis handlingen er tydelig.
     
-    Basert på brukerens forespørsel, bestem hvilke karthandlinger som skal utføres og returner dem i JSON-format.
-    
+    Spesifikk håndtering av "mitt område" eller lignende:
+    - Hvis brukerens spørsmål inneholder fraser som "mitt område", "her", "i nærheten", "rundt meg", eller lignende som indikerer brukerens nåværende posisjon, SKAL du bruke "FindMyLocation" verktøyet for å sentrere kartet på brukerens posisjon.
+    - Dette gjelder selv om resten av spørsmålet handler om å finne informasjon (f.eks. "Er det kvikkleire rundt mitt område?"). Din oppgave er å justere kartvisningen; en annen assistent tar seg av informasjonsinnhentingen.
+
+    Hvis en forespørsel inneholder flere deler, og noen er direkte kartrelaterte handlinger du kan utføre, prioriter å utføre disse kart-handlingene.
+
     Tilgjengelige verktøy:
-    1. "PanMap" - Flytter kartet til en spesifisert lokasjon
-       Format: {{"tool": "PanMap", "params": {{"location": "stedsnavnet"}}}} // Kan også ta koordinater hentet fra SearchAddress
+    1. "PanMap" - Flytter kartet til en spesifisert lokasjon. Bruk dette direkte hvis brukeren ber om å se eller gå til et sted.
+       Format: {{\"tool\": \"PanMap\", \"params\": {{\"location\": \"stedsnavnet\"}}}} // Kan også ta koordinater hentet fra SearchAddress
        
-    2. "ZoomMap" - Setter zoom-nivået på kartet (1-18)
-       Format: {{"tool": "ZoomMap", "params": {{"level": zoom_level}}}}
+    2. "ZoomMap" - Setter zoom-nivået på kartet (1-18). Bruk dette direkte hvis brukeren ber om å zoome.
+       Format: {{\"tool\": \"ZoomMap\", \"params\": {{\"level\": zoom_level}}}}\
        VIKTIG: "level" må være et heltall mellom 1 og 18, IKKE en streng som "increase" eller "decrease".
        
-    3. "AddMarkers" - Legger til markører på kartet
-       Format: {{"tool": "AddMarkers", "params": {{"locations": ["sted1", "sted2"], "clear": true/false}}}}
+    3. "AddMarkers" - Legger til markører på kartet. Bruk dette for å markere steder.
+       Format: {{\"tool\": \"AddMarkers\", \"params\": {{\"locations\": ["sted1", "sted2"], \"clear\": true/false}}}}\
        
-    4. "FindMyLocation" - Finner brukerens nåværende posisjon og sentrerer kartet på den
-       Format: {{"tool": "FindMyLocation", "params": {{"zoom_level": 14, "add_marker": true/false}}}}
+    4. "FindMyLocation" - Finner brukerens nåværende posisjon og sentrerer kartet på den. Bruk dette når brukeren spør "hvor er jeg", "vis mitt område", "finn kvikkleire her", etc.
+       Format: {{\"tool\": \"FindMyLocation\", \"params\": {{\"zoom_level\": 14, "add_marker": true/false}}}}\
        Du kan også bruke add_marker parameteren for å legge til en markør på brukerens posisjon.
        
-    5. "SearchAddress" - Søker etter en spesifikk norsk gateadresse for å finne koordinater og fullt navn.
-      Format: {{"tool": "SearchAddress", "params": {{"address": "gatenavn nummer...", "add_marker": true/false}}}}
+    5. "SearchAddress" - Søker etter en spesifikk norsk gateadresse for å finne koordinater og fullt navn. Bruk dette for gateadresser.
+      Format: {{\"tool\": \"SearchAddress\", \"params\": {{\"address\": \"gatenavn nummer...\", \"add_marker\": true/false}}}}\
       VIKTIG:
         - Dette verktøyet finner koordinatene og sentrerer kartet der automatisk.
         - Kartet vil automatisk zoome til nivå 14 med mindre du også kaller "ZoomMap".
         - Bruk "add_marker": true for å legge til en markør på adressen.
         - Du trenger ikke å inkludere postnummer/poststed, men det kan hjelpe for å finne riktig adresse.
     
-    Analyser brukerens forespørsel og returner en JSON-array med verktøykall som skal utføres.
-    Eksempel (søk adresse): [{{"tool": "SearchAddress", "params": {{"address": "Eidsdalen 7B"}}}}] // Senterer kartet + zoomer til 14 automatisk
-    Eksempel (søk adresse + marker): [{{"tool": "SearchAddress", "params": {{"address": "Storgata 1, Oslo", "add_marker": true}}}}] // Senterer kartet, zoomer til 14 auto + marker
-    Eksempel (søk adresse + zoom): [{{"tool": "SearchAddress", "params": {{"address": "Nygårdsgaten 5, Bergen"}}}}, {{"tool": "ZoomMap", "params": {{"level": 16}}}}] // Senterer kartet + zoomer til 16
-    Eksempel (panorering og zoom): [{{"tool": "PanMap", "params": {{"location": "Oslo"}}}}, {{"tool": "ZoomMap", "params": {{"level": 14}}}}] // Eksempel for panorering og zoom
+    Analyser brukerens forespørsel og returner en JSON-array med KUN de nødvendige verktøykallene for å utføre de forespurte handlingene.
+    Hvis brukeren for eksempel sier "ta meg til Kristiansand", returner kun PanMap-kallet. Ikke spør om bekreftelse.
+
+    Eksempel (søk adresse): [{{\"tool\": \"SearchAddress\", \"params\": {{\"address\": \"Eidsdalen 7B\"}}}}] // Senterer kartet + zoomer til 14 automatisk
+    Eksempel (søk adresse + marker): [{{\"tool\": \"SearchAddress\", \"params\": {{\"address\": \"Storgata 1, Oslo\", \"add_marker\": true}}}}] // Senterer kartet, zoomer til 14 auto + marker
+    Eksempel (søk adresse + zoom): [{{\"tool\": \"SearchAddress\", \"params\": {{\"address\": \"Nygårdsgaten 5, Bergen\"}}}}, {{\"tool\": \"ZoomMap\", \"params\": {{\"level\": 16}}}}] // Senterer kartet + zoomer til 16
+    Eksempel (panorering og zoom): [{{\"tool\": \"PanMap\", \"params\": {{\"location\": \"Oslo\"}}}}, {{\"tool\": \"ZoomMap\", \"params\": {{\"level\": 14}}}}] // Eksempel for panorering og zoom
     
     Du kan kjenne igjen disse handlingene:
     - Panorering: Når brukeren vil se et spesifikt sted (f.eks. "vis meg Oslo", "ta meg til Bergen")
     - Zooming: Når brukeren vil zoome inn eller ut (f.eks. "zoom til nivå 16", "zoom inn")
     - Markører: Når brukeren vil markere steder (f.eks. "marker Oslo og Bergen", "fjern alle markører")
-    - Min posisjon: Finne eller markere brukerens posisjon (f.eks. "vis hvor jeg er", "marker min posisjon")
+    - Min posisjon: Finne eller markere brukerens posisjon (f.eks. "vis hvor jeg er", "marker min posisjon", "sjekk forholdene her")
     """
     
     # Create tool calling prompt
@@ -330,19 +339,29 @@ async def call_tools(state: Dict) -> Dict:
                 # Directly call the implementation
                 tool_result_content = await pan_to_location(**action.tool_input)
                 
-                # Only update map_center from PanMap if SearchAddress hasn't already set it successfully
-                if not search_address_succeeded:
-                    if isinstance(tool_result_content, tuple) and len(tool_result_content) == 2:
-                        map_center = tool_result_content
-                        print(f"PanMap updating map_center: {map_center}")
-                    else:
-                         print(f"PanMap returned non-coordinate result, not updating map_center: {tool_result_content}")
-                else:
-                    print(f"PanMap skipping map_center update because SearchAddress succeeded earlier.")
-                # We add PanMap when SearchAddress succeeds, so we don't need to add it again here if search_address_succeeded.
-                if not search_address_succeeded and isinstance(tool_result_content, tuple) and len(tool_result_content) == 2:
+                if isinstance(tool_result_content, tuple) and len(tool_result_content) == 2: # PanMap got coordinates
+                    map_center = tool_result_content # Update map_center
                     if "PanMap" not in action_taken:
-                         action_taken.append("PanMap")
+                        action_taken.append("PanMap")
+                    print(f"PanMap updated map_center to: {map_center}")
+
+                    if not search_address_succeeded:
+                        # This is a direct PanMap call (not from SearchAddress, which has its own zoom logic).
+                        # Ensure zoom is at least 14 and this updated zoom is communicated.
+                        print(f"PanMap (direct) processing zoom. Current local zoom_level variable: {zoom_level}")
+                        if zoom_level < 14:
+                            zoom_level = 14 # Adjust zoom_level up to 14
+                            print(f"PanMap (direct): zoom_level was <14, adjusted to 14.")
+                        # else: zoom_level is already >= 14, it will be preserved.
+
+                        # For a direct pan, always ensure the current zoom level (which is now >= 14) is sent.
+                        if "ZoomMap" not in action_taken:
+                            action_taken.append("ZoomMap")
+                            print(f"PanMap (direct): Adding 'ZoomMap' to action_taken to send zoom_level: {zoom_level}.")
+                        
+                else: # PanMap did not return valid coordinates
+                     print(f"PanMap returned non-coordinate result: {tool_result_content}")
+                # Note: If PanMap was called due to SearchAddress, SearchAddress handles its own zoom defaults.
                          
             elif tool_name == "ZoomMap":
                 tool_result_content = await set_zoom_level(**action.tool_input)
@@ -590,20 +609,28 @@ Zoom-nivå: {zoom_level}
 Markører: {markers_count}
         
 VIKTIG:
-- Hvis SearchAddress ble kalt ({search_address_called}) og mislyktes med feilmeldingen: '{search_address_error}', informer brukeren KLART om at adressen '{original_search_query}' ikke ble funnet. Ikke si noe annet.
-- Hvis SearchAddress var vellykket og fant adressen '{found_address}', bekreft at kartet viser denne adressen. Nevn også hvis markør ble lagt til.
-- Hvis PanMap ble brukt for et generelt stedsnavn '{location}', bekreft at kartet viser dette stedet.
-- Hvis kun andre handlinger ble utført (zoom, markører, min posisjon), beskriv disse kort.
-- Hvis FindMyLocation ble brukt, si at kartet viser brukerens posisjon. Nevn også hvis markør ble lagt til.
-- Ikke dikt opp informasjon. Svar kun basert på handlingene og resultatene.
-        
-Eksempel (adresse ikke funnet): Beklager, jeg fant ingen adresse som heter 'Helvetesgata 12'.
-Eksempel (adresse funnet + markør): Ok, jeg har sentrert kartet på Eidsdalen 7B og la til en markør.
-Eksempel (adresse funnet, ingen markør): Greit, kartet viser nå Eidsdalen 7B.
-Eksempel (sted funnet): Kartet viser nå Oslo.
-Eksempel (kun zoom): Jeg har zoomet inn på kartet.
-Eksempel (min posisjon + markør): Ok, kartet viser nå din posisjon, og jeg har lagt til en markør der.
-        
+- HVIS SearchAddress ble faktisk kalt for en spesifikk adresse ({search_address_called} er sann):
+    - OG søket var vellykket ({search_address_succeeded} er sann):
+        Bekreft at kartet viser den funnet adressen '{found_address}'. Nevn også hvis en markør ble lagt til (hvis 'AddMarkers' er i strengen '{actions}' og {markers_count} > 0).
+        Eksempel: Ok, jeg har sentrert kartet på {found_address} og la til en markør.
+    - ELLERS (søket var IKKE vellykket, dvs. {search_address_succeeded} er usann):
+        - HVIS det var en spesifikk feilmelding ('{search_address_error}' ikke er tom):
+            Informer brukeren: Beklager, jeg kunne ikke finne adressen '{original_search_query}' på grunn av følgende feil: {search_address_error}.
+        - ELLERS (ingen spesifikk feilmelding):
+            Informer brukeren: Beklager, jeg fant ingen adresse som heter '{original_search_query}'.
+- ELLERS (SearchAddress ble IKKE kalt, dvs. {search_address_called} er usann):
+    - Formuler en KORT og POSITIV bekreftelse på handlingene som faktisk ble utført. IKKE nevn noe om å ikke finne adresser i dette tilfellet.
+    - Hvis PanMap ble brukt for å vise '{location}', nevn at kartet viser dette stedet.
+    - Hvis AddMarkers ble brukt (og {markers_count} > 0), nevn at markør(er) ble lagt til.
+    - Hvis FindMyLocation ble brukt, si at kartet viser brukerens posisjon.
+    - Hvis ZoomMap ble brukt (og ikke allerede dekket av PanMap/FindMyLocation), nevn det nye zoomnivået {zoom_level}.
+    - Kombiner disse til en flytende setning.
+    Eksempel (PanMap til Oslo og AddMarkers for Trondheim): Ok, jeg har lagt til en markør i Trondheim og kartet viser nå Oslo.
+    Eksempel (PanMap til Bergen, zoom til 10): Kartet viser nå Bergen og er zoomet til nivå 10.
+    Eksempel (AddMarkers for 2 steder): Greit, 2 markører er lagt til.
+    Eksempel (FindMyLocation med markør): Ok, kartet viser din posisjon og en markør er lagt til.
+
+Ikke dikt opp informasjon. Svar kun basert på handlingene og resultatene.
 Hold svaret KORT, konsist og direkte relatert til handlingene.
 """
 
@@ -618,6 +645,7 @@ Hold svaret KORT, konsist og direkte relatert til handlingene.
     ])
     
     # Prepare data for the prompt
+    search_address_succeeded = bool(found_address_text) # True if found_address_text is not empty
     prompt_data = {
         "query": latest_query,
         "actions": ", ".join(action_taken) if action_taken else "ingen",
@@ -626,6 +654,7 @@ Hold svaret KORT, konsist og direkte relatert til handlingene.
         "zoom_level": state.get("zoom_level", 14),
         "markers_count": len(state.get("markers", [])),
         "found_address": found_address_text or "",
+        "search_address_succeeded": search_address_succeeded, # Added boolean flag
         "search_address_called": search_address_called,
         "search_address_error": search_address_error or "", 
         "original_search_query": original_search_query or ""
@@ -674,38 +703,38 @@ async def send_map_update(state: Dict) -> Dict:
         try:
             action_taken = state.get("action_taken", [])
             map_data = {}
+
+            # 1. Handle Centering: Prioritize FindMyLocation
+            if "FindMyLocation" in action_taken:
+                map_data["findMyLocation"] = True
+                # Add marker preference for FindMyLocation, if any
+                # state["add_marker_at_location"] is set by call_tools based on FindMyLocation input.
+                add_marker_pref = state.get("add_marker_at_location", False)
+                if add_marker_pref:
+                    map_data["addMarker"] = True # Client handles adding marker at its found location
             
-            # Center Update: Triggered by PanMap or FindMyLocation
-            if "PanMap" in action_taken or "FindMyLocation" in action_taken:
-                 map_center = state.get("map_center")
-                 if map_center:
-                      map_data["center"] = map_center
-                 else: # FindMyLocation needs client side action
-                      if "FindMyLocation" in action_taken:
-                           map_data["findMyLocation"] = True # Trigger client-side location
-                           # Add marker preference for FindMyLocation if applicable
-                           add_marker_loc = state.get("add_marker_at_location", False)
-                           if add_marker_loc:
-                                map_data["addMarker"] = True # Add marker at user's location
+            elif "PanMap" in action_taken: # Executed only if FindMyLocation didn't take precedence for centering
+                map_center_coords = state.get("map_center")
+                if map_center_coords: # This should be set if PanMap or SearchAddress ran
+                    map_data["center"] = map_center_coords
             
-            # Marker Update: Triggered by AddMarkers
-            # Includes markers added by SearchAddress (which adds AddMarkers to action_taken)
-            # Also handles markers added by FindMyLocation (via addMarker flag above)
+            # 2. Handle Zoom Level
+            # state["zoom_level"] is authoritatively updated by call_tools if FindMyLocation, ZoomMap, 
+            # or SearchAddress (implicitly invoking zoom logic) ran.
+            # We send the zoom if FindMyLocation was actioned (as it determines its own zoom) 
+            # OR if ZoomMap was explicitly actioned (either by direct tool or implicitly by SearchAddress/PanMap).
+            if "FindMyLocation" in action_taken or "ZoomMap" in action_taken:
+                current_zoom = state.get("zoom_level")
+                # Ensure zoom_level is valid and set by call_tools
+                if current_zoom is not None: 
+                    map_data["zoom"] = current_zoom
+            
+            # 3. Handle Markers from AddMarkers tool (list of specific markers)
             if "AddMarkers" in action_taken:
-                markers = state.get("markers")
-                if markers is not None: # Send even if empty list if action was taken
-                     map_data["markers"] = markers
-                # Check if markers were cleared (check tool input, not stored in state currently)
-                # This requires looking back at tool inputs, maybe simplify?
-                # For now, assume client handles clearing if markers list is empty.
-                # map_data["clearMarkers"] = state.get("clear_markers", False) # Needs state update
-            
-            # Zoom Update: Triggered by ZoomMap 
-            # SearchAddress also triggers ZoomMap implicitly if needed
-            if "ZoomMap" in action_taken:
-                 zoom = state.get("zoom_level")
-                 if zoom is not None:
-                      map_data["zoom"] = zoom
+                markers_list = state.get("markers")
+                # Send markers_list even if it's empty, as this could be the result of a "clear markers" action.
+                if markers_list is not None: 
+                    map_data["markers"] = markers_list
             
             print(f"Sending map update data: {map_data}")
             

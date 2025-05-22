@@ -22,6 +22,7 @@ from .utils.message_utils import (
     standardize_messages,
     get_last_message_by_role
 )
+from helpers.websocket import send_websocket_message, send_websocket_action
 import re
 import asyncio
 import uuid
@@ -299,119 +300,220 @@ class GeoNorgeSupervisor:
         
         async def merge_results(state):
             """
-            Merge results from multiple workflows run in parallel by concatenating
-            the map response (if any) followed by the RAG response (if any).
+            Merge results from multiple workflows run in parallel by generating a
+            synthesized response using an LLM based on RAG and map outputs.
             """
-            print("DEBUG merge_results: Starting direct concatenation merge.")
+            print("DEBUG merge_results: Starting LLM-based merge.")
             state_dict = standardize_state(state)
+
             results = state_dict.get("results", {})
             websocket_id = state_dict.get("websocket_id", "")
-            
-            # If not enough results for merging (less than 2), pass through to process_result
-            # This handles cases where only one workflow ran successfully or both failed.
+            websocket = self.active_websockets.get(websocket_id)
+
             if len(results) < 2:
-                print("DEBUG merge_results: Not enough results to merge, passing state to process_result.")
-                # Ensure state is updated from the single result if only one succeeded
+                print("DEBUG merge_results: Not enough results to merge with LLM, passing state to process_result.")
                 if len(results) == 1:
                     single_result = list(results.values())[0]
+                    # Ensure messages from single result are primary if no LLM merge occurs
+                    if "messages" in single_result and single_result["messages"]:
+                         state_dict["messages"] = standardize_messages(single_result["messages"])
+                         state_dict["chat_history"] = format_history(state_dict["messages"])
                     state_dict = self._update_state_from_result(state_dict, single_result)
-                # Ensure 'results' contains error info if workflows failed
-                # process_result will handle formatting the final message from state['messages'] or the single result.
-                return state_dict 
+                return state_dict
 
-            map_response_content = ""
-            rag_response_content = ""
-            error_messages = []
+            original_user_query_content = "Brukerforespørsel ikke funnet."
+            original_messages_list = state_dict.get("messages", [])
+            last_human_msg_obj = get_last_message_by_role(original_messages_list, "human")
+            if last_human_msg_obj:
+                std_human_msg = standardize_message(last_human_msg_obj)
+                original_user_query_content = std_human_msg.get("content", original_user_query_content)
 
-            # Extract content from Map result
+            map_response_content = "Kartoperasjon utført." # Default if no content
+            rag_response_content = "Informasjon hentet." # Default if no content
+            error_messages_details = []
+
             if "map" in results:
                 map_result = results["map"]
                 if "error" not in map_result:
                     messages = standardize_messages(map_result.get("messages", []))
                     last_map_msg = get_last_message_by_role(messages, "assistant")
                     if isinstance(last_map_msg, dict):
-                        map_response_content = last_map_msg.get("content", "")
+                        content = last_map_msg.get("content", "").strip()
+                        if content: map_response_content = content
                     elif isinstance(last_map_msg, str):
-                         map_response_content = last_map_msg
-                    # Optionally skip purely procedural map messages if desired
-                    is_likely_procedural = len(map_response_content.split()) < 10 and ("kart" in map_response_content.lower() or "zoom" in map_response_content.lower() or "lag" in map_response_content.lower())
-                    if is_likely_procedural:
-                        print(f"DEBUG: Skipping likely procedural message from map: '{map_response_content}'")
-                        map_response_content = "" # Clear it so it's not added
+                        content = last_map_msg.strip()
+                        if content: map_response_content = content
                 else:
-                    error_messages.append(f"Feil i Kart: {map_result['error']}")
+                    error_messages_details.append(f"Feil i Kart: {map_result['error']}")
 
-            # Extract content from RAG result
             if "rag" in results:
                 rag_result = results["rag"]
                 if "error" not in rag_result:
                     messages = standardize_messages(rag_result.get("messages", []))
                     last_rag_msg = get_last_message_by_role(messages, "assistant")
                     if isinstance(last_rag_msg, dict):
-                        rag_response_content = last_rag_msg.get("content", "")
+                        content = last_rag_msg.get("content", "").strip()
+                        if content: rag_response_content = content
                     elif isinstance(last_rag_msg, str):
-                        rag_response_content = last_rag_msg
+                        content = last_rag_msg.strip()
+                        if content: rag_response_content = content
                 else:
-                    error_messages.append(f"Feil i Informasjonssøk: {rag_result['error']}")
-            
-            # --- Combine the content ---
-            combined_parts = []
-            if map_response_content:
-                combined_parts.append(map_response_content)
-            if rag_response_content:
-                combined_parts.append(rag_response_content)
-            if error_messages:
-                 # Prepend error messages if both content parts are empty
-                 if not combined_parts:
-                      combined_parts.extend(error_messages)
-                 else: # Append error messages otherwise
-                      combined_parts.append("\nFeil oppstod:")
-                      combined_parts.extend(error_messages)
+                    error_messages_details.append(f"Feil i Informasjonssøk: {rag_result['error']}")
 
-            # Join the parts into the final response
-            final_response_content = "\n\n".join(combined_parts).strip()
-            
-            if not final_response_content:
-                final_response_content = "Beklager, jeg kunne ikke fullføre forespørselen."
+            final_response_content = ""
 
-            # --- Merge State (e.g., Map State, Metadata) ---
-            # This helper merges map state (prioritizing map workflow) and metadata
-            merged_state = self._update_state_from_results(state_dict, results) 
-            
-            # --- Construct Final Merged State ---
-            # Use the original user query message + the new concatenated assistant response
-            # --- FIX: Find the actual last human message dictionary ---
-            last_human_message_dict = None
-            original_messages = state_dict.get("messages", [])
-            for msg in reversed(original_messages):
-                # Standardize msg to check its role reliably
-                std_msg_check = standardize_message(msg)
-                if std_msg_check.get("role") in ["human", "user"]:
-                    # Ensure we append the original message (or a standardized dict version)
-                    # Let's use the standardized version for consistency
-                    last_human_message_dict = std_msg_check 
-                    break # Found the latest one
-            # --- End FIX ---
-
-            # user_query_message = get_last_message_by_role(state_dict.get("messages", []), "human") # Old way, likely returned string
-            final_messages = []
-            # if user_query_message: # Old way
-            #     final_messages.append(user_query_message) # Old way
-            if last_human_message_dict:
-                 final_messages.append(last_human_message_dict) # Append the found dictionary
+            if error_messages_details and not (map_response_content != "Kartoperasjon utført." or rag_response_content != "Informasjon hentet."):
+                # Only errors, no content from successful workflows
+                final_response_content = "Beklager, det oppstod feil under behandling av forespørselen:\n" + "\n".join(error_messages_details)
             else:
-                 print("WARN merge_results: Could not find last human message in state.")
-                 # Optionally, add a placeholder or skip? For now, just log.
+                # At least one workflow produced content or no errors occurred, try to synthesize
+                prompt_template_str = f"""
+                Du er en hjelpsom assistent som kombinerer informasjon fra ulike kilder til et helhetlig og godt formatert svar.
+                Brukerens opprinnelige spørsmål var: "{original_user_query_content}"
+
+                Her er informasjonen du har mottatt:
+                1.  **Fra Kartsystemet:** 
+                    {map_response_content}
+                
+                2.  **Fra Informasjonssystemet (RAG):**
+                    {rag_response_content}
+
+                VENNLIGST FØLG DISSE RETNINGSLINJENE FOR SVARFORMATERING:
+                -   Start med en kort, direkte oppsummering eller svar på brukerens hovedspørsmål.
+                -   Bruk Markdown for å strukturere svaret ditt tydelig.
+                    -   Bruk **bold** for å fremheve nøkkelinformasjon eller titler.
+                    -   Bruk punktlister (med `-` eller `*`) for å presentere flere elementer, resultater eller detaljer på en oversiktlig måte.
+                    -   Bruk overskrifter (f.eks. `### Detaljer fra Kart`) hvis du trenger å skille tydelig mellom komplekse informasjonsblokker (bruk sparsomt).
+                -   Integrer informasjonen fra kart- og informasjonssystemet naturlig i svaret ditt. Unngå å bare liste opp hva hvert system sa.
+                -   Inkluder alle relevante datasett som er nært relatert til brukerens spørsmål.
+                -   Hvis ett system ga en klar handling (f.eks. "Kartet viser nå X") og det andre ga informasjon (f.eks. "Datasettet Y handler om Z"), kombiner dette på en logisk måte. Eksempel: "Kartet viser nå X. Når det gjelder Y, er dette et datasett som handler om Z."
+                -   Hvis en av informasjonskildene indikerer en feil, nevn dette på en hjelpsom måte, men prøv fortsatt å gi et nyttig svar med den andre informasjonen hvis mulig.
+                -   Unngå fraser som "Basert på informasjonen...", "Informasjon fra kartsystemet sier...", med mindre det er helt nødvendig for klarhet. Gi i stedet det direkte, kombinerte svaret.
+                -   Hold svaret så konsist som mulig samtidig som det er fullstendig og lett å lese.
+                -   Sørg for god norsk språkbruk og grammatikk.
+
+                Formuler et sammenhengende, velformatert og nyttig svar til brukeren.
+                """
+                if error_messages_details:
+                    prompt_template_str += "\n\nFølgende feil oppstod underveis:\n" + "\n".join(error_messages_details)
+                    prompt_template_str += "\nTa hensyn til disse feilene i ditt svar, om nødvendig."
+
+                
+                prompt = ChatPromptTemplate.from_template(prompt_template_str)
+                chain = prompt | self.model | StrOutputParser()
+                
+                print(f"DEBUG merge_results: Preparing to synthesize response. RAG content: '{rag_response_content[:50]}...', Map content: '{map_response_content[:50]}...'")
+
+                llm_synthesized_content = None
+                llm_synthesis_successful = False
+                # streamed_to_websocket will be set by the LLM calling logic below
+                # and used later to set merged_state["response_streamed"]
+                streamed_to_websocket_in_this_node = False 
+
+                try:
+                    if websocket:
+                        print(f"DEBUG merge_results: Streaming LLM-merged response to websocket {websocket_id}")
+                        await send_websocket_message("chatStream", {"payload": "", "isNewMessage": True}, websocket)
+                        
+                        current_full_response = ""
+                        async for chunk_content in chain.astream({}):
+                            if chunk_content: # Ensure there's content in the chunk
+                                await send_websocket_message("chatStream", {"payload": chunk_content}, websocket)
+                                current_full_response += chunk_content
+                        
+                        llm_synthesized_content = current_full_response.strip()
+                        if llm_synthesized_content: # Check if LLM produced any content
+                            llm_synthesis_successful = True
+                        streamed_to_websocket_in_this_node = True # Attempted to stream
+                        
+                        await send_websocket_action("streamComplete", websocket)
+                        await send_websocket_action("formatMarkdown", websocket)
+                        print(f"DEBUG merge_results: Successfully streamed LLM-merged response. Length: {len(llm_synthesized_content or '')}")
+                    else: # No websocket, just invoke for content
+                        print(f"DEBUG merge_results: Invoking LLM for synthesized response (no websocket).")
+                        llm_synthesized_content = await chain.ainvoke({})
+                        if llm_synthesized_content: # Check if LLM produced any content
+                            llm_synthesis_successful = True
+                        print(f"DEBUG merge_results: Successfully synthesized response (no websocket). Length: {len(llm_synthesized_content or '')}")
+
+                except Exception as e:
+                    print(f"ERROR merge_results: LLM synthesis/streaming failed: {e}")
+                    llm_synthesis_successful = False # Explicitly set on error
+
+                if llm_synthesis_successful and llm_synthesized_content:
+                    final_response_content = llm_synthesized_content
+                else:
+                    # LLM failed or produced no content. Fallback to concatenation.
+                    print(f"INFO merge_results: LLM synthesis failed or produced no content. Using fallback concatenation.")
+                    fallback_parts = []
+                    if map_response_content != "Kartoperasjon utført.": fallback_parts.append(map_response_content)
+                    if rag_response_content != "Informasjon hentet.": fallback_parts.append(rag_response_content)
+                    
+                    if error_messages_details:
+                        if fallback_parts: # Append error details if there was some other content
+                            fallback_parts.append(f"\\n\\nI tillegg oppstod følgende feil i noen av de underliggende systemene: {'; '.join(error_messages_details)}")
+                        else: # No other content, errors are the main message for this fallback
+                             # This case (no RAG/Map content, LLM failed, but errors exist)
+                             # means the initial check at line ~358 (if error_messages_details and not (successful_content...))
+                             # didn't set final_response_content, so we set it based on errors here.
+                            final_response_content = "Beklager, det oppstod feil under behandling av forespørselen:\\n" + "\\n".join(error_messages_details)
+                    
+                    if not final_response_content: # If not set by the error-specific path above
+                        final_response_content = "\\n\\n".join(fallback_parts).strip()
+
+                    if not final_response_content: # Still no content after all fallback attempts
+                        final_response_content = "Beklager, jeg kunne ikke fullføre forespørselen på grunn av en intern feil (fallback)."
+            
+            # This final_response_content is now set either by:
+            # 1. The initial check (lines 358-360) if only errors and no workflow content.
+            # 2. Successful LLM synthesis.
+            # 3. Fallback concatenation if LLM failed.
+
+            # Safeguard if final_response_content is somehow still empty
+            if not final_response_content: 
+                final_response_content = "Beklager, jeg kunne ikke behandle forespørselen din fullstendig."
+
+            merged_state = self._update_state_from_results(state_dict, results)
+            
+            last_human_message_dict = None
+            if last_human_msg_obj: # Use the already fetched and standardized one
+                 last_human_message_dict = standardize_message(last_human_msg_obj)
+
+            final_messages = []
+            if last_human_message_dict:
+                 final_messages.append(last_human_message_dict)
+            else:
+                 print("WARN merge_results: Could not find last human message in state for LLM merge.")
             
             final_messages.append({"role": "assistant", "content": final_response_content})
 
             merged_state["messages"] = final_messages
             merged_state["chat_history"] = format_history(final_messages)
-            merged_state["workflow_result"] = {"merged": True, "concatenated": True, "content": final_response_content} 
-            # Mark as not streamed since we removed the LLM streaming part
-            merged_state["response_streamed"] = False 
+            merged_state["workflow_result"] = {"merged_by_llm": True, "content": final_response_content}
+            
+            if websocket and merged_state.get("metadata_context") and final_response_content:
+                print(f"DEBUG merge_results: Attempting to insert image based on merged content and metadata.")
+                try:
+                    await insert_image_rag_response(
+                        final_response_content,
+                        merged_state["metadata_context"],
+                        websocket
+                    )
+                    print("DEBUG merge_results: Successfully called insert_image_rag_response.")
+                except Exception as e:
+                    print(f"ERROR merge_results: Failed to insert image: {e}")
+                    import traceback
+                    traceback.print_exc()
+            else:
+                if not websocket: print("DEBUG merge_results: No websocket for image insertion.")
+                if not merged_state.get("metadata_context"): print("DEBUG merge_results: No metadata_context for image insertion.")
+                if not final_response_content: print("DEBUG merge_results: No final_response_content for image insertion.")
 
-            print(f"DEBUG merge_results: Concatenated response: '{final_response_content[:100]}...'")
+            # Set response_streamed based on whether streaming actually happened to a websocket
+            if websocket and llm_synthesis_successful and streamed_to_websocket_in_this_node:
+                merged_state["response_streamed"] = True
+            else:
+                merged_state["response_streamed"] = False
             
             return merged_state
         
@@ -430,9 +532,7 @@ class GeoNorgeSupervisor:
                 "zoom_level": state_dict.get("zoom_level"),
                 "visible_layers": state_dict.get("visible_layers", []),
                 "markers": state_dict.get("markers", []),
-                # Include the results dict for potential debugging on client/session storage
                 "results_from_workflows": state_dict.get("results", {}), 
-                # Keep the simple summary 
                 "workflow_result": state_dict.get("workflow_result", {}),
                 "response_streamed": state_dict.get("response_streamed", False)
             }
@@ -446,9 +546,6 @@ class GeoNorgeSupervisor:
             final_state = {k: v for k, v in final_state.items() if v is not None}
             
             print(f"DEBUG: Final state keys before END: {final_state.keys()}")
-            
-            # Ensure metadata gets handled if present
-            await self._handle_metadata_image(final_state)
             
             return final_state
         

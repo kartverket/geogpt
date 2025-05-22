@@ -80,8 +80,10 @@ const SearchForm: React.FC<SearchFormProps> = ({
       placeholder={
         isWebsocketSearch ? "Spør GeoGPT..." : "Søk etter datasett..."
       }
-      className={`pl-9 ${rightPadding} relative rounded-lg focus:ring-0 focus:outline-none focus:border-0 border-0 outline-none ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 ${
-        isWebsocketSearch ? "bg-transparent" : "bg-white border border-gray-300"
+      className={`pl-9 ${rightPadding} relative rounded-lg outline-none ${
+        isWebsocketSearch
+          ? "bg-transparent border-0 focus:ring-0 focus:border-0 ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 outline-none"
+          : "bg-white border border-gray-300 focus:border-color-gn-primary focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
       }`}
       disabled={isSearching}
     />
