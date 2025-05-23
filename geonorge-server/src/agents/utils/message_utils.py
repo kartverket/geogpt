@@ -33,6 +33,45 @@ def fix_message_dict_for_conversion(message: Dict) -> Dict:
     
     return fixed_msg
 
+# New utility function to convert dict messages to proper Message objects
+def convert_dict_to_message_objects(messages: List) -> List:
+    """
+    Convert dict messages to proper LangChain Message objects.
+    
+    Args:
+        messages: List of messages (mix of dicts and Message objects)
+        
+    Returns:
+        List of properly formatted Message objects
+    """
+    formatted_messages = []
+    
+    for msg in messages:
+        if isinstance(msg, (SystemMessage, HumanMessage, AIMessage)):
+            # Already a proper message object
+            formatted_messages.append(msg)
+        elif isinstance(msg, dict):
+            # Convert dict to proper message object
+            role = msg.get("role", "")
+            content = msg.get("content", "")
+            
+            if role == "system":
+                formatted_messages.append(SystemMessage(content=content))
+            elif role == "human" or role == "user":
+                formatted_messages.append(HumanMessage(content=content))
+            elif role == "assistant" or role == "ai":
+                # Handle tool calls if present
+                if "additional_kwargs" in msg and "tool_calls" in msg["additional_kwargs"]:
+                    # Create AIMessage with tool calls
+                    formatted_messages.append(AIMessage(
+                        content=content,
+                        additional_kwargs={"tool_calls": msg["additional_kwargs"]["tool_calls"]}
+                    ))
+                else:
+                    formatted_messages.append(AIMessage(content=content))
+    
+    return formatted_messages
+
 # New utility function to standardize message handling
 def standardize_message(message: Union[Dict, BaseMessage]) -> Dict:
     """

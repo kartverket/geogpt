@@ -2210,3 +2210,75 @@ Vanlige formater og deres brukervennlighet for ikke-GIS-brukere:
 *   **GML (Geography Markup Language):** Et XML-basert format som kan være komplekst å jobbe med uten GIS-kunnskap.
 
 Generelt sett vil **GeoJSON** og **CSV** være de enkleste formatene å starte med hvis du ikke har GIS-erfaring.
+2025-05-23 14:10:02,414 - agents.supervisor - INFO - Session: 4989090256
+  User: hei
+  Assistant: Hei! Jeg er GeoGPT, en ekspertassistent for Geonorge. Jeg er spesialisert på å hjelpe deg med å finne geodata og datasett.
+
+Jeg kan for eksempel hjelpe deg med å finne:
+
+*   Datasett for et spesifikt geografisk område (f.eks. "Finn datasett for Oslofjorden")
+*   Datasett som inneholder spesifikk informasjon (f.eks. "Finn datasett med informasjon om vegetasjonstyper")
+*   Datasett som er egnet for en bestemt analyse (f.eks. "Finn høydedata som er egnet for å lage en 3D-modell")
+
+Bare fortell meg hva du leter etter, så skal jeg gjøre mitt beste for å hjelpe deg!
+
+2025-05-23 14:10:11,680 - agents.supervisor - INFO - Session: 4989090256
+  User: hva er fkb
+  Assistant: Jeg kan hjelpe deg med å finne datasett relatert til FKB (Felles kartdatabase). Vil du at jeg skal søke etter FKB-relaterte datasett i Geonorge?
+
+2025-05-23 14:10:34,234 - agents.supervisor - INFO - Session: 4989090256
+  User: Ja
+  Assistant: Her er informasjon om FKB datasett i Norge:
+
+**Felles KartdataBase (FKB)**
+*   Beskrivelse: En samling datasett som utgjør en sentral del av grunnkartet, inkludert høyde, vann, markslag (AR5), arealbruk, bygninger, ledninger, veg, jernbane og flyplass.
+*   Sist oppdatert: 01.03.2014
+*   Mer informasjon: [https://kartkatalog.geonorge.no/metadata/Felles-KartdataBase-(FKB)/0e90ca71-6a02-4036-bd94-f219fe64645f](https://kartkatalog.geonorge.no/metadata/Felles-KartdataBase-(FKB)/0e90ca71-6a02-4036-bd94-f219fe64645f)
+
+**FKB-Bane**
+*   Beskrivelse: Data om infrastruktur for skinnegående kjøretøy, som jernbane, tunnelbane og sporveg.
+*   Sist oppdatert: 15.01.2017
+*   Mer informasjon: [https://kartkatalog.geonorge.no/metadata/FKB-Bane/3165138f-1461-44fe-8b10-eac44e08a10a](https://kartkatalog.geonorge.no/metadata/FKB-Bane/3165138f-1461-44fe-8b10-eac44e08a10a)
+
+**FKB-Lufthavn**
+*   Beskrivelse: Et begrenset utvalg av objekttyper for lufthavner.
+*   Sist oppdatert: 15.01.2017
+*   Mer informasjon: [https://kartkatalog.geonorge.no/metadata/FKB-Lufthavn/23dfcc33-fb04-4898-aa88-68b49c4bfea7](https://kartkatalog.geonorge.no/metadata/FKB-Lufthavn/23dfcc33-fb04-4898-aa88-68b49c4bfea7)
+
+**FKB-Bygning**
+*   Beskrivelse: Detaljert bygningsinformasjon, inkludert alle typer bygninger og bygningsvedheng.
+*   Sist oppdatert: 15.01.2017
+*   Mer informasjon: [https://kartkatalog.geonorge.no/metadata/FKB-Bygning/8b4304ea-4fb0-479c-a24d-fa225e2c6e97](https://kartkatalog.geonorge.no/metadata/FKB-Bygning/8b4304ea-4fb0-479c-a24d-fa225e2c6e97)
+
+**FKB-BygnAnlegg**
+*   Beskrivelse: Bygningsmessige anlegg som ikke er spesifisert i andre FKB-datasett, som murer, gjerder og kaier.
+*   Sist oppdatert: 15.01.2017
+*   Mer informasjon: [https://kartkatalog.geonorge.no/metadata/FKB-BygnAnlegg/ede5ffb2-ee2a-44a3-852d-369a14d97f2e](https://kartkatalog.geonorge.no/metadata/FKB-BygnAnlegg/ede5ffb2-ee2a-44a3-852d-369a14d97f2e)
+
+**FKB-Arealbruk**
+*   Beskrivelse: Den fysiske bruken av et areal, ikke heldekkende.
+*   Sist oppdatert: 15.01.2017
+*   Mer informasjon: [https://kartkatalog.geonorge.no/metadata/FKB-Arealbruk/87b31015-a3de-4540-9b8b-cb1bf4e1cb3a](https://kartkatalog.geonorge.no/metadata/FKB-Arealbruk/87b31015-a3de-4540-9b8b-cb1bf4e1cb3a)
+
+**FKB-TraktorvegSti**
+*   Beskrivelse: Traktorveger, stier og stitrapp med senterlinjegeometri.
+*   Sist oppdatert: 15.01.2017
+*   Mer informasjon: [https://kartkatalog.geonorge.no/metadata/FKB-TraktorvegSti/cc3a2d98-52ac-4699-9947-ed0625903de4](https://kartkatalog.geonorge.no/metadata/FKB-TraktorvegSti/cc3a2d98-52ac-4699-9947-ed0625903de4)
+
+**FKB-Veg**
+*   Beskrivelse: Detaljert informasjon om alle offentlige og private veganlegg.
+*   Sist oppdatert: 15.01.2017
+*   Mer informasjon: [https://kartkatalog.geonorge.no/metadata/FKB-Veg/4920b452-75cc-45f2-964c-3378204c3517](https://kartkatalog.geonorge.no/metadata/FKB-Veg/4920b452-75cc-45f2-964c-3378204c3517)
+
+**FKB-Naturinfo**
+*   Beskrivelse: Naturinformasjon som hekk, innmålte trær og steiner.
+*   Sist oppdatert: 15.01.2017
+*   Mer informasjon: [https://kartkatalog.geonorge.no/metadata/FKB-Naturinfo/aa3c01f3-0678-470d-b03b-33085a7bae28](https://kartkatalog.geonorge.no/metadata/FKB-Naturinfo/aa3c01f3-0678-470d-b03b-33085a7bae28)
+
+**FKB-AR5**
+*   Beskrivelse: Omfattende kartlegging og beskrivelse av Norges arealressurser på et detaljert nivå.
+*   Sist oppdatert: 15.01.2017
+*   Mer informasjon: [https://kartkatalog.geonorge.no/metadata/FKB-AR5/166382b4-82d6-4ea9-a68e-6fd0c87bf788](https://kartkatalog.geonorge.no/metadata/FKB-AR5/166382b4-82d6-4ea9-a68e-6fd0c87bf788)
+
+FKB-data er ikke-sensitive og åpne data. De er finansiert gjennom Geovekst-samarbeidet, og er fritt tilgjengelige for Norge digitalt parter. Private aktører må kjøpe tilgang gjennom en forhandler.
+

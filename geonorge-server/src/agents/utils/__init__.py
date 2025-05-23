@@ -9,14 +9,7 @@ from .dataset_utils import (
     extract_dataset_info
 )
 
-from .document_grading import (
-    evaluate_document_relevance,
-)
 
-from .templates import (
-    RESPONSE_TEMPLATES,
-    NO_RESULTS_TEMPLATE
-)
 
 from .common import (
     active_websockets,
@@ -36,14 +29,7 @@ __all__ = [
     'create_follow_up_context',
     'extract_dataset_info',
     
-    # Document grading utils
-    'evaluate_document_relevance',
-    'prepare_documents_for_evaluation',
-    
-    # Templates
-    'RESPONSE_TEMPLATES',
-    'NO_RESULTS_TEMPLATE',
-    
+
     # Common utils
     'active_websockets',
     'register_websockets_dict',
