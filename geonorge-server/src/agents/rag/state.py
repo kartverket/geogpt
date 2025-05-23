@@ -1,67 +1,113 @@
-from typing import Dict, List, Literal, Annotated, Sequence
+"""
+State definition and helper functions for the RAG workflow.
+"""
+from typing import Dict, Callable, Any, List, Annotated, Sequence
 from typing_extensions import TypedDict
-from langgraph.graph import END
-from langgraph.graph.message import add_messages
 from langchain_core.messages import BaseMessage, AIMessage
+from langgraph.graph.message import add_messages
+from langgraph.graph import END
 
-# Original content from rag_workflow.py
-def tools_condition(state: Dict) -> Literal["tools", END]:
+def tools_condition(state: Dict) -> str:
     """
     Determines if the agent wants to use a tool or if it has a final response.
-    Checks the last message directly for tool calls before standardization.
+    
+    Args:
+        state: The current state object with messages
+        
+    Returns:
+        String indicating if the agent wants to use a tool ("tools") or is finished (END)
     """
+    from langchain_core.messages import AIMessage
+    # import json # Removed redundant import
+    
+    # Debug current state
     print(f"DEBUG tools_condition: Checking for tool calls in state")
-
-    # Get messages list from state
     messages = state.get("messages", [])
     if not messages:
-        print("DEBUG tools_condition: No messages in state, returning END")
+        print("DEBUG tools_condition: No messages in state")
         return END
-
-    # --- Check the actual last message object ---
-    last_message_obj = messages[-1]
+        
+    # Get the last message
+    last_message = messages[-1]
+    print(f"DEBUG tools_condition: Last message type: {type(last_message)}")
+    
+    # Debug the message structure
+    if hasattr(last_message, "__dict__"):
+        print(f"DEBUG tools_condition: Message attributes: {last_message.__dict__.keys()}")
+    
+    # Check if it has tool calls - try multiple approaches
     has_tool_calls = False
-
-    if isinstance(last_message_obj, AIMessage):
-        # LangChain AIMessage object
-        if last_message_obj.tool_calls and len(last_message_obj.tool_calls) > 0:
-            print(f"DEBUG tools_condition: Found tool_calls in AIMessage object: {last_message_obj.tool_calls}")
-            has_tool_calls = True
-        elif last_message_obj.additional_kwargs and "tool_calls" in last_message_obj.additional_kwargs and last_message_obj.additional_kwargs["tool_calls"]:
-             print(f"DEBUG tools_condition: Found tool_calls in AIMessage additional_kwargs: {last_message_obj.additional_kwargs['tool_calls']}")
-             has_tool_calls = True
-    elif isinstance(last_message_obj, dict):
-        # Dictionary representation
-        if last_message_obj.get("role") == "assistant":
-             if "tool_calls" in last_message_obj and last_message_obj["tool_calls"]:
-                 print(f"DEBUG tools_condition: Found tool_calls key in dict: {last_message_obj['tool_calls']}")
-                 has_tool_calls = True
-             elif "additional_kwargs" in last_message_obj and "tool_calls" in last_message_obj["additional_kwargs"] and last_message_obj["additional_kwargs"]["tool_calls"]:
-                 print(f"DEBUG tools_condition: Found tool_calls in dict additional_kwargs: {last_message_obj['additional_kwargs']['tool_calls']}")
-                 has_tool_calls = True
-
-    # --- End direct check ---
-
+    
+    # Try direct tool_calls attribute
+    if hasattr(last_message, "tool_calls") and last_message.tool_calls:
+        print(f"DEBUG tools_condition: Found tool_calls directly: {last_message.tool_calls}")
+        has_tool_calls = True
+    
+    # Try additional_kwargs for OpenAI format
+    elif hasattr(last_message, "additional_kwargs") and last_message.additional_kwargs.get("tool_calls"):
+        print(f"DEBUG tools_condition: Found tool_calls in additional_kwargs: {last_message.additional_kwargs.get('tool_calls')}")
+        has_tool_calls = True
+    
+    # For AIMessage with content containing JSON that might be a function call
+    elif isinstance(last_message, AIMessage) and hasattr(last_message, "content"):
+        content = last_message.content
+        try:
+            # See if content is parseable as JSON and contains a function_call
+            if isinstance(content, str) and ('tool_call' in content.lower() or 'function_call' in content.lower()):
+                print(f"DEBUG tools_condition: Content might contain a tool call: {content[:100]}...")
+                has_tool_calls = True
+        except:
+            pass
+    
     if has_tool_calls:
         print("DEBUG tools_condition: Returning 'tools'")
         return "tools"
-    else:
-        # Optional: Log why no tool calls were detected
-        if isinstance(last_message_obj, AIMessage):
-            print(f"DEBUG tools_condition: No tool_calls found in AIMessage (tool_calls={getattr(last_message_obj, 'tool_calls', None)}, kwargs={getattr(last_message_obj, 'additional_kwargs', {}).get('tool_calls')})")
-        elif isinstance(last_message_obj, dict):
-            print(f"DEBUG tools_condition: No tool_calls found in dict (tool_calls key: {'tool_calls' in last_message_obj}, kwargs key: {'additional_kwargs' in last_message_obj and 'tool_calls' in last_message_obj['additional_kwargs']})")
-        else:
-            print(f"DEBUG tools_condition: Last message is neither AIMessage nor dict ({type(last_message_obj)}), cannot check for tool calls.")
+    
+    # No tool calls, so we're done
+    print("DEBUG tools_condition: No tool calls found, returning END")
+    return END
 
-        print("DEBUG tools_condition: No tool calls detected, returning END")
-        return END
-
-class AgentState(TypedDict):
+class AgentState(TypedDict, total=False):
     """State for the agent-based RAG workflow."""
     messages: Annotated[Sequence[BaseMessage], add_messages]
-    websocket_id: str
-    intent: str
-    retrieval_results: List[Dict]
-    documents_relevant: bool
-    dataset_info: Dict 
+    websocket_id: str # Will be optional due to total=False if not provided
+    chat_history: str
+    original_query: str
+    metadata_context: List[Any]
+    in_merged_workflow: bool 
+    rewrite_attempts: int 
+
+# Create wrapper function that handles state conversion
+def with_state_handling(node_func: Callable) -> Callable:
+    """Wrap a node function with state handling logic."""
+    async def wrapped(state: Any) -> Dict:
+        print(f"DEBUG RAG {node_func.__name__}: state type = {type(state)}")
+        
+        # Handle different state input types
+        if isinstance(state, dict): # Simplified: directly check for dict
+            return await node_func(state)
+        else:
+            try:
+                if hasattr(state, "to_dict"):
+                    state_dict = state.to_dict()
+                    return await node_func(state_dict) # Pass the converted dict
+                else:
+                    # If it's not a dict and doesn't have to_dict, try to use as is if it's already a compatible state
+                    # This case might indicate an unexpected state type, but we'll let the node_func handle it
+                    # or it might be already an AgentState (though unlikely given the typical flow)
+                    print(f"DEBUG RAG {node_func.__name__}: state is not dict and has no to_dict, passing as is.")
+                    return await node_func(state) # Pass the original state
+            except Exception as e:
+                print(f"DEBUG: Error converting state in {node_func.__name__}: {e}")
+                # Fallback state
+                fallback_state = {
+                    "messages": [{"role": "human", "content": "Hjelp meg med geografiske data"}],
+                    "websocket_id": getattr(state, "websocket_id", ""),
+                    "chat_history": ""
+                }
+                return await node_func(fallback_state)
+    
+    wrapped.__name__ = node_func.__name__
+    wrapped.__doc__ = node_func.__doc__
+    
+    return wrapped 
