@@ -27,10 +27,13 @@ import re
 import asyncio
 import uuid
 import logging
+from pathlib import Path
 
 # --- Specific File Logging Configuration ---
-log_file = 'geonorge_chat.log'
-file_handler = logging.FileHandler(log_file, mode='a')
+
+root_dir = Path(__file__).resolve().parents[2]
+log_file = root_dir / 'geonorge_chat.log'
+file_handler = logging.FileHandler(str(log_file), mode='a')
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 file_handler.setFormatter(formatter)
 
@@ -819,15 +822,8 @@ class GeoNorgeSupervisor:
         )
         logger.info(log_message)
 
-        # Image insertion is now handled within process_result before END
-        
-        # If response was streamed, we don't need to return the full content here
-        # unless it's needed for non-websocket clients.
-        # The streaming happens in merge_results or potentially within workflows.
-        # Let's return the final content anyway for consistency / non-websocket use cases.
-        
         print(f"DEBUG: chat method returning final message content.")
-        # Remove websocket from active list when chat interaction is done for this query
+
         if websocket_id in self.active_websockets:
             # print(f"DEBUG: Deregistering websocket {websocket_id} from supervisor.")
             del self.active_websockets[websocket_id]
