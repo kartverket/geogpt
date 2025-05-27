@@ -33,14 +33,17 @@ from pathlib import Path
 
 root_dir = Path(__file__).resolve().parents[2]
 log_file = root_dir / 'geonorge_chat.log'
-file_handler = logging.FileHandler(str(log_file), mode='a')
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-file_handler.setFormatter(formatter)
 
-logger = logging.getLogger(__name__) 
+logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO) # Ensure INFO messages are processed by this logger
-logger.addHandler(file_handler)
-logger.propagate = False # Prevent logs from going to the console handler
+try:
+    file_handler = logging.FileHandler(str(log_file), mode='a')
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+    logger.propagate = False # Prevent logs from going to the console handler
+except Exception as e:
+    logger.warning(f"Could not set up file logging at {log_file}: {e}")
 # --- End Logging Configuration ---
 
 # Define workflow configuration
