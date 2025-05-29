@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -76,6 +76,42 @@ const DatasetItem: React.FC<DatasetItemProps> = (props) => {
   // Add state for hover card open state and description loading
   const [isHoverCardOpen, setIsHoverCardOpen] = useState(false);
   const [isLoadingDescription, setIsLoadingDescription] = useState(false);
+
+  // Add effect to close hover card on scroll
+  useEffect(() => {
+    if (!isHoverCardOpen) return;
+
+    const handleScroll = () => {
+      setIsHoverCardOpen(false);
+    };
+
+    // Find all possible scroll containers
+    const scrollContainers = [
+      // TabsContent scroll areas
+      document.querySelector('[data-state="active"].overflow-y-auto'),
+      document.querySelector('[role="tabpanel"][data-state="active"]'),
+      // Any parent scroll container
+      document.querySelector(".overflow-y-auto"),
+      // Window scroll as fallback
+      window,
+    ];
+
+    // Add event listeners to all found containers
+    scrollContainers.forEach((container) => {
+      if (container) {
+        container.addEventListener("scroll", handleScroll, { passive: true });
+      }
+    });
+
+    return () => {
+      // Cleanup all event listeners
+      scrollContainers.forEach((container) => {
+        if (container) {
+          container.removeEventListener("scroll", handleScroll);
+        }
+      });
+    };
+  }, [isHoverCardOpen]);
 
   if (!searchResult.uuid) {
     console.warn("DatasetItem rendered without UUID", searchResult);
@@ -306,7 +342,7 @@ const DatasetItem: React.FC<DatasetItemProps> = (props) => {
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
-                    className="underline-offset-4 hover:underline"
+                    className="underline-offset-2 hover:underline"
                   >
                     {searchResult.title || "Ukjent Tittel"}
                   </a>
@@ -317,7 +353,7 @@ const DatasetItem: React.FC<DatasetItemProps> = (props) => {
                 className="w-80 p-4 rounded-omar border border-gray-200 shadow-lg"
               >
                 <div className="space-y-2">
-                  <h4 className="font-medium text-color-gn-primary">
+                  <h4 className="font-medium text-color-gn-lightblue">
                     {searchResult.title || "Ukjent Tittel"}
                   </h4>
                   {!descriptionsCache.has(resultKey) || isLoadingDescription ? (
