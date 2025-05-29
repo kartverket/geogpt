@@ -1,4 +1,4 @@
-import React, { ChangeEvent, FormEvent, useState } from "react";
+import React, { ChangeEvent, FormEvent, useState, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, X, Loader2, Sparkles, Lightbulb } from "lucide-react";
 import {
@@ -53,10 +53,12 @@ const SearchForm: React.FC<SearchFormProps> = ({
 }) => {
   const isWebsocketSearch = searchMethod === "websocket";
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const handleSampleClick = (prompt: string) => {
     onSearchTermChange(prompt);
     setPopoverOpen(false);
+    inputRef.current?.focus();
   };
 
   // Determine if the X/Loader container area should be active
@@ -70,6 +72,7 @@ const SearchForm: React.FC<SearchFormProps> = ({
 
   const inputElement = (
     <Input
+      ref={inputRef}
       value={searchTerm}
       onChange={(e: ChangeEvent<HTMLInputElement>) =>
         onSearchTermChange(e.target.value)
@@ -77,8 +80,10 @@ const SearchForm: React.FC<SearchFormProps> = ({
       placeholder={
         isWebsocketSearch ? "Spør GeoGPT..." : "Søk etter datasett..."
       }
-      className={`pl-9 ${rightPadding} relative rounded-lg focus:ring-0 focus:outline-none focus:border-0 border-0 outline-none ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 ${
-        isWebsocketSearch ? "bg-transparent" : "bg-white border border-gray-300"
+      className={`pl-9 ${rightPadding} relative rounded-lg outline-none ${
+        isWebsocketSearch
+          ? "bg-transparent border-0 focus:ring-0 focus:border-0 ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 outline-none"
+          : "bg-white border border-gray-300 focus:border-color-gn-primary focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
       }`}
       disabled={isSearching}
     />

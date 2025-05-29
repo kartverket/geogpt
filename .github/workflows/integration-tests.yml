@@ -4,13 +4,13 @@ name: Integration Tests
 on:
   push:
     branches:
-      - 'feat/GEON-1790-Fjern-creation-av-embeddings'
-      
+      - "feat/GEON-1790-Fjern-creation-av-embeddings"
+
       - main
 
   pull_request:
     branches:
-      - 'feat/GEON-1790-Fjern-creation-av-embeddings'
+      - "feat/GEON-1790-Fjern-creation-av-embeddings"
       - main
 
 jobs:
@@ -22,7 +22,7 @@ jobs:
       DB_NAME: asd
       DB_USER: asd
       DB_PASSWORD: asd
-      OPENAI_API_KEY: ${{ secrets.AZURE_GPT_API_KEY }}  
+      OPENAI_API_KEY: ${{ secrets.AZURE_GPT_API_KEY }}
       AZURE_GPT_API_KEY: ${{ secrets.AZURE_GPT_API_KEY }}
       AZURE_GPT_ENDPOINT: ${{ secrets.AZURE_GPT_ENDPOINT }}
       AZURE_EMBEDDING_API_KEY: ${{ secrets.AZURE_EMBEDDING_API_KEY }}
@@ -35,7 +35,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Install Docker Compose
         run: |
@@ -58,7 +58,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest requests psycopg2-binary
+          pip install -r geonorge-server/requirements.txt pytest psycopg2-binary
 
       - name: Build and start services
         run: |
@@ -76,18 +76,18 @@ jobs:
           # Show all installed extensions to diagnose
           echo "Listing all PostgreSQL extensions..."
           docker-compose exec -T database psql -U asd -d asd -c "SELECT extname FROM pg_extension;"
-    
+
           # Try to create the vector extension if it doesn't exist
           echo "Attempting to create vector extension if not exists..."
           docker-compose exec -T database psql -U asd -d asd -c "CREATE EXTENSION IF NOT EXISTS vector;"
-    
+
           # Verify the extension exists
           echo "Checking for vector extension..."
           docker-compose exec -T database psql -U asd -d asd -c "SELECT extname FROM pg_extension WHERE extname = 'vector';"
 
       - name: Validate file location
         run: |
-          docker-compose exec -T backend ls 
+          docker-compose exec -T backend ls
 
       - name: Run vector creation scripts
         run: |
@@ -100,8 +100,9 @@ jobs:
 
       - name: Run integration tests
         run: |
-          # Add your test commands here
+          # Run existing service tests and new API endpoint tests
           python -m pytest tests/test_services.py -v
+          python -m pytest geonorge-server/tests/test_api_endpoints.py -v
 
       - name: Show logs on failure
         if: failure()

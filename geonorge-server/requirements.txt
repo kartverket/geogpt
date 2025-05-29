@@ -12,3 +12,4 @@ langchain
 langgraph
 langchain-openai
 nest_asyncio
+flask-swagger-ui

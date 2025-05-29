@@ -194,9 +194,15 @@ const DemoV4 = () => {
     chatManagement.setBlockPopoverClose,
   ]);
 
-  const handleChatSubmit = (e?: React.FormEvent<HTMLFormElement>) => {
-    if (e) e.preventDefault();
-    const trimmedInput = chatManagement.chatInput.trim(); // Use chatInput from hook
+  const handleChatSubmit = (
+    e?: React.FormEvent<HTMLFormElement>,
+    examplePrompt?: string
+  ) => {
+    if (e?.preventDefault) {
+      e.preventDefault();
+    }
+    const trimmedInput =
+      examplePrompt?.trim() ?? chatManagement.chatInput.trim();
     if (trimmedInput && !isStreaming) {
       sendMessage(trimmedInput); // Use sendMessage from hook
       chatManagement.setChatInput(""); // Use setChatInput from hook
@@ -348,7 +354,7 @@ const DemoV4 = () => {
             </div>
           )}
           {!chatManagement.isFullScreen && (
-            <div className="absolute right-8 top-1/2 transform -translate-y-1/2 flex flex-col space-y-4 z-50">
+            <div className="absolute right-4 top-1/2 transform -translate-y-1/2 flex flex-col space-y-4 z-50">
               <button
                 onClick={openChatPanel}
                 className={`${

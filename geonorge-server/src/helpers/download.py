@@ -238,7 +238,7 @@ async def get_dataset_download_formats(vdb_search_response: List[tuple]) -> List
     return valid_results
 
 # --- New WMS Capabilities Helper ---
-async def _fetch_wms_capabilities_async(wms_url: str, timeout_seconds: int = 5) -> Optional[Dict[str, Any]]:
+async def _fetch_wms_capabilities_async(wms_url: str, timeout_seconds: int = 1) -> Optional[Dict[str, Any]]:
     """ Fetches and parses WMS GetCapabilities using aiohttp. Returns dict or None on error. """
     if not wms_url:
         logger.debug("Skipping WMS fetch: No URL provided.")
@@ -554,7 +554,7 @@ async def check_download_api_connectivity() -> bool:
     try:
         # Test URL that should always be accessible
         url = "https://nedlasting.geonorge.no/api/codelists/defaults"
-        timeout = aiohttp.ClientTimeout(total=5)
+        timeout = aiohttp.ClientTimeout(total=1)
         
         async with aiohttp.ClientSession(timeout=timeout) as session:
             try:

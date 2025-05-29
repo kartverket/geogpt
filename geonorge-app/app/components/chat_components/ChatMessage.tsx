@@ -2,6 +2,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { ChatMessage as ChatMessageType, SearchResult } from "./types";
 import { Download, Eye } from "lucide-react";
+import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
 import {
   Tooltip,
   TooltipContent,
@@ -127,48 +128,29 @@ export const ChatMessage = ({
     content = content.slice("System: ".length);
   }
 
-  // Format bold text
-  content = content.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
-
-  content = content.replace(
-    /(https?:\/\/[^\s]+)/g,
-    '<a href="$1" target="_blank" rel="noopener noreferrer" class="underline break-all">$1</a>'
-  );
-
-  // Format URLs with better styling
-  content = content.replace(
-    /\[([^\]]+)\]\(([^)]+)\)/g,
-    '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-black hover:underline break-words">$1</a>'
-  );
-
-  // Format bullet points (asterisks)
-  content = content.replace(/^\s*\*\s+(.+)$/gm, "<li>$1</li>");
-
-  // Wrap lists in ul tags with better styling for nested content
-  if (content.includes("<li>")) {
-    content = content.replace(
-      /(<li>.*?<\/li>)+/g,
-      '<ul class="list-disc pl-5 my-2 space-y-1">$&</ul>'
-    );
-  }
-
-  // Add paragraph breaks for better readability
-  content = content.replace(/\n\n+/g, '</p><p class="my-2">');
-  if (!content.startsWith("<ul") && !content.startsWith("<p")) {
-    content = "<p>" + content + "</p>";
-  }
-
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-3`}>
       <div
-        className={`max-w-[80%] p-3 rounded-md text-sm break-words ${
+        className={`max-w-[75%] p-3 rounded-md text-sm ${
           isUser ? "bg-orange-50" : "bg-gray-100"
-        }`}
+        } overflow-hidden`}
+        style={{ width: "auto", maxWidth: "clamp(300px, 65%, 600px)" }}
       >
-        <div
-          className="chat-content"
-          dangerouslySetInnerHTML={{ __html: content }}
-        />
+        <div className="chat-content w-full overflow-hidden">
+          <div className="prose prose-sm max-w-none overflow-hidden">
+            <style jsx global>{`
+              .prose a {
+                word-break: break-word;
+                overflow-wrap: anywhere;
+                word-wrap: break-word;
+                hyphens: auto;
+                max-width: 100%;
+                display: inline-block;
+              }
+            `}</style>
+            <MarkdownRenderer>{content}</MarkdownRenderer>
+          </div>
+        </div>
       </div>
     </div>
   );
