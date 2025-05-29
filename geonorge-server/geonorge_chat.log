@@ -1,0 +1,773 @@
+2025-05-29 09:15:52,561 - agents.supervisor - INFO - Session: 140262223506128
+  User: ta meg til kristiansand
+  Assistant: Kartet viser nå Kristiansand og er zoomet til nivå 14.
+2025-05-29 15:26:43,457 - agents.supervisor - INFO - Session: 139741932193616
+  User: Kan du ta meg til Kristiansand
+  Assistant: Kartet viser nå Kristiansand og er zoomet til nivå 14.
+2025-05-29 15:27:30,328 - agents.supervisor - INFO - Session: 139741932193616
+  User: Hva er kvikkleire?
+  Assistant: Jeg er GeoGPT, en assistent som kan hjelpe deg med å finne geodata og datasett fra Geonorge. Jeg kan for eksempel hjelpe deg med å finne datasett over høyde, vegetasjon, arealplaner, eller andre geografiske temaer. Jeg kan også hjelpe deg med å finne kartdata for et spesifikt område.
+2025-05-29 15:27:41,503 - agents.supervisor - INFO - Session: 139741932193616
+  User: Hva er FKB
+  Assistant: **Hva er FKB?**
+
+FKB står for Felles Kartdatabase. Det er en samling av datasett som utgjør en sentral del av grunnkartet i Norge. FKB-dataene er ikke-sensitive og åpne data, finansiert gjennom Geovekst-samarbeidet eller av kommunene selv.
+
+**Hvilke datasett inngår i FKB?**
+
+Datasett som inngår i FKB inkluderer blant annet:
+
+*   Høyde
+*   Vann (FKB-Vann)
+*   Markslag (AR5)
+*   Arealbruk (FKB-Arealbruk)
+*   Bygninger (FKB-Bygning)
+*   Bygningsmessige anlegg (FKB-BygnAnlegg)
+*   Ledninger
+*   Veg (FKB-Veg)
+*   Jernbane
+*   Flyplass (FKB-Lufthavn)
+*   Traktorveg/Sti (FKB-TraktorvegSti)
+*   Naturinfo (FKB-Naturinfo)
+*   Tiltak (FKB-Tiltak)
+
+FKB-data er fritt tilgjengelige for Norge digitalt-parter og kan lastes ned gjennom nedlastingsløsningen på Geonorge. Private aktører må kjøpe tilgang til dataene gjennom en forhandler.
+
+2025-05-29 15:28:43,508 - agents.supervisor - INFO - Session: 139741931047248
+  User: Hvilke datasett er tilgjengelig for flomdata?
+  Assistant: Jeg har funnet flere relevante datasett om flomdata i Norge:
+
+*   **Flomveier - Lier:** Viser hvor vannet vil renne ved store nedbørsmengder i Lier, uten å ta hensyn til avløp og rør.
+*   **Flom aktsomhet Nordre Follo:** Viser maksvannstand ved 200 års regn med 50% klimapåslag i tettbebygde områder i Nordre Follo.
+*   **Flomsoner:** Arealer som oversvømmes ved ulike flomstørrelser (20-, 200- og 1000-årsflommer).
+*   **Utredninger av flomfare:** Rapportdatabase over utførte flomfareutredninger i Norge.
+*   **Flom aktsomhetsområder:** Nasjonalt datasett som viser områder som kan være utsatt for flomfare, egnet for kommuneplanlegging.
+*   **Stormflo og havnivå:** Informasjon om høye vannstander (stormflo) ved dagens og fremtidig havnivå, anbefalt for bruk i kommunal planlegging.
+*   **Flom Aktsomhetsoner Drøbak:** Beregnede flomsoner for 200-årsflom med klimapåslag for Raskebekken i Drøbak.
+*   **Høyeste flomnivå august 2023 - Ringerike:** Viser høyeste flomnivå registrert under uværet "Hans" i Ringerike.
+
+Du kan trykke på "VIS" knappen på bildet for å legge til kartlag fra datasettet.
+
+2025-05-29 15:31:31,636 - agents.supervisor - INFO - Session: 139741799135888
+  User: Gi meg forklaring på FKB
+  Assistant: FKB står for Felles Kartdatabase, og er en samling datasett som utgjør en sentral del av grunnkartet i Norge. FKB-data er ikke-sensitive og åpne data, finansiert gjennom Geovekst-samarbeidet eller av kommunene selv. Dataene er fritt tilgjengelige for Norge digitalt-parter, men private aktører må kjøpe tilgang via en forhandler.
+
+Her er en oversikt over FKB-datasettene som er tilgjengelige:
+
+1.  **Felles KartdataBase (FKB)**
+    *   Beskrivelse: Den overordnede databasen som definerer standardene for alle FKB-datasettene. Inneholder data om høyde, vann, markslag (AR5), arealbruk, bygninger, bygningsmessige anlegg, ledninger, veg, jernbane og flyplass.
+    *   Mer informasjon: [https://kartkatalog.geonorge.no/metadata/Felles-KartdataBase-(FKB)/0e90ca71-6a02-4036-bd94-f219fe64645f](https://kartkatalog.geonorge.no/metadata/Felles-KartdataBase-(FKB)/0e90ca71-6a02-4036-bd94-f219fe64645f)
+
+2.  **FKB-Vann**
+    *   Beskrivelse: Beskriver geografisk beliggenhet, forløp og form for bekker, elver, kanaler, grøfter, innsjøer, isbreer og den topografiske delen av kyst og sjø.
+    *   Mer informasjon: [https://kartkatalog.geonorge.no/metadata/FKB-Vann/595e47d9-d201-479c-a77d-cbc1f573a76b](https://kartkatalog.geonorge.no/metadata/FKB-Vann/595e47d9-d201-479c-a77d-cbc1f573a76b)
+
+3.  **FKB-Bygning**
+    *   Beskrivelse: Detaljert bygningsinformasjon, inkludert alle typer bygninger, takoverbygg, beskrivende bygningslinjer og bygningsvedheng. Har en 1:1 kobling mot matrikkelen.
+    *   Mer informasjon: [https://kartkatalog.geonorge.no/metadata/FKB-Bygning/8b4304ea-4fb0-479c-a24d-fa225e2c6e97](https://kartkatalog.geonorge.no/metadata/FKB-Bygning/8b4304ea-4fb0-479c-a24d-fa225e2c6e97)
+
+4.  **FKB-Arealbruk**
+    *   Beskrivelse: Beskriver den fysiske bruken av et areal, uavhengig av jordas produksjonsevne eller hva området er planlagt brukt til.
+    *   Mer informasjon: [https://kartkatalog.geonorge.no/metadata/FKB-Arealbruk/87b31015-a3de-4540-9b8b-cb1bf4e1cb3a](https://kartkatalog.geonorge.no/metadata/FKB-Arealbruk/87b31015-a3de-4540-9b8b-cb1bf4e1cb3a)
+
+5.  **FKB-Lufthavn**
+    *   Beskrivelse: Et begrenset utvalg av objekttyper for lufthavner.
+    *   Mer informasjon: [https://kartkatalog.geonorge.no/metadata/FKB-Lufthavn/23dfcc33-fb04-4898-aa88-68b49c4bfea7](https://kartkatalog.geonorge.no/metadata/FKB-Lufthavn/23dfcc33-fb04-4898-aa88-68b49c4bfea7)
+
+6.  **FKB-BygnAnlegg**
+    *   Beskrivelse: Beskriver bygningsmessige anlegg som ikke er spesifisert i andre fagspesifikke FKB-datasett, som murer, gjerder, kaier, moloer, tanker etc.
+    *   Mer informasjon: [https://kartkatalog.geonorge.no/metadata/FKB-BygnAnlegg/ede5ffb2-ee2a-44a3-852d-369a14d97f2e](https://kartkatalog.geonorge.no/metadata/FKB-BygnAnlegg/ede5ffb2-ee2a-44a3-852d-369a14d97f2e)
+
+7.  **FKB-Tiltak**
+    *   Beskrivelse: Områder der det skjer utbygging som er omsøkt/godkjent gjennom saksbehandling. Brukes som metadata for de øvrige FKB-datasettene og for å oppdatere grunnkartet raskere.
+    *   Mer informasjon: [https://kartkatalog.geonorge.no/metadata/FKB-Tiltak/8944603c-9414-43a7-9421-9a1de9850a96](https://kartkatalog.geonorge.no/metadata/FKB-Tiltak/8944603c-9414-43a7-9421-9a1de9850a96)
+
+8.  **FKB-Veg**
+    *   Beskrivelse: Detaljert informasjon om alle offentlige og private veganlegg.
+    *   Mer informasjon: [https://kartkatalog.geonorge.no/metadata/FKB-Veg/4920b452-75cc-45f2-964c-3378204c3517](https://kartkatalog.geonorge.no/metadata/FKB-Veg/4920b452-75cc-45f2-964c-3378204c3517)
+
+9.  **FKB-Ledning**
+    *   Beskrivelse: Ledningsdata innenfor elektrisitet, elektrisk kommunikasjon, belysningsanlegg, ledningsanlegg tilknyttet bane og VA. Kun objekter som er synlig i terrenget.
+    *   Mer informasjon: [https://kartkatalog.geonorge.no/metadata/FKB-Ledning/6e05aefb-f90e-4c7d-9fb9-299574d0bbf6](https://kartkatalog.geonorge.no/metadata/FKB-Ledning/6e05aefb-f90e-4c7d-9fb9-299574d0bbf6)
+
+10. **FKB-TraktorvegSti**
+    *   Beskrivelse: Landsdekkende datasett som inneholder traktorveger, stier og stitrapp med senterlinjegeometri.
+    *   Mer informasjon: [https://kartkatalog.geonorge.no/metadata/FKB-TraktorvegSti/cc3a2d98-52ac-4699-9947-ed0625903de4](https://kartkatalog.geonorge.no/metadata/FKB-TraktorvegSti/cc3a2d98-52ac-4699-9947-ed0625903de4)
+
+2025-05-29 15:31:46,377 - agents.supervisor - INFO - Session: 139741799135888
+  User: DTM 50
+  Assistant: Basert på søket ditt, her er informasjon om DTM 50 og noen relaterte datasett som kan være interessante:
+
+**DTM 50**
+Digital terrengmodell med høyder i et rutenett på 50 x 50 meter for fastlands-Norge. Laget i 2007 og ikke planlagt oppdatert. Standardavvik i høyde er +/- 4-6 meter.
+Mer informasjon: https://kartkatalog.geonorge.no/metadata/DTM-50/e25d0104-0858-4d06-bba8-d154514c11d2
+
+Siden du er interessert i terrengmodeller, kan følgende datasett også være relevante:
+
+**Jan Mayen DTM 5**
+Digital terrengmodell for Jan Mayen med en oppløsning på 5 meter.
+Mer informasjon: https://kartkatalog.geonorge.no/metadata/Jan-Mayen-DTM-5/731a0602-d262-483d-aaa6-474cef68e82a
+
+**Bouvetøya DTM 20**
+Digital terrengmodell for Bouvetøya med en oppløsning på 20 meter.
+Mer informasjon: https://kartkatalog.geonorge.no/metadata/Bouvetøya-DTM-20/0cfe0ce1-603a-4692-a3c3-5f6427f63a19
+
+**Peter I Øy DTM 20**
+Digital terrengmodell for Peter I Øy med en oppløsning på 20 meter.
+Mer informasjon: https://kartkatalog.geonorge.no/metadata/Peter-I-Øy-DTM-20/2aeb93a8-1015-4d8c-bf93-5a10bf613dc8
+
+**Dybdedata - terrengmodeller 50 meters grid**
+Terrengmodeller som viser terrengvariasjoner på havbunnen, med en oppløsning på 50 meter. Dekningen varierer, men er best i nordlige fylker og områder kartlagt av MAREANO-programmet.
+Mer informasjon: https://kartkatalog.geonorge.no/metadata/Dybdedata---terrengmodeller-50-meters-grid/67a3a191-49cc-45bc-baf0-eaaf7c513549
+
+2025-05-29 15:32:01,404 - agents.supervisor - INFO - Session: 139741062903312
+  User: FKB
+  Assistant: Her er informasjon om FKB-datasett i Norge:
+
+**Felles Kartdatabase (FKB)**
+FKB er en samling datasett som utgjør en sentral del av grunnkartet og er definert av FKB produktspesifikasjonene som vedtas av Geovekst-forum. Datasettene i FKB består av blant annet høyde, vann, markslag (AR5), arealbruk, bygninger, bygningsmessige anlegg, ledninger, veg, jernbane og flyplass. FKB-data er ikke-sensitive og åpne data.
+
+**FKB-Lufthavn**
+Omfatter et begrenset utvalg av objekttyper for lufthavner som skal registreres og forvaltes i FKB.
+
+**FKB-Bane**
+Omfatter data om infrastruktur for skinnegående kjøretøy, bl.a. jernbane, tunnelbane, forstadsbane, sporveg og kabelbane.
+
+**FKB-Vann**
+Beskriver geografisk beliggenhet, forløp og form for bekker, elver, kanaler, grøfter, innsjøer, isbreer og den topografiske delen av kyst og sjø.
+
+**FKB-Veg**
+Inneholder detaljert informasjon om alle offentlige og private veganlegg.
+
+**FKB-BygnAnlegg**
+Beskriver bygningsmessige anlegg som ikke er spesifisert i andre fagspesifikke FKB-datasett som FKB-Bygning eller FKB-Veg. Dette inkluderer objekter som murer, gjerder, kaier, moloer, tanker etc.
+
+**FKB-Arealbruk**
+Beskriver den fysiske bruken av et areal, og er ikke heldekkende.
+
+**FKB-TraktorvegSti**
+Et landsdekkende FKB-datasett som inneholder traktorveger, stier og stitrapp med senterlinjegeometri.
+
+**FKB-Naturinfo**
+Beskriver naturinformasjon som ikke faller inn under de andre naturressurskapitlene - konkret hekk, innmålte trær og steiner.
+
+**FKB-Bygning**
+Inneholder detaljert bygningsinformasjon og benytter samme definisjon/inndeling av en bygning som matrikkelen og har en 1:1 kobling mot matrikkelen.
+
+2025-05-29 15:32:12,707 - agents.supervisor - INFO - Session: 139741062903312
+  User: DTM 50
+  Assistant: Her er informasjon om tilgjengelige geografiske data i Norge:
+
+**Digitale Terrengmodeller (DTM)**
+
+*   **DTM 50:** Digital terrengmodell med høyder i et rutenett på 50 x 50 meter. Dekker fastlands-Norge med øyer. Standardavvik i høyde er +/- 4-6 meter. Sist oppdatert: 17.08.2013.
+*   **Bouvetøya DTM 20:** Digital terrengmodell med høyder i et rutenett på 20x20 meter. Dekker landarealet av Bouvetøya. Sist oppdatert: 05.03.2018.
+*   **Peter I Øy DTM 20:** Digital terrengmodell med høyder i et rutenett på 20x20 meter. Dekker landarealet av Peter I Øy. Sist oppdatert: 05.03.2018.
+*   **Jan Mayen DTM 5:** Terrengmodell for Jan Mayen med 5 meters oppløsning. Sist oppdatert: 28.10.2024.
+
+**Rasterdata**
+
+*   **N50 Raster (UTM33) - Rutevis:** Rasterdata med lik presentasjon som kartserien Norge 1:50 000. Leveres i ruter á 20 km x 20 km. Sist oppdatert: 01.01.2001.
+*   **N50 Raster (UTM35) - Rutevis:** Rasterdata med lik presentasjon som kartserien Norge 1:50 000. Leveres i ruter á 20 km x 20 km. Sist oppdatert: 01.01.2001.
+
+**Kartdata**
+
+*   **N50 Kartdata:** Kartdata tilpasset målestokkområdet 1:25 000 til 1:100 000. Dekker fastlands-Norge og er begrenset av riksgrensen mot nabolandene og territorialgrensen i havet. Ajourføres kontinuerlig og distribueres ukentlig. Sist oppdatert: 01.01.2001.
+*   **N50 Kartdata - historiske versjoner:** Kartdata tilpasset målestokkområdet 1:25 000 til 1:100 000. Dekker fastlands-Norge og er begrenset av riksgrensen mot nabolandene og territorialgrensen i havet. Sist oppdatert: 17.01.2020.
+
+**Andre datasett**
+
+*   **Digitalt markslagskart (DMK) - Historisk datasett:** Informasjon om jordtilhøve, myr-egenskaper, driftsforhold på jordbruksareal og detaljert informasjon om produksjonspotensial for skog (bonitet). Sist oppdatert: 17.04.2013.
+*   **Dybdedata - terrengmodeller 50 meters grid:** Terrengvariasjoner på havbunnen med 50m x 50m oppløsning. Dekningsområdet er kystnært og inkluderer store deler av Hordaland og ellers utvalgte områder i Sogn og Fjordane, Møre og Romsdal og Trøndelag. Sist oppdatert: 05.04.2018.
+
+Du kan legge til kartlag fra datasettet ved å trykke på "VIS" knappen på bildet.
+
+2025-05-29 15:32:58,031 - agents.supervisor - INFO - Session: 139741062903312
+  User: Luftfartshindringer
+  Assistant: Jeg kan hjelpe deg med geografiske data relatert til luftfart og restriksjoner i Norge. Her er en oversikt over tilgjengelige datasett:
+
+**Luftfartshindre:**
+
+*   **Nasjonalt register over luftfartshindre:** Inneholder informasjon om menneskeskapte objekter som master, tårn og kraftledninger som kan være hindringer for luftfarten. ([Mer informasjon](https://kartkatalog.geonorge.no/metadata/Nasjonalt-register-over-luftfartshindre/28c896d0-8a0d-4209-bf31-4931033b1082))
+
+**Flyplasser og restriksjoner:**
+
+*   **Lufthavn - Byggerestriksjoner (BRA):** Områder rundt flyplasser og NAV-anlegg der bygg kan forstyrre signaler. ([Mer informasjon](https://kartkatalog.geonorge.no/metadata/Lufthavn---Byggerestriksjoner-(BRA)/e0db7ab9-c1fc-4a52-b381-1e5273204ef9))
+*   **Lufthavner Flyplasser:** Viser lokalisering av fly- og helikopterplasser basert på N50 Kartdata. ([Mer informasjon](https://kartkatalog.geonorge.no/metadata/Lufthavner-Flyplasser/8de1886c-2c54-4f1a-a527-566987ae7fbd))
+*   **Lufthavn-punkt Avinor:** Punktdata som representerer Avinors lufthavner. ([Mer informasjon](https://kartkatalog.geonorge.no/metadata/Lufthavn-punkt-Avinor/22485273-dc0c-4484-a8be-357105d65689))
+*   **FKB-Lufthavn:** Et utvalg av objekttyper for lufthavner som registreres og forvaltes i FKB. ([Mer informasjon](https://kartkatalog.geonorge.no/metadata/FKB-Lufthavn/23dfcc33-fb04-4898-aa88-68b49c4bfea7))
+
+**Støy:**
+
+*   **Støysoner Avinors lufthavner:** Informasjon om støy i innflyvningssoner og ved bakken rundt Avinors flyplasser. ([Mer informasjon](https://kartkatalog.geonorge.no/metadata/Støysoner-Avinors-lufthavner/1489f7f8-40c8-4dc4-83b6-bcf277b56506))
+*   **Støysoner for Forsvarets flyplasser:** Støysoner for Forsvarets flyplasser. ([Mer informasjon](https://kartkatalog.geonorge.no/metadata/Støysoner-for-Forsvarets-flyplasser/ec1541d3-4a56-4095-9bf7-08dcfbb673d1))
+*   **Støykart - strategisk støykartlegging (Støydirektivet):** Data for rapportering i henhold til EUs støydirektiv, inkludert data fra Avinor. ([Mer informasjon](https://kartkatalog.geonorge.no/metadata/Støykart---strategisk-støykartlegging-(Støydirektivet)/93a154a7-47d5-47b8-bdda-f156d92386cc))
+
+**Andre restriksjoner:**
+
+*   **Restriksjonsområder - Naturvern:** Restriksjoner som gjelder i Naturvernområder, inkludert ferdselsforbud og luftfart (lavflyving og start/landing). ([Mer informasjon](https://kartkatalog.geonorge.no/metadata/Restriksjonsområder---Naturvern/a5110961-6246-4173-90ce-69ff3604d9f6))
+*   **Motorferdsel Svalbard - fartsrestriksjoner fuglefjell:** Viser fuglefjell som er beskyttet mot motorferdsel, med fartsrestriksjoner ved ferdsel på sjø. ([Mer informasjon](https://kartkatalog.geonorge.no/metadata/Motorferdsel-Svalbard---fartsrestriksjoner-fuglefjell/e6c0454b-42d5-48c3-82ad-25206788749c))
+
+2025-05-29 15:33:52,123 - agents.supervisor - INFO - Session: 139741802402064
+  User: Hvilke datasett er tilgjengelig for flomdata?
+  Assistant: Jeg har funnet informasjon om flomdata i Norge. Her er en oversikt over tilgjengelige datasett:
+
+**Oversikt over flomrelaterte datasett:**
+
+*   **Flomveier - Lier:** Viser åpne flomveier basert på terrenganalyse ved store nedbørsmengder i Lier kommune.
+*   **Flom aktsomhet Nordre Follo:** Viser maksvannstand ved 200 års regn med 50% klimapåslag i tettbebygde områder i Nordre Follo.
+*   **Flomsoner:** Viser arealer som oversvømmes ved ulike flomstørrelser (20-, 200- og 1000-årsflommer), og i noen tilfeller også forventet flomsone for 200-årsflommen i år 2100.
+*   **Utredninger av flomfare:** En rapportdatabase som viser hvor i Norge det er utført utredninger av flomfare, inkludert flomberegninger og vannlinjeberegninger.
+*   **Flom aktsomhetsområder:** Et nasjonalt datasett som viser hvilke arealer som kan være utsatt for flomfare på et overordnet nivå.
+*   **Stormflo og havnivå:** Viser hvilke arealer som kan bli berørt av oversvømmelse ved ulike høye vannstander, nå og i fremtiden, med klimapåslag.
+*   **Flom Aktsomhetsoner Drøbak:** Beregnede flomsoner for 200-årsflom (inklusive 40% klimapåslag) for Raskebekken i Drøbak.
+*   **Høyeste flomnivå august 2023 - Ringerike:** Viser høyeste flomnivå som ble registrert under uværet "Hans" i august 2023 i Ringerike.
+
+Jeg har også informasjon om datasettet **Vannmasser - Overflatestrøm**, som viser modellert strømstyrke i havoverflaten for områdene Nye Stavanger kommune og Ålesund/Giske.
+
+Hvis du har mer spesifikke spørsmål om et av disse datasettene, eller ønsker å vite mer om flomdata i et bestemt område, kan du spørre meg.
+
+2025-05-29 15:34:05,974 - agents.supervisor - INFO - Session: 139741802402064
+  User: FKB bygning
+  Assistant: Jeg kan hjelpe deg med informasjon om geografiske data i Norge. Her er noen relevante datasett:
+
+**FKB-Bygning:**
+Dette datasettet inneholder detaljert bygningsinformasjon som beskriver alle typer bygninger, takoverbygg, beskrivende bygningslinjer og bygningsvedheng. Det er en del av Felles Kartdatabase (FKB) og har en 1:1 kobling mot Matrikkelen via bygningsnummer. Dataene er ikke-sensitive og fritt tilgjengelige for Norge digitalt parter. Private aktører må kjøpe tilgang gjennom en forhandler.
+
+**FKB-BygnAnlegg:**
+Dette datasettet beskriver bygningsmessige anlegg som murer, gjerder, kaier og moloer. Det er også en del av FKB og er ikke-sensitivt og åpent tilgjengelig.
+
+**FKB-Tiltak:**
+Dette datasettet inneholder informasjon om områder der det skjer utbygging, som er omsøkt eller godkjent av kommunen. Dataene brukes som metadata for de øvrige FKB-datasettene og bidrar til raskere oppdatering av grunnkartet.
+
+**Kirkebygg - forenklet:**
+Dette datasettet inneholder informasjon om kirkebygg etter kirkeloven og bygninger vigslet til kirkelig bruk (kapeller). Per 01.09.2019 inneholdt det 2095 kirkebygg.
+
+Du kan legge til kartlag fra datasettet ved å trykke på "VIS" knappen på bildet.
+
+2025-05-29 15:34:24,167 - agents.supervisor - INFO - Session: 139741795788752
+  User: Hvilke datasett er tilgjengelig for flomdata?
+  Assistant: Jeg har funnet flere relevante datasett om flomdata i Norge:
+
+*   **Flomveier - Lier:** Viser hvor vann vil renne ved store nedbørsmengder i Lier, uten å ta hensyn til avløp og rør.
+*   **Flom aktsomhet Nordre Follo:** Viser maksvannstand ved 200 års regn med 50% klimapåslag i tettbebygde områder i Nordre Follo.
+*   **Flomsoner:** Arealer som oversvømmes ved ulike flomstørrelser (20-, 200- og 1000-årsflommene), og forventet 200-årsflom i 2100 i utsatte områder.
+*   **Utredninger av flomfare:** Rapportdatabase over utførte flomfareutredninger i Norge, med lenker til PDF-rapporter for noen utredninger.
+*   **Flom aktsomhetsområder:** Nasjonalt datasett som viser områder som kan være utsatt for flomfare, egnet for bruk i kommuneplanlegging.
+*   **Stormflo og havnivå:** Viser hvilke områder som kan bli berørt av oversvømmelse ved ulike høye vannstander, nå og i fremtiden, med klimapåslag.
+*   **Flom Aktsomhetsoner Drøbak:** Beregnede flomsoner for 200-årsflom (inklusive 40% klimapåslag) for Raskebekken i Drøbak.
+*   **Høyeste flomnivå august 2023 - Ringerike:** Viser høyeste flomnivå som ble registrert under uværet "Hans" i august 2023 i Ringerike.
+
+Du kan legge til kartlag fra datasettet ved å trykke på "VIS" knappen på bildet.
+
+2025-05-29 15:34:40,122 - agents.supervisor - INFO - Session: 139741795788752
+  User: FKB
+  Assistant: Her er informasjon om FKB-datasett i Norge:
+
+**Felles Kartdatabase (FKB)**
+FKB er en samling datasett som utgjør en sentral del av grunnkartet og er definert av FKB produktspesifikasjonene som vedtas av Geovekst-forum. Datasettene inkluderer høyde, vann, markslag, arealbruk, bygninger, ledninger, veg, jernbane og flyplass. FKB-data er åpne data, finansiert gjennom Geovekst-samarbeidet, og er fritt tilgjengelige for Norge digitalt parter. Private aktører må kjøpe tilgang gjennom en forhandler.
+
+**FKB-Lufthavn**
+Omfatter et utvalg av objekttyper for lufthavner.
+
+**FKB-Bane**
+Inneholder data om infrastruktur for skinnegående kjøretøy som jernbane, tunnelbane og sporveg.
+
+**FKB-Vann**
+Beskriver geografisk beliggenhet, forløp og form for bekker, elver, innsjøer, isbreer og kystlinjer.
+
+**FKB-Veg**
+Inneholder detaljert informasjon om alle offentlige og private veganlegg.
+
+**FKB-BygnAnlegg**
+Beskriver bygningsmessige anlegg som murer, gjerder, kaier og moloer.
+
+**FKB-Arealbruk**
+Beskriver den fysiske bruken av et areal, uavhengig av jordas produksjonsevne eller planlagt bruk.
+
+**FKB-TraktorvegSti**
+Inneholder traktorveger, stier og stitrapp med senterlinjegeometri.
+
+**FKB-Naturinfo**
+Beskriver naturinformasjon som hekker, innmålte trær og steiner.
+
+**FKB-Bygning**
+Inneholder detaljert bygningsinformasjon og har en 1:1 kobling mot matrikkelen.
+
+Du kan finne mer informasjon om hvert datasett ved å følge lenkene som er oppgitt.
+
+2025-05-29 15:39:11,564 - agents.supervisor - INFO - Session: 139740523870032
+  User: Ingen brukerinput funnet.
+  Assistant: Her er informasjon om eiendomsgrenser for Gjøvik:
+
+Kartet viser nå Gjøvik, zoomet til nivå 14. For å finne eiendomsgrenser, kan du bruke datasettet **Matrikkelen - Eiendomskart Teig**.
+
+*   Dette datasettet inneholder eiendomsinformasjon fra Matrikkelen, inkludert teiger (avgrensede arealer/jordstykker) med informasjon om hvilken eiendom de tilhører.
+*   Datasettet inneholder også grensepunkt, grenser og teigareal med kvalitetsopplysninger.
+*   [Mer informasjon om Matrikkelen - Eiendomskart Teig](https://kartkatalog.geonorge.no/metadata/Matrikkelen---Eiendomskart-Teig/74340c24-1c8a-4454-b813-bfe498e80f16)
+
+Jeg fant ingen datasettbeskrivelser spesifikt for "Matrikkelen - Eiendomskart Teig Gjøvik". Du kan prøve å søke etter dette for å se om det finnes et mer spesifikt datasett for Gjøvik kommune.
+2025-05-29 15:40:23,422 - agents.supervisor - INFO - Session: 139740524959632
+  User: Hvilke datasett er tilgjengelig for flomdata?
+  Assistant: Jeg har funnet flere relevante datasett om flomdata i Norge:
+
+*   **Flomveier - Lier:** Viser hvor vann vil renne ved store nedbørsmengder i Lier, uten å ta hensyn til avløp og rør.
+*   **Flom aktsomhet Nordre Follo:** Viser maksvannstand ved 200 års regn med 50% klimapåslag i tettbebygde områder i Nordre Follo.
+*   **Flomsoner:** Arealer som oversvømmes ved ulike flomstørrelser (20-, 200- og 1000-årsflommene), og forventet 200-årsflom i år 2100 i områder med økt vannføring pga. klimaendringer.
+*   **Utredninger av flomfare:** Rapportdatabase over utførte flomfareutredninger i Norge, inkludert flomberegninger og vannlinjeberegninger.
+*   **Flom aktsomhetsområder:** Nasjonalt datasett som viser områder som kan være utsatt for flomfare, egnet for bruk i kommuneplanlegging.
+*   **Stormflo og havnivå:** Informasjon om høye vannstander (stormflo) med dagens og fremtidig havnivå, samt modellerte arealer som kan bli berørt av oversvømmelse.
+*   **Flom Aktsomhetsoner Drøbak:** Beregnede flomsoner for 200-årsflom med klimapåslag for Raskebekken i Drøbak.
+*   **Høyeste flomnivå august 2023 - Ringerike:** Viser høyeste flomnivå registrert under uværet "Hans" i Ringerike, basert på bilder og FKB-høydekurver.
+
+Du kan legge til kartlag fra datasettet ved å trykke på "VIS" knappen på bildet.
+
+2025-05-29 15:41:12,267 - agents.supervisor - INFO - Session: 139740524959632
+  User: KVikkleire
+  Assistant: Jeg kan hjelpe deg med informasjon om kvikkleire og relaterte geografiske data i Norge. Her er en oversikt over tilgjengelige datasett:
+
+**Kvikkleire**
+*   **Beskrivelse:** Kart over soner med potensiell fare for større kvikkleireskred, identifisert ved kvartærgeologisk kartlegging og geotekniske vurderinger. Klassifisert etter faregrad og konsekvensklasse.
+*   **Sist oppdatert:** 15.04.2002
+*   **Mer informasjon:** [https://kartkatalog.geonorge.no/metadata/Kvikkleire/a29b905c-6aaa-4283-ae2c-d167624c08a8](https://kartkatalog.geonorge.no/metadata/Kvikkleire/a29b905c-6aaa-4283-ae2c-d167624c08a8)
+
+**Aktsomhetskart for kvikkleireskred**
+*   **Beskrivelse:** Utviklet av NVE for å identifisere mulige løsneområder for kvikkleireskred, basert på "Aktsomhet marin leire" og terrengkriterier.
+*   **Sist oppdatert:** 04.01.2024
+*   **Mer informasjon:** [https://kartkatalog.geonorge.no/metadata/Aktsomhetskart-for-kvikkleireskred/dabd2a2c-36d5-4ed7-a4c9-d49808a2b848](https://kartkatalog.geonorge.no/metadata/Aktsomhetskart-for-kvikkleireskred/dabd2a2c-36d5-4ed7-a4c9-d49808a2b848)
+
+**Mulighet for marin leire**
+*   **Beskrivelse:** Viser hvor det potensielt kan finnes marin leire basert på løsmassekart og data for marin grense.
+*   **Sist oppdatert:** 12.01.2016
+*   **Mer informasjon:** [https://kartkatalog.geonorge.no/metadata/Mulighet-for-marin-leire/641a81c2-9354-473b-b8f0-2b1e2ab3930a](https://kartkatalog.geonorge.no/metadata/Mulighet-for-marin-leire/641a81c2-9354-473b-b8f0-2b1e2ab3930a)
+
+Jeg har også informasjon om andre relevante datasett som:
+
+*   **Løsmasser:** Viser utbredelsen av ulike løsmassetyper.
+*   **Mektighet av kvartære sedimenter på norsk kontinentalsokkel:** Viser tykkelsen av sedimenter avsatt de siste 2,6 millioner år.
+
+Hvis du har spesifikke spørsmål om disse datasettene, eller ønsker å vite mer om andre geografiske data relatert til kvikkleire, er det bare å spørre!
+
+2025-05-29 15:41:38,441 - agents.supervisor - INFO - Session: 139740524959632
+  User: luftfartshindringer
+  Assistant: Jeg kan hjelpe deg med geografiske data relatert til luftfart og restriksjoner i Norge. Her er en oversikt over tilgjengelige datasett:
+
+**Luftfartshindre:**
+
+*   **Nasjonalt register over luftfartshindre:** Inneholder informasjon om menneskeskapte objekter som master, tårn, kraner og kraftledninger som kan være hindringer for luftfarten. ([Mer informasjon](https://kartkatalog.geonorge.no/metadata/Nasjonalt-register-over-luftfartshindre/28c896d0-8a0d-4209-bf31-4931033b1082))
+
+**Restriksjoner rundt lufthavner:**
+
+*   **Lufthavn - Byggerestriksjoner (BRA):** Viser områder rundt flyplasser og NAV-anlegg der bygg og konstruksjoner kan forstyrre signaler og medføre restriksjoner. ([Mer informasjon](https://kartkatalog.geonorge.no/metadata/Lufthavn---Byggerestriksjoner-(BRA)/e0db7ab9-c1fc-4a52-b381-1e5273204ef9))
+
+**Naturvernrestriksjoner:**
+
+*   **Restriksjonsområder - Naturvern:** Angir restriksjoner som gjelder i naturvernområder, inkludert ferdselsforbud og luftfart (lavflyging og start/landing). ([Mer informasjon](https://kartkatalog.geonorge.no/metadata/Restriksjonsområder---Naturvern/a5110961-6246-4173-90ce-69ff3604d9f6))
+
+**Støysoner:**
+
+*   **Støysoner Avinors lufthavner:** Viser støyforhold i innflyvningssoner og ved bakken rundt Avinors flyplasser. ([Mer informasjon](https://kartkatalog.geonorge.no/metadata/Støysoner-Avinors-lufthavner/1489f7f8-40c8-4dc4-83b6-bcf277b56506))
+*   **Støysoner for Forsvarets flyplasser:** Dekker støyforhold rundt Forsvarets flyplasser. ([Mer informasjon](https://kartkatalog.geonorge.no/metadata/Støysoner-for-Forsvarets-flyplasser/ec1541d3-4a56-4095-9bf7-08dcfbb673d1))
+*   **Støykart - strategisk støykartlegging (Støydirektivet):** Omfatter strategisk støykartlegging rundt større byområder, veier, jernbaner og flyplasser. ([Mer informasjon](https://kartkatalog.geonorge.no/metadata/Støykart---strategisk-støykartlegging-(Støydirektivet)/93a154a7-47d5-47b8-bdda-f156d92386cc))
+
+**Flyplasser:**
+
+*   **Lufthavner Flyplasser:** Inneholder data om lufthavner med fly- og helikopterplasser basert på N50 Kartdata. ([Mer informasjon](https://kartkatalog.geonorge.no/metadata/Lufthavner-Flyplasser/8de1886c-2c54-4f1a-a527-566987ae7fbd))
+*   **Lufthavn-punkt Avinor:** Punktdata som representerer Avinors lufthavner. ([Mer informasjon](https://kartkatalog.geonorge.no/metadata/Lufthavn-punkt-Avinor/22485273-dc0c-4484-a8be-357105d65689))
+*   **FKB-Lufthavn:** En del av Felles Kartdatabase (FKB) som omfatter et utvalg av objekttyper for lufthavner. ([Mer informasjon](https://kartkatalog.geonorge.no/metadata/FKB-Lufthavn/23dfcc33-fb04-4898-aa88-68b49c4bfea7))
+
+**Motorferdsel Svalbard:**
+
+*   **Motorferdsel Svalbard - fartsrestriksjoner fuglefjell:** Viser fuglefjell som er beskyttet mot motorferdsel, med fartsrestriksjoner på sjø ved utvalgte områder. ([Mer informasjon](https://kartkatalog.geonorge.no/metadata/Motorferdsel-Svalbard---fartsrestriksjoner-fuglefjell/e6c0454b-42d5-48c3-82ad-25206788749c))
+
+2025-05-29 15:44:19,134 - agents.supervisor - INFO - Session: 139741061323728
+  User: Ingen brukerinput funnet.
+  Assistant: Basert på din posisjon, har jeg funnet tilgjengelig informasjon om kvikkleire i området.
+
+Jeg har funnet følgende datasett som kan være relevante:
+
+*   **Kvikkleire:** Kartene gir en oversikt over soner med potensiell fare (aktsomhetsområder) for større kvikkleireskred. Kartet viser nå din posisjon i forhold til disse sonene.
+*   **Aktsomhetskart for kvikkleireskred:** Dette kartet, utviklet av NVE, tar hensyn til både løsmassene og terrenget for å vurdere risiko.
+*   **Mulighet for marin leire:** Dette datasettet viser områder hvor det potensielt kan finnes marin leire, som er en forutsetning for kvikkleire.
+
+Du kan finne mer detaljert informasjon om hvert datasett, inkludert oppdateringsdato og beskrivelser, ved å følge lenkene som er oppgitt. Vær oppmerksom på at disse kartene indikerer potensiell fare og at en konkret vurdering av din spesifikke lokasjon kan kreve ytterligere undersøkelser.
+2025-05-29 15:45:29,676 - agents.supervisor - INFO - Session: 139741799030480
+  User: Hei
+  Assistant: Hei! Jeg er GeoGPT, en ekspertassistent for Geonorge. Jeg er spesialisert på å hjelpe deg med å finne geodata og datasett.
+
+Jeg kan for eksempel hjelpe deg med å finne:
+
+*   Datasett for et spesifikt geografisk område, for eksempel "Hvilke datasett finnes for Oslo kommune?"
+*   Datasett som inneholder spesifikke typer informasjon, for eksempel "Finn datasett som inneholder informasjon om høyde over havet."
+*   Datasett som er egnet for et bestemt formål, for eksempel "Hvilke datasett kan brukes til å lage et kart over vegetasjonstyper?"
+
+Jeg bruker et vektor-søk for å finne datasett basert på din beskrivelse av hva datasettet skal inneholde. Hvordan kan jeg hjelpe deg?
+
+2025-05-29 15:45:43,791 - agents.supervisor - INFO - Session: 139741059045200
+  User: Hei
+  Assistant: Jeg er GeoGPT, en ekspertassistent for Geonorge, spesialisert på å finne geodata og datasett. Jeg kan hjelpe deg med å søke etter spesifikke datasett i GeoNorge-databasen basert på dine behov. For eksempel, kan jeg hjelpe deg med å finne datasett som inneholder informasjon om:
+
+-   Høyde over havet
+-   Bygninger i et spesifikt område
+-   Elver og innsjøer
+-   Geologiske data
+-   Vegnett
+-   Eiendommer
+
+Bare fortell meg hva du leter etter, så skal jeg gjøre mitt beste for å finne det for deg.
+
+2025-05-29 15:48:06,824 - agents.supervisor - INFO - Session: 139740524048656
+  User: Ingen brukerinput funnet.
+  Assistant: Det er viktig å være klar over faren for kvikkleire, spesielt i områder med marin leire. Jeg har informasjon om kvikkleire og områder med potensiell risiko.
+
+Jeg har funnet følgende datasett som kan være relevante for din posisjon:
+
+*   **Kvikkleire:** Dette datasettet viser soner med potensiell fare for større kvikkleireskred, klassifisert etter faregrad, konsekvensklasse og risikoklasse. Du kan finne mer informasjon her: [Kvikkleire](https://kartkatalog.geonorge.no/metadata/Kvikkleire/a29b905c-6aaa-4283-ae2c-d167624c08a8)
+*   **Aktsomhetskart for kvikkleireskred:** Dette kartet tar hensyn til både løsmassene og terrenget for å identifisere mulige løsneområder for kvikkleireskred. Mer informasjon er tilgjengelig her: [Aktsomhetskart-for-kvikkleireskred](https://kartkatalog.geonorge.no/metadata/Aktsomhetskart-for-kvikkleireskred/dabd2a2c-36d5-4ed7-a4c9-d49808a2b848)
+*   **Mulighet for marin leire:** Dette datasettet viser områder hvor det potensielt kan finnes marin leire, basert på løsmassekart og data for marin grense. Du kan finne mer informasjon her: [Mulighet-for-marin-leire](https://kartkatalog.geonorge.no/metadata/Mulighet-for-marin-leire/641a81c2-9354-473b-b8f0-2b1e2ab3930a)
+
+For å få et nøyaktig svar på om det er kvikkleirefare akkurat der du er, anbefaler jeg at du sjekker de tilgjengelige kartene og datasettene via lenkene ovenfor. Kartsystemet viser din posisjon, så du kan sammenligne den med de kartlagte områdene for kvikkleirefare.
+2025-05-29 15:50:24,077 - agents.supervisor - INFO - Session: 139740526950352
+  User: Ingen brukerinput funnet.
+  Assistant: Basert på tilgjengelig data, kan jeg ikke gi et definitivt svar på om det er kvikkleire *nøyaktig* rundt din posisjon. Kartet viser din posisjon, og jeg har funnet flere relevante datasett som kan hjelpe deg med å vurdere risikoen:
+
+*   **Kvikkleire:** Dette datasettet viser soner med potensiell fare for større kvikkleireskred, klassifisert etter faregrad og konsekvensklasse. Du kan bruke dette kartlaget til å se om din posisjon er innenfor en slik sone. [Mer informasjon](https://kartkatalog.geonorge.no/metadata/Kvikkleire/a29b905c-6aaa-4283-ae2c-d167624c08a8)
+*   **Aktsomhetskart for kvikkleireskred:** Dette kartet tar hensyn til både løsmasser og terreng for å identifisere mulige løsneområder for kvikkleireskred. Det kan gi en mer detaljert vurdering av risikoen i ditt område. [Mer informasjon](https://kartkatalog.geonorge.no/metadata/Aktsomhetskart-for-kvikkleireskred/dabd2a2c-36d5-4ed7-a4c9-d49808a2b848)
+*   **Mulighet for marin leire:** Dette datasettet viser områder hvor det potensielt kan finnes marin leire, som er en forutsetning for kvikkleire. Selv om det ikke direkte indikerer kvikkleire, kan det gi en indikasjon på om området er utsatt. [Mer informasjon](https://kartkatalog.geonorge.no/metadata/Mulighet-for-marin-leire/641a81c2-9354-473b-b8f0-2b1e2ab3930a)
+
+For å få en bedre forståelse av situasjonen rundt din posisjon, anbefaler jeg at du legger til disse kartlagene ved å trykke på "VIS" knappen på bildet og undersøker dem i forhold til din posisjon. Vær oppmerksom på at disse kartene gir en indikasjon på potensiell risiko, og en faglig vurdering kan være nødvendig for å fastslå den faktiske risikoen for kvikkleire.
+2025-05-29 15:51:50,800 - agents.supervisor - INFO - Session: 139740526950352
+  User: Hei
+  Assistant: Hei! Jeg er GeoGPT, en ekspertassistent for Geonorge. Jeg er spesialisert på å hjelpe deg med å finne geodata og datasett.
+
+Jeg kan for eksempel hjelpe deg med å:
+
+*   Finne kartdata for et spesifikt område.
+*   Søke etter datasett basert på tema, som for eksempel høyde, vegetasjon, eller bebyggelse.
+*   Identifisere tilgjengelige data for arealplanlegging.
+
+Fortell meg hva du leter etter, så skal jeg gjøre mitt beste for å hjelpe deg!
+
+2025-05-29 15:52:11,374 - agents.supervisor - INFO - Session: 139740526950352
+  User: Fortell meg om kvikkleire
+  Assistant: Jeg har funnet informasjon om følgende datasett relatert til kvikkleire:
+
+*   **Kvikkleire**: Viser soner med potensiell fare for større kvikkleireskred, klassifisert etter faregrad og konsekvensklasse. ([Mer informasjon](https://kartkatalog.geonorge.no/metadata/Kvikkleire/a29b905c-6aaa-4283-ae2c-d167624c08a8))
+*   **Aktsomhetskart for kvikkleireskred**: Utviklet av NVE for å identifisere mulige løsneområder for kvikkleireskred, og markerer områder hvor det kan være fare for skade fra utløp fra et kvikkleireskred. ([Mer informasjon](https://kartkatalog.geonorge.no/metadata/Aktsomhetskart-for-kvikkleireskred/dabd2a2c-36d5-4ed7-a4c9-d49808a2b848))
+*   **Mulighet for marin leire**: Viser områder hvor det potensielt kan finnes marin leire, basert på løsmassekart og data for marin grense. ([Mer informasjon](https://kartkatalog.geonorge.no/metadata/Mulighet-for-marin-leire/641a81c2-9354-473b-b8f0-2b1e2ab3930a))
+
+2025-05-29 15:52:29,791 - agents.supervisor - INFO - Session: 139740526950352
+  User: DTm i gjøvik
+  Assistant: Jeg fant informasjon om følgende datasett som kan være relevante for din forespørsel om kvikkleire i Gjøvik:
+
+*   **Kvikkleire:** Dette datasettet gir en oversikt over soner med potensiell fare for større kvikkleireskred, inkludert faregrad og konsekvensklasse.
+*   **Mulighet for marin leire:** Viser hvor det potensielt kan finnes marin leire, som er en forutsetning for kvikkleire.
+*   **Aktsomhetskart for kvikkleireskred:** Viser områder med aktsomhet for kvikkleireskred basert på marin leire og terrengkriterier.
+
+Du kan visualisere disse datasettene ved å trykke på "VIS" knappen på bildet.
+2025-05-29 15:53:25,767 - agents.supervisor - INFO - Session: 139740526950352
+  User: Ingen brukerinput funnet.
+  Assistant: Ok, her er svaret ditt:
+
+Du er nå tatt til Gjøvik på kartet, med zoomnivå 14.
+
+Jeg kan ikke gi et definitivt svar på om det er kvikkleire *nøyaktig* rundt din posisjon, men kartet viser din posisjon, og jeg har funnet flere relevante datasett som kan hjelpe deg med å vurdere risikoen:
+
+*   **Kvikkleire:** Dette datasettet viser soner med potensiell fare for større kvikkleireskred, klassifisert etter faregrad og konsekvensklasse. Du kan bruke dette kartlaget til å se om din posisjon er innenfor en slik sone. [Mer informasjon](https://kartkatalog.geonorge.no/metadata/Kvikkleire/a29b905c-6aaa-4283-ae2c-d167624c08a8)
+*   **Aktsomhetskart for kvikkleireskred:** Dette kartet tar hensyn til både løsmasser og terreng for å identifisere mulige løsneområder for kvikkleireskred. Det kan gi en mer detaljert vurdering av risikoen i ditt område. [Mer informasjon](https://kartkatalog.geonorge.no/metadata/Aktsomhetskart-for-kvikkleireskred/dabd2a2c-36d5-4ed7-a4c9-d49808a2b848)
+*   **Mulighet for marin leire:** Dette datasettet viser områder hvor det potensielt kan finnes marin leire, som er en forutsetning for kvikkleire. Selv om det ikke direkte indikerer kvikkleire, kan det gi en indikasjon på om området er utsatt. [Mer informasjon](https://kartkatalog.geonorge.no/metadata/Mulighet-for-marin-leire/641a81c2-9354-473b-b8f0-2b1e2ab3930a)
+
+For å få en bedre forståelse av situasjonen rundt din posisjon, anbefaler jeg at du legger til disse kartlagene ved å trykke på "VIS" knappen på bildet og undersøker dem i forhold til din posisjon. Vær oppmerksom på at disse kartene gir en indikasjon på potensiell risiko, og en faglig vurdering kan være nødvendig for å fastslå den faktiske risikoen for kvikkleire.
+2025-05-29 15:53:33,246 - agents.supervisor - INFO - Session: 139740526950352
+  User: ta meg til gjøvik
+  Assistant: Kartet viser nå Gjøvik og er zoomet til nivå 14.
+2025-05-29 15:54:38,497 - agents.supervisor - INFO - Session: 139741799123280
+  User: Ingen brukerinput funnet.
+  Assistant: Du er nå tatt til Gjøvik i kartet, som er zoomet til nivå 14. Her er informasjon om FKB-datasett (Felles KartdataBase) som kan være relevant for deg:
+
+*   **Felles KartdataBase (FKB)**: Inneholder data som følger FKB produktspesifikasjonen, inkludert høyde, vann, markslag, arealbruk, bygninger, bygningsmessige anlegg, ledninger, veg, jernbane og flyplass.
+*   **FKB-Lufthavn**: Omfatter et utvalg av objekttyper for lufthavner.
+*   **FKB-Bane**: Data om infrastruktur for skinnegående kjøretøy som jernbane, tunnelbane og sporvei.
+*   **FKB-Bygning**: Detaljert bygningsinformasjon med kobling til matrikkelen.
+*   **FKB-BygnAnlegg**: Beskriver bygningsmessige anlegg som murer, gjerder og kaier.
+*   **FKB-Arealbruk**: Beskriver den fysiske bruken av et areal.
+*   **FKB-Veg**: Detaljert informasjon om alle offentlige og private veganlegg.
+*   **FKB-Naturinfo**: Naturinformasjon som hekker, trær og steiner.
+*   **FKB-TraktorvegSti**: Traktorveger, stier og stitrapp.
+*   **FKB-Vann**: Bekker, elver, innsjøer og kystlinjer.
+2025-05-29 15:54:52,508 - agents.supervisor - INFO - Session: 139741799123280
+  User: ta meg til gjøvik
+  Assistant: Kartet viser nå Gjøvik og er zoomet til nivå 14.
+2025-05-29 15:55:18,267 - agents.supervisor - INFO - Session: 139741799123280
+  User: Ingen brukerinput funnet.
+  Assistant: Jeg har nå zoomet kartet til Gjøvik, nivå 14.
+
+Jeg beklager, jeg kan ikke vise DTM (Digital Terrain Model) direkte i kartet. Men jeg kan hjelpe deg med å finne DTM-datasett for Gjøvik. Vil du at jeg skal søke etter det?
+2025-05-29 15:56:02,676 - agents.supervisor - INFO - Session: 139741799123280
+  User: What does DTM stand for?
+
+  Assistant: I am sorry, I cannot answer questions that are not related to GIS, Geonorge, Geodata, or datasets.
+
+2025-05-29 15:56:17,701 - agents.supervisor - INFO - Session: 139741799123280
+  User: Hva er DTM
+  Assistant: Beklager, jeg kan ikke svare på spørsmål som ikke er relatert til GIS, Geonorge, Geodata eller datasett.
+2025-05-29 15:56:37,750 - agents.supervisor - INFO - Session: 139741799123280
+  User: Hva er luftfarthindringer
+  Assistant: Beklager, jeg kan ikke svare på spørsmål som ikke er relatert til GIS, Geonorge, Geodata eller datasett.
+
+2025-05-29 15:57:04,550 - agents.supervisor - INFO - Session: 139741799123280
+  User: hei
+  Assistant: Hei! Jeg er GeoGPT, en ekspertassistent for Geonorge. Jeg er spesialisert på å hjelpe deg med å finne geodata og datasett fra Geonorge. For eksempel, kan jeg hjelpe deg med å finne datasett for høydekurver, eiendommer, eller veier i et bestemt område. Bare fortell meg hva du leter etter!
+
+2025-05-29 15:57:15,340 - agents.supervisor - INFO - Session: 139741799123280
+  User: kan du vise meg martikkel
+  Assistant: Kartet viser nå martikkel og er zoomet til nivå 14.
+2025-05-29 15:57:41,166 - agents.supervisor - INFO - Session: 139741799123280
+  User: bygninger i norge
+  Assistant: Jeg fant flere datasett som inneholder informasjon om bygninger i Norge. Her er en oversikt:
+
+**Datasett om bygninger i Norge:**
+
+*   **INSPIRE Bygninger 2D NO:** Viser plasseringen av bygninger som punkt eller med bygningens grunnleggende form. ([Mer informasjon](https://kartkatalog.geonorge.no/metadata/INSPIRE-Bygninger-2D-NO/bff47a2e-693d-49f3-987a-e8becce72f4c))
+*   **Kulturminner - Freda bygninger:** Inneholder informasjon om bygninger og kirker som er fredet. ([Mer informasjon](https://kartkatalog.geonorge.no/metadata/Kulturminner---Freda-bygninger/a4bfd879-120f-490e-9907-68ba870664b1))
+*   **N20 Bygning:** Dekker alle bygninger med bygningsomriss tilpasset målestokk 1:20 000. ([Mer informasjon](https://kartkatalog.geonorge.no/metadata/N20-Bygning/b187c449-04ac-42fe-9eab-83d81bf338bc))
+*   **FKB-Bygning:** Detaljert bygningsinformasjon som er en del av Felles Kartdatabase (FKB). ([Mer informasjon](https://kartkatalog.geonorge.no/metadata/FKB-Bygning/8b4304ea-4fb0-479c-a24d-fa225e2c6e97))
+*   **Kirkebygg - forenklet:** Basert på Kirkebyggdatabasen og inneholder kirker etter kirkeloven og bygninger vigslet til kirkelig bruk (kapeller). ([Mer informasjon](https://kartkatalog.geonorge.no/metadata/Kirkebygg---forenklet/eea87664-d936-478e-897a-c38ca7c478a0))
+*   **FKB-BygnAnlegg:** Beskriver bygningsmessige anlegg som murer, gjerder, kaier, moloer, tanker etc. som ikke er spesifisert i andre fagspesifikke FKB-datasett. ([Mer informasjon](https://kartkatalog.geonorge.no/metadata/FKB-BygnAnlegg/ede5ffb2-ee2a-44a3-852d-369a14d97f2e))
+*   **SEFRAK-bygninger Kongsberg kommune:** SEFRAK-bygninger i Kongsberg kommune. ([Mer informasjon](https://kartkatalog.geonorge.no/metadata/SEFRAK-bygninger-Kongsberg-kommune/7c37a352-7264-4832-8cd4-2086fa8193c9))
+*   **Matrikkelen - Bygningspunkt:** Utdrag av bygningsinformasjonen som er registrert i Matrikkelen. ([Mer informasjon](https://kartkatalog.geonorge.no/metadata/Matrikkelen---Bygningspunkt/24d7e9d1-87f6-45a0-b38e-3447f8d7f9a1))
+*   **Matrikkelen - Bygningspunkt Utvidet:**  Utdrag av bygningsinformasjonen som er registrert i Matrikkelen, krever tilgangskontroll. ([Mer informasjon](https://kartkatalog.geonorge.no/metadata/Matrikkelen---Bygningspunkt-Utvidet/a1cd85e3-d075-49b3-9cc5-e6ac9d23ed59))
+*   **Kulturminner - SEFRAK-bygninger:** Landsdekkende register over eldre bygninger og andre kulturminner i Norge. ([Mer informasjon](https://kartkatalog.geonorge.no/metadata/Kulturminner---SEFRAK-bygninger/93f06149-037c-48cf-b294-d166f65b6838))
+
+2025-05-29 15:59:19,136 - agents.supervisor - INFO - Session: 139741799123280
+  User: Har du noen eksempler på hva jeg kan se på hvis jeg skal bygge hus
+  Assistant: Jeg kan hjelpe deg med geografiske data i Norge. Her er informasjon om datasett som kan være relevante for deg:
+
+**Kirkebygg - forenklet**
+Dette datasettet inneholder informasjon om 2095 kirkebygg i Norge per 01.09.2019, basert på Kirkebyggdatabasen. Det inkluderer kirker etter kirkeloven og bygninger vigslet til kirkelig bruk (kapeller) med et utvalg egenskaper.
+Mer informasjon: [https://kartkatalog.geonorge.no/metadata/Kirkebygg---forenklet/eea87664-d936-478e-897a-c38ca7c478a0](https://kartkatalog.geonorge.no/metadata/Kirkebygg---forenklet/eea87664-d936-478e-897a-c38ca7c478a0)
+
+**Kulturminner - Verneverdig tette trehusmiljøer**
+Dette datasettet dekker områder som Riksantikvaren definerer som verneverdig tette trehusmiljøer, hvor det må tas særskilte brannvernhensyn.
+Mer informasjon: [https://kartkatalog.geonorge.no/metadata/Kulturminner---Verneverdig-tette-trehusmiljøer/420a0af3-135c-49de-bd14-e4dec9c858db](https://kartkatalog.geonorge.no/metadata/Kulturminner---Verneverdig-tette-trehusmiljøer/420a0af3-135c-49de-bd14-e4dec9c858db)
+
+**Matrikkelen - Bygningspunkt**
+Datasettet inneholder et utdrag av bygningsinformasjonen som er registrert i Matrikkelen, Norges offisielle register over fast eiendom, herunder bygninger.
+Mer informasjon: [https://kartkatalog.geonorge.no/metadata/Matrikkelen---Bygningspunkt/24d7e9d1-87f6-45a0-b38e-3447f8d7f9a1](https://kartkatalog.geonorge.no/metadata/Matrikkelen---Bygningspunkt/24d7e9d1-87f6-45a0-b38e-3447f8d7f9a1)
+
+**Matrikkelen - Bygningspunkt Utvidet**
+Datasettet "Matrikkelen – Bygningspunkt Utvidet" inneholder et utdrag av bygningsinformasjonen som er registrert i Matrikkelen, Norges offisielle register over fast eiendom, herunder bygninger. Produktet inneholder data som krever tilgangskontroll
+Mer informasjon: [https://kartkatalog.geonorge.no/metadata/Matrikkelen---Bygningspunkt-Utvidet/a1cd85e3-d075-49b3-9cc5-e6ac9d23ed59](https://kartkatalog.geonorge.no/metadata/Matrikkelen---Bygningspunkt-Utvidet/a1cd85e3-d075-49b3-9cc5-e6ac9d23ed59)
+
+**SEFRAK-bygninger Kongsberg kommune**
+Datasettet inneholder SEFRAK-bygninger i Kongsberg kommune. SEFRAK er et register over eldre bygninger og andre kulturminner i Norge.
+Mer informasjon: [https://kartkatalog.geonorge.no/metadata/SEFRAK-bygninger-Kongsberg-kommune/7c37a352-7264-4832-8cd4-2086fa8193c9](https://kartkatalog.geonorge.no/metadata/SEFRAK-bygninger-Kongsberg-kommune/7c37a352-7264-4832-8cd4-2086fa8193c9)
+
+**INSPIRE Bygninger 2D NO**
+Informasjon om plassering av bygninger kan leveres som punkt eller med den faktiske grunnleggende formen for bygningen. Vanligvis er bygninger en del av matrikkelen.
+Mer informasjon: [https://kartkatalog.geonorge.no/metadata/INSPIRE-Bygninger-2D-NO/bff47a2e-693d-49f3-987a-e8becce72f4c](https://kartkatalog.geonorge.no/metadata/INSPIRE-Bygninger-2D-NO/bff47a2e-693d-49f3-987a-e8becce72f4c)
+
+**Tettsteder**
+Datasettet viser Tettsteder pr. 01.01 for gjeldene år. Tettsteder er geografiske områder som har en dynamisk avgrensing, og antall tettsteder og deres yttergrenser vil endre seg over tid avhengig av byggeaktivitet og befolkningsutvikling.
+Mer informasjon: [https://kartkatalog.geonorge.no/metadata/Tettsteder/173f4a15-dead-4f82-b92e-f37396b72cea](https://kartkatalog.geonorge.no/metadata/Tettsteder/173f4a15-dead-4f82-b92e-f37396b72cea)
+
+**Fritidsbyggområder**
+Datasettet viser Fritidsbyggområder (Tettbygde) pr. 01.01.2021. Fritidsbyggområder er geografiske områder som har en dynamisk avgrensing, og antall områder og deres yttergrenser vil endre seg over tid avhengig av byggeaktivitet.
+Mer informasjon: [https://kartkatalog.geonorge.no/metadata/Fritidsbyggområder/a2f2e360-b822-4b5b-9d3b-972f58a872ba](https://kartkatalog.geonorge.no/metadata/Fritidsbyggområder/a2f2e360-b822-4b5b-9d3b-972f58a872ba)
+
+**Boligstatistikk på rutenett 5000 m**
+Datasettene inneholder statistikk over antall boliger og tilknyttede variabler pr 01. januar. Boligstatistikk på ruter tilhører temagruppen "Bygg/Bolig" i SSBs produktgruppe ”Statistikk på rutenett”.
+Mer informasjon: [https://kartkatalog.geonorge.no/metadata/Boligstatistikk-på-rutenett-5000-m/9a70d640-c7e3-4a61-865e-67ae44b0d45f](https://kartkatalog.geonorge.no/metadata/Boligstatistikk-på-rutenett-5000-m/9a70d640-c7e3-4a61-865e-67ae44b0d45f)
+
+**Boligstatistikk på rutenett 250 m**
+Datasettene inneholder statistikk over antall boliger og tilknyttede variabler pr 01. januar. Boligstatistikk på ruter tilhører temagruppen "Bygg/Bolig" i SSBs produktgruppe ”Statistikk på rutenett”.
+Mer informasjon: [https://kartkatalog.geonorge.no/metadata/Boligstatistikk-på-rutenett-250-m/f3cdcd1f-5ee7-40fe-ac19-33a9101e00a4](https://kartkatalog.geonorge.no/metadata/Boligstatistikk-på-rutenett-250-m/f3cdcd1f-5ee7-40fe-ac19-33a9101e00a4)
+
+For å visualisere dataene, kan du legge til kartlag fra datasettet ved å trykke på "VIS" knappen på bildet.
+
+Jeg kan også foreslå datasett for å bygge hus.
+
+2025-05-29 16:01:43,223 - agents.supervisor - INFO - Session: 139741795779536
+  User: Kan du ta meg til Tromsø
+  Assistant: Kartet viser nå Tromsø og er zoomet til nivå 14.
+2025-05-29 16:02:05,515 - agents.supervisor - INFO - Session: 139741795779536
+  User: Kirkebygg
+  Assistant: Jeg har funnet informasjon om kirkebygg i Tromsø.
+
+**Kirkebygg i Tromsø**
+Jeg fant et datasett som heter "Kirkebygg - forenklet" som inneholder informasjon om 2095 kirkebygg over hele Norge per 01.09.2019. Datasettet er basert på Kirkebyggdatabasen og inneholder kirker etter kirkeloven og bygninger vigslet til kirkelig bruk (kapeller).
+
+Hvis du ønsker å se kirkebygg i Tromsø, kan du legge til dette datasettet i kartet ved å trykke på "VIS" knappen på bildet.
+
+2025-05-29 16:04:32,613 - agents.supervisor - INFO - Session: 139740524466832
+  User: Hvilke datasett er tilgjengelig for flomdata?
+  Assistant: Jeg har funnet flere relevante datasett om flomdata i Norge:
+
+*   **Flomveier - Lier:** Viser hvor vannet vil renne ved store nedbørsmengder i Lier, uten hensyn til avløp og rør.
+*   **Flom aktsomhet Nordre Follo:** Viser maksvannstand ved 200 års regn med 50% klimapåslag i Nordre Follo.
+*   **Flomsoner:** Viser arealer som oversvømmes ved ulike flomstørrelser (20-, 200- og 1000-årsflommene).
+*   **Utredninger av flomfare:** En rapportdatabase som viser hvor i Norge det er utført utredninger av flomfare.
+*   **Flom aktsomhetsområder:** Viser hvilke arealer som kan være utsatt for flomfare på et overordnet nivå.
+*   **Stormflo og havnivå:** Informasjon om høye vannstander (stormflo) ved dagens og fremtidige havnivåer.
+*   **Flom Aktsomhetsoner Drøbak:** Beregnede flomsoner for 200-årsflom (inklusive 40% klimapåslag) for Raskebekken i Drøbak.
+*   **Høyeste flomnivå august 2023 - Ringerike:** Viser høyeste flomnivå som ble registrert under uværet "Hans" i august 2023 i Ringerike.
+
+Du kan legge til kartlag fra datasettet ved å trykke på "VIS" knappen på bildet.
+
+2025-05-29 16:04:43,142 - agents.supervisor - INFO - Session: 139740524466832
+  User: ¨Kvikkleire
+  Assistant: Jeg har funnet informasjon om følgende datasett relatert til kvikkleire:
+
+*   **Kvikkleire**: Viser soner med potensiell fare for større kvikkleireskred, klassifisert etter faregrad, konsekvensklasse og risikoklasse.
+*   **Aktsomhetskart for kvikkleireskred**: Tar hensyn til både løsmasser og terreng for å identifisere mulige løsneområder for kvikkleireskred.
+*   **Mulighet for marin leire**: Viser områder hvor det potensielt kan finnes marin leire, basert på løsmassekart og data for marin grense.
+
+Jeg har også funnet informasjon om andre relevante datasett:
+
+*   **Løsmasser**: Viser utbredelsen av ulike løsmassetyper som dekker fjelloverflaten.
+*   **Gravbarhet**: Viser hvor lett eller vanskelig det er å grave i bunnen, basert på sedimentfordeling.
+*   **Bunnsedimenter (dannelse), oversikt**: Viser bunnsedimenter klassifisert etter jordartstype i oversiktsskala.
+*   **Bunnsedimenter (dannelse), regionalt**: Viser bunnsedimenter klassifisert etter jordartstype i regional skala.
+*   **Bunnsedimenter (dannelse), detaljert**: Viser bunnsedimenter klassifisert etter jordartstype i detaljert skala for kystnære områder.
+*   **Grus og pukk**: Inneholder informasjon om grus- og pukkforekomster og uttakssteder i Norge.
+*   **Dyrkbar jord**: Viser arealer som kan dyrkes og som oppfyller kravene til klima og jordkvalitet for plantedyrking.
+
+2025-05-29 16:05:10,626 - agents.supervisor - INFO - Session: 139741930258704
+  User: Fkb
+  Assistant: Jeg er GeoGPT, en ekspert assistent for Geonorge, spesialisert på å finne geodata og datasett.
+
+Jeg kan hjelpe deg med å finne datasett i GeoNorge-databasen ved å bruke vektor-søk på beskrivelsen din av hva datasettet skal inneholde. For eksempel, du kan spørre etter:
+
+*   "Datasett som viser høydekurver i Oslo"
+*   "FKB data for hele Norge"
+*   "Nedlastning av ortofoto for Bergen"
+
+Hvordan kan jeg hjelpe deg?
+
+2025-05-29 16:05:23,886 - agents.supervisor - INFO - Session: 139741930258704
+  User: DTM
+  Assistant: Her er informasjon om tilgjengelige digitale terrengmodeller (DTM) og andre relevante datasett i Norge:
+
+**DTM 50**
+*   Beskrivelse: Digital terrengmodell med høyder i et rutenett på 50 x 50 meter, primært basert på høydeinformasjon fra N50. Dekker fastlands-Norge med øyer.
+*   Oppdatering: Produsert i 2007, ingen planlagte oppdateringer.
+*   Nøyaktighet: Standardavvik i høyde er +/- 4-6 meter.
+
+**Bouvetøya DTM 20**
+*   Beskrivelse: Digital terrengmodell for Bouvetøya med høyder i et rutenett på 20x20 meter, basert på B20 Kartdata.
+
+**Jan Mayen DTM 5**
+*   Beskrivelse: Terrengmodell for Jan Mayen med 5 meters oppløsning.
+
+**Peter I Øy DTM 20**
+*   Beskrivelse: Digital terrengmodell for Peter I Øy med høyder i et rutenett på 20x20 meter, basert på P50 Kartdata.
+
+**Dybdedata - terrengmodeller**
+*   Beskrivelse: Viser terrengvariasjoner på havbunnen med oppløsning på 5 og 25 meters grid.
+
+**Markfuktighet**
+*   Beskrivelse: Rasterdata som viser sannsynlighet for økt fuktighetsinnhold i marka, angitt som høydeforskjell mellom et punkt og nærmeste vannmettede punkt (DTW).
+
+**Digitalt markslagskart (DMK) - Historisk datasett**
+*   Beskrivelse: Historisk datasett som inneholder informasjon om jordforhold, myregenskaper, driftsforhold på jordbruksareal og detaljert informasjon om produksjonspotensial for skog (bonitet).
+
+Jeg har også informasjon om datasettet **Trafikkmengde** som gir informasjon om representativ trafikkmengde for en vegstrekning på europa-, riks- eller fylkesveger.
+
+2025-05-29 16:07:30,201 - agents.supervisor - INFO - Session: 139741799703824
+  User: Vis meg eiendomsgrenser for Gjøvik
+  Assistant: Kartet viser nå Gjøvik og er zoomet til nivå 14.
+2025-05-29 16:07:45,345 - agents.supervisor - INFO - Session: 139741799703824
+  User: Kvikkleire
+  Assistant: Basert på søkeresultatene, her er de mest relevante datasettene for kvikkleire i Gjøvik:
+
+**1. Kvikkleire**
+Beskrivelse: Kartene gir en oversikt over soner med potensiell fare (aktsomhetsområder) for større kvikkleireskred. Sonene er identifisert og avgrenset ved kvartærgeologisk kartlegging, geoteknisk vurdering av topografi og grove, geotekniske undersøkelser.
+Mer informasjon: https://kartkatalog.geonorge.no/metadata/Kvikkleire/a29b905c-6aaa-4283-ae2c-d167624c08a8
+
+**2. Aktsomhetskart for kvikkleireskred**
+Beskrivelse: Aktsomhetskart for kvikkleireskred er utviklet av NVE, og tar hensyn til både løsmassene og terrenget. Det kan brukes for å følge steg 2 og 3 i «Prosedyre for utredning av områdeskredfare» i NVE veileder 1/2019 «Sikkerhet mot kvikkleireskred» kapittel 3.2.
+Mer informasjon: https://kartkatalog.geonorge.no/metadata/Aktsomhetskart-for-kvikkleireskred/dabd2a2c-36d5-4ed7-a4c9-d49808a2b848
+
+**3. Mulighet for marin leire**
+Beskrivelse: Datasettet 'Mulighet for marin leire' (MML) er basert på løsmassekart og datasett for marin grense (MG), og viser hvor det potensielt kan finnes marin leire - enten oppe i dagen eller under andre løsmassetyper.
+Mer informasjon: https://kartkatalog.geonorge.no/metadata/Mulighet-for-marin-leire/641a81c2-9354-473b-b8f0-2b1e2ab3930a
+
+**Viktig tilleggsinformasjon:**
+*   **Dekningsområde:** Vær oppmerksom på at datasettet "Mulighet for marin leire" kun leveres for områder der løsmasser er kartlagt i målestokk 1:50 000 eller mer detaljert. Sjekk om Gjøvik er dekket av slik kartlegging.
+*   **Oppdatering:** Undersøk når datasettene sist ble oppdatert for å sikre at du bruker den mest aktuelle informasjonen.
+*   **Nøyaktighet:** Husk at "Mulighet for marin leire" indikerer *potensiell* forekomst. Det kreves geotekniske undersøkelser for å bekrefte tilstedeværelsen av kvikkleire.
+*   **Myrdata Innlandet:** Selv om dette datasettet primært fokuserer på myr, kan det inneholde informasjon om grunnforhold som kan være relevant i en kvikkleirevurdering, spesielt i områder med våtmark.
+
+2025-05-29 16:08:12,416 - agents.supervisor - INFO - Session: 139741061322576
+  User: Hvilke datasett er tilgjengelig for flomdata?
+  Assistant: Jeg har funnet informasjon om flomdata i Norge. Her er en oversikt over tilgjengelige datasett:
+
+**Oversikt over flomdatasett:**
+
+*   **Flomveier - Lier:** Viser åpne flomveier basert på terrenganalyse ved store nedbørsmengder i Lier kommune.
+*   **Flom aktsomhet Nordre Follo:** Viser maksvannstand ved 200 års regn med 50% klimapåslag i Nordre Follo.
+*   **Flomsoner:** Viser arealer som oversvømmes ved ulike flomstørrelser (20-, 200- og 1000-årsflommer).
+*   **Utredninger av flomfare:** En rapportdatabase som viser hvor i Norge det er utført utredninger av flomfare.
+*   **Flom aktsomhetsområder:** Viser hvilke arealer som kan være utsatt for flomfare på et overordnet nivå.
+*   **Stormflo og havnivå:** Informasjon om høye vannstander (stormflo) ved dagens og fremtidige havnivåer.
+*   **Flom Aktsomhetsoner Drøbak:** Beregnede flomsoner for 200-årsflom (inklusive 40% klimapåslag) for Raskebekken i Drøbak.
+*   **Høyeste flomnivå august 2023 - Ringerike:** Viser høyeste flomnivå som ble registrert under uværet "Hans" i august 2023 i Ringerike.
+
+Du kan legge til kartlag fra datasettet ved å trykke på "VIS" knappen på bildet.
+
+2025-05-29 16:08:19,112 - agents.supervisor - INFO - Session: 139741061322576
+  User: FKB?
+  Assistant: Beklager, jeg forstår ikke spørsmålet. Kan du omformulere?
+
+2025-05-29 16:08:48,757 - agents.supervisor - INFO - Session: 139740527090448
+  User: Hvilke datasett er tilgjengelig for flomdata?
+  Assistant: Jeg har funnet informasjon om flomdata i Norge. Her er en oversikt over tilgjengelige datasett:
+
+**Oversikt over flomdatasett:**
+
+*   **Flomveier - Lier:** Viser åpne flomveier basert på terrenganalyse ved store nedbørsmengder i Lier kommune.
+*   **Flom aktsomhet Nordre Follo:** Viser maksvannstand ved 200 års regn med 50% klimapåslag i Nordre Follo.
+*   **Flomsoner:** Viser arealer som oversvømmes ved ulike flomstørrelser (20-, 200- og 1000-årsflommer).
+*   **Utredninger av flomfare:** En rapportdatabase som viser hvor i Norge det er utført utredninger av flomfare.
+*   **Flom aktsomhetsområder:** Viser hvilke arealer som kan være utsatt for flomfare på et overordnet nivå.
+*   **Stormflo og havnivå:** Informasjon om høye vannstander (stormflo) ved dagens og fremtidige havnivåer.
+*   **Flom Aktsomhetsoner Drøbak:** Beregnede flomsoner for 200-årsflom (inklusive 40% klimapåslag) for Raskebekken i Drøbak.
+*   **Stormflo og havnivå – statistikk over berørte objekter og areal:** *Datasettet med berørte objekter er midlertidig fjernet.*
+*   **Høyeste flomnivå august 2023 - Ringerike:** Viser høyeste flomnivå som ble registrert under uværet "Hans" i august 2023 i Ringerike.
+
+Du kan legge til kartlag fra datasettet ved å trykke på "VIS" knappen på bildet.
+
+2025-05-29 16:10:15,026 - agents.supervisor - INFO - Session: 139740527090448
+  User: Find the Digital Terrain Model (DTM) with 10-meter resolution.
+
+  Assistant: Beklager, jeg fant ingen datasett med nøyaktig 10 meters oppløsning i søkeresultatene. Men her er noen datasett som kan være relevante for deg, med varierende oppløsning:
+
+*   **Jan Mayen DTM 5**
+    *   Beskrivelse: Terrengmodell for Jan Mayen med 5 meters oppløsning.
+    *   Mer informasjon: [https://kartkatalog.geonorge.no/metadata/Jan-Mayen-DTM-5/731a0602-d262-483d-aaa6-474cef68e82a](https://kartkatalog.geonorge.no/metadata/Jan-Mayen-DTM-5/731a0602-d262-483d-aaa6-474cef68e82a)
+
+*   **Bouvetøya DTM 20**
+    *   Beskrivelse: Digital terrengmodell for Bouvetøya med 20x20 meters oppløsning.
+    *   Mer informasjon: [https://kartkatalog.geonorge.no/metadata/Bouvetøya-DTM-20/0cfe0ce1-603a-4692-a3c3-5f6427f63a19](https://kartkatalog.geonorge.no/metadata/Bouvetøya-DTM-20/0cfe0ce1-603a-4692-a3c3-5f6427f63a19)
+
+*   **Peter I Øy DTM 20**
+    *   Beskrivelse: Digital terrengmodell for Peter I Øy med 20x20 meters oppløsning.
+    *   Mer informasjon: [https://kartkatalog.geonorge.no/metadata/Peter-I-Øy-DTM-20/2aeb93a8-1015-4d8c-bf93-5a10bf613dc8](https://kartkatalog.geonorge.no/metadata/Peter-I-Øy-DTM-20/2aeb93a8-1015-4d8c-bf93-5a10bf613dc8)
+
+*   **DTM 50**
+    *Beskrivelse: Digital terrengmodell med høyder i et rutenett på 50 x 50 meter.
+    *Mer informasjon: https://kartkatalog.geonorge.no/metadata/DTM-50/e25d0104-0858-4d06-bba8-d154514c11d2
+
+Jeg anbefaler også å se på de ulike dybdedata-settene, spesielt de med 5 og 25 meters oppløsning, dersom du er interessert i terrengmodeller under vann.
+
+2025-05-29 16:10:21,559 - agents.supervisor - INFO - Session: 139739990359824
+  User: Ingen brukerinput funnet.
+  Assistant: Her er informasjon om eiendomsgrenser for Gjøvik:
+
+Kartet viser nå Gjøvik, zoomet til nivå 14. For å finne eiendomsgrenser, kan du bruke datasettet **Matrikkelen - Eiendomskart Teig**.
+
+*   Dette datasettet inneholder eiendomsinformasjon fra Matrikkelen, inkludert teiger (avgrensede arealer/jordstykker) med informasjon om hvilken eiendom de tilhører.
+*   Du kan finne informasjon om matrikkelnummer, grensepunkter, grenser og teigareal.
+*   Datasettet er fritt tilgjengelig.
+
+Jeg fant dessverre ingen datasettbeskrivelser spesifikt for Gjøvik. Du kan prøve å søke etter "Matrikkelen - Eiendomskart Teig Gjøvik" for å se om det finnes et mer spesifikt datasett.
