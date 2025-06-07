@@ -10,6 +10,9 @@ GeoGPT er et MVP (Minimum Viable Product) designet for å gjøre geodata mer til
 
 ## Tech Stack
 
+![alt text](systemarchitect.png)
+
+
 - **Frontend**: Next.js, TypeScript og Tailwind CSS for et responsivt og moderne brukergrensesnitt
 - **Backend**: Python med WebSocket for sanntidskommunikasjon
 - **AI/ML**: RAG (Retrieval-Augmented Generation) arkitektur med LangChain og LangGraph
