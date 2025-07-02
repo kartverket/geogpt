@@ -1,0 +1,4 @@
+organization: Land
+product: GeoNorge
+repo_types: [InternalApi,InternalClient,Experiment]
+platforms: [LOKALT]
